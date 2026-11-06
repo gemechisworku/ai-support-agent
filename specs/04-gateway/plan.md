@@ -8,9 +8,11 @@ One FastAPI app (`supportagent.gateway.app:app`, port 8002) hosts three surfaces
 1. **Session API** (`/sessions`, worker token). This is the dispatcher side. The agent worker's
    entrypoint code (not the LLM) creates a session from room metadata and holds the returned opaque
    token. The token never enters a prompt.
-2. **MCP** (`/mcp`), built with the MCP Python SDK `FastMCP` in streamable-HTTP mode and mounted into
-   the FastAPI app. Each tool handler resolves the session from the `Authorization` header
-   (`ctx.request_context.request.headers`), then runs one shared pipeline:
+2. **MCP** (`/mcp`), built with the MCP Python SDK 2.x low-level `Server` (`on_list_tools` / `on_call_tool`;
+   `FastMCP` is `MCPServer` in 2.x) in stateless streamable-HTTP mode with JSON responses, mounted into the
+   FastAPI app; the SDK session manager runs in the app lifespan. Each tool's input schema is its Pydantic
+   model (`additionalProperties: false`). The handler reads the session token from the HTTP
+   `Authorization` header (`ctx.request.headers`, isolated in `_session_token`), then runs one shared pipeline:
 
    ```
    resolve session → check scope (unverified/verified/any/worker) → rate limit
@@ -98,7 +100,11 @@ tests/gateway/
 ## Dependencies
 Runtime: `mcp` (Python SDK), `fastapi`, `uvicorn`, `httpx`. No extra dev dependency: `HttpBankClient` is
 tested with `httpx.MockTransport`.
-Compose service `gateway` (uses the `x-app` anchor, `command: uvicorn supportagent.gateway.app:app --host 0.0.0.0 --port 8002`, depends on `bank-api`).
+Compose service `gateway` (uses the `x-app` anchor; `alembic -n kb upgrade head` then
+`uvicorn --factory supportagent.gateway.app:create_app --host 0.0.0.0 --port 8002`; depends on `bank-api`;
+`OLLAMA_URL=http://host.docker.internal:11434` for embeddings). The app is a factory so importing it has no
+side effects; `host="0.0.0.0"` disables the SDK's localhost-only Host check because the agent calls
+`gateway:8002` on the internal network. M1 exit demo: `scripts/demo_m1.py` (also run by `test_e2e_m1.py`).
 Settings: `GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`, `PROMISE_MAX_DAYS`, `HUMAN_AGENT_AVAILABLE`, `HUMAN_AGENT_EXTENSION`.
 
 ## Test strategy
@@ -112,5 +118,6 @@ Settings: `GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`, `P
   "late fee personal loan" → promise → outcome. It then asserts the audit rows.
 
 ## Risks
-- The MCP SDK's header access API may differ between versions. Isolate it in `mcp_server.py` (`_session_token(ctx)`).
+- The MCP SDK's header access API may differ between versions (it did: 1.x `FastMCP` → 2.x `MCPServer`).
+  It is isolated in `mcp_server.py` (`_session_token(ctx)`); `test_mcp_server.py` exercises it over real HTTP.
 - Fuzzy name matching could accept the wrong person. Distance ≤ 1 applies per token **and** DOB and last 4 must match exactly.

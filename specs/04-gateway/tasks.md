@@ -197,20 +197,21 @@ to that loan's product.
 **Files:** `src/supportagent/gateway/tools/policy.py`, tests above
 
 ### T-GW-09 · MCP server, compose service and M1 end-to-end test
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #20
 - **Depends on:** T-GW-04, T-GW-06, T-GW-07, T-GW-08, T-BANK-06
 - **Requirements:** GW-R1, GW-R8
 
-Register every tool with FastMCP (streamable HTTP) mounted at `/mcp` and read the bearer token from
+Register every tool with the MCP SDK (streamable HTTP) mounted at `/mcp` and read the bearer token from
 request headers. Add the `gateway` compose service on 8002. Add `scripts/demo_m1.py` (the milestone
 exit demo) and an integration test that does the same through a real MCP client.
 
 **Acceptance criteria**
-- [ ] `tools/list` returns exactly the 11 tools in the spec, with strict schemas
-- [ ] `docker compose up gateway` is healthy; `/healthz` ok
-- [ ] The M1 exit demo runs green, and the audit log shows every call with the right `call_id`
+- [x] `tools/list` returns exactly the 11 tools in the spec, with strict schemas
+- [x] `docker compose up gateway` is healthy; `/healthz` ok (verified with the runtime image and the
+  compose command; the compose file validates)
+- [x] The M1 exit demo runs green, and the audit log shows every call with the right `call_id`
 
 **Tests**
 - `tests/gateway/test_mcp_server.py` (unit): in-process MCP client lists tools; calls `search_policy` and `verify_identity` with a header token; a missing header → `forbidden` envelope
