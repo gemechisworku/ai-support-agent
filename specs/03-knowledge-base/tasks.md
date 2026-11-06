@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-KB-01 · Synthetic policy corpus
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #21
 - **Depends on:** T-PLAT-01
@@ -20,10 +20,10 @@ reporting at 30 DPD, etc.) must be stated exactly. The bank seed (T-BANK-02) and
 (T-COMP-01) use the same values.
 
 **Acceptance criteria**
-- [ ] 20 docs, unique `doc_id`s, valid `product`/`audience`/`version`/`effective_date`
-- [ ] Each product doc states grace days and late fee matching the plan table
-- [ ] Delinquency stages, promise-to-pay rules, disputes and hardship docs state the values in architecture §5
-- [ ] Docs contain no real bank names, people or phone numbers
+- [x] 20 docs, unique `doc_id`s, valid `product`/`audience`/`version`/`effective_date`
+- [x] Each product doc states grace days and late fee matching the plan table
+- [x] Delinquency stages, promise-to-pay rules, disputes and hardship docs state the values in architecture §5
+- [x] Docs contain no real bank names, people or phone numbers
 
 **Tests**
 - `tests/kb/test_corpus.py` (unit): every doc parses; required keys and allowed values; unique ids; each product code has exactly one product doc
