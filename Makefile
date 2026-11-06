@@ -58,6 +58,10 @@ migrate: up ## Upgrade the bank and kb databases to head (Alembic, one env per d
 migrate-test: up ## Upgrade bank_test and kb_test to head
 	BANK_DB=bank_test KB_DB=kb_test $(MAKE) migrate
 
+.PHONY: kb-ingest
+kb-ingest: migrate ## Ingest data/policies into the kb database (ARGS="--embedder fake" or "--dry-run")
+	$(PY) python -m supportagent.kb.ingest $(ARGS)
+
 check: lint typecheck boundaries tasks-validate test-all ## Everything CI runs
 
 docker-build: ## Build the runtime image

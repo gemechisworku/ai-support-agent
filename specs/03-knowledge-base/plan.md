@@ -95,6 +95,8 @@ rows from the same embedder (vectors from different models are not comparable).
 | Confidence | best cosine similarity among returned vector hits ≥ `KB_MIN_SIMILARITY` (default 0.55) | RRF scores are rank-only and not comparable across queries |
 | Fake embedder | SHA-256 of lower-cased word unigrams+bigrams hashed into 768 buckets, L2-normalised | deterministic and lexical, so tests are meaningful offline |
 | Versions | keep all; filter at query time | NFR-AUDIT replay; architecture §5 |
+| Ingestion conflicts | plan every document first; any conflict (same version with a new hash, or a different embedder) aborts before anything is written, naming each document | a half-ingested corpus is worse than none |
+| Embedded text | `section_path + "\n" + text` (the embedder adds `search_document: `) | headings carry the topic words |
 | Audience | default `customer`; `internal` only on explicit request | agent should not recite internal procedures |
 
 ## Dependencies

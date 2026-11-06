@@ -98,7 +98,7 @@ The `Embedder` protocol (`dim`, `embed_documents(texts)`, `embed_query(text)`). 
 **Files:** `src/supportagent/kb/embed.py`, tests above
 
 ### T-KB-05 · Versioned ingestion CLI
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #25
 - **Depends on:** T-KB-01, T-KB-02, T-KB-03, T-KB-04
@@ -110,9 +110,9 @@ version) or fails (same version, different hash). Each document goes in one tran
 (`added / skipped / chunks`). Add `make kb-ingest`.
 
 **Acceptance criteria**
-- [ ] Second run is a no-op (exit 0, "0 added")
-- [ ] New version is added and the old one kept; same version with edited content → non-zero exit naming the doc
-- [ ] `--dry-run` writes nothing and lists the planned actions
+- [x] Second run is a no-op (exit 0, "0 added")
+- [x] New version is added and the old one kept; same version with edited content → non-zero exit naming the doc
+- [x] `--dry-run` writes nothing and lists the planned actions
 
 **Tests**
 - `tests/kb/test_ingest.py` (integration, HashEmbedder): full corpus ingest counts; idempotency; version add; hash-conflict error; dry-run
