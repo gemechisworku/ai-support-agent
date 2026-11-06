@@ -2,14 +2,14 @@
 
 <!-- GENERATED on main by .github/workflows/status.yml after each merge. Do not edit. -->
 
-**Overall:** █░░░░░░░░░░░░░░░░░░░ 3/80 tasks done
+**Overall:** █░░░░░░░░░░░░░░░░░░░ 4/80 tasks done
 
 ## By milestone
 
 | Milestone | Due | Progress |
 |---|---|---|
 | M0 · Foundation | 2026-11-10 | █████░░░░░ 3/6 |
-| M1 · Data and knowledge | 2026-11-13 | ░░░░░░░░░░ 0/21 |
+| M1 · Data and knowledge | 2026-11-13 | ░░░░░░░░░░ 1/21 |
 | M2 · Conversation | 2026-11-20 | ░░░░░░░░░░ 0/19 |
 | M3 · Telephony and outbound | 2026-11-27 | ░░░░░░░░░░ 0/20 |
 | M4 · Operations, quality and demo | 2026-12-04 | ░░░░░░░░░░ 0/14 |
@@ -20,7 +20,7 @@
 |---|---|
 | [01-platform](01-platform/tasks.md) | █████░░░░░ 3/6 |
 | [02-mock-bank](02-mock-bank/tasks.md) | ░░░░░░░░░░ 0/7 |
-| [03-knowledge-base](03-knowledge-base/tasks.md) | ░░░░░░░░░░ 0/6 |
+| [03-knowledge-base](03-knowledge-base/tasks.md) | ██░░░░░░░░ 1/6 |
 | [04-gateway](04-gateway/tasks.md) | ░░░░░░░░░░ 0/10 |
 | [05-compliance](05-compliance/tasks.md) | ░░░░░░░░░░ 0/5 |
 | [06-agent](06-agent/tasks.md) | ░░░░░░░░░░ 0/12 |
@@ -51,7 +51,7 @@
 | ⬜ | T-KB-01 | Synthetic policy corpus | M1 | T-PLAT-01 | #21 |
 | ⬜ | T-KB-02 | KB schema and migration (documents, chunks, HNSW, tsvector) | M1 | T-PLAT-03 | #22 |
 | ⬜ | T-KB-03 | Heading-based markdown chunker | M1 | T-PLAT-01 | #23 |
-| ⬜ | T-KB-04 | Embedder interface: Ollama and deterministic fake | M1 | T-PLAT-02 | #24 |
+| ✅ | T-KB-04 | Embedder interface: Ollama and deterministic fake | M1 | T-PLAT-02 | #24 |
 | ⬜ | T-KB-05 | Versioned ingestion CLI | M1 | T-KB-01, T-KB-02, T-KB-03, T-KB-04 | #25 |
 | ⬜ | T-KB-06 | Hybrid retrieval (RRF, filters, threshold) with golden questions | M1 | T-KB-05 | #26 |
 | ⬜ | T-GW-01 | Tool contracts and bank API client | M1 | T-PLAT-04, T-BANK-01 | #12 |
@@ -131,7 +131,7 @@
 | F3 | BANK-R6, TEL-R1, TEL-R2, TEL-R4, TEL-R5, TEL-R7, SCHED-R1, SCHED-R3, SCHED-R4, SCHED-R7 | T-BANK-05, T-SCHED-01, T-SCHED-02, T-SCHED-03, T-SCHED-06, T-TEL-01, T-TEL-02, T-TEL-04, T-TEL-05 | ░░░░░ 0/9 |
 | F4 | GW-R2, GW-R3, AGENT-R2 | T-AGENT-02, T-AGENT-04, T-GW-02, T-GW-05 | ░░░░░ 0/4 |
 | F5 | BANK-R1, BANK-R3, BANK-R4, BANK-R5, GW-R1, GW-R4, GW-R11 | T-BANK-01, T-BANK-02, T-BANK-03, T-BANK-04, T-GW-01, T-GW-06, T-GW-09, T-GW-10 | ░░░░░ 0/8 |
-| F6 | KB-R1, KB-R2, KB-R3, KB-R4, KB-R5, KB-R6, KB-R7, GW-R7, AGENT-R5, AGENT-R6 | T-AGENT-06, T-AGENT-07, T-GW-08, T-KB-01, T-KB-02, T-KB-03, T-KB-04, T-KB-05, T-KB-06 | ░░░░░ 0/9 |
+| F6 | KB-R1, KB-R2, KB-R3, KB-R4, KB-R5, KB-R6, KB-R7, GW-R7, AGENT-R5, AGENT-R6 | T-AGENT-06, T-AGENT-07, T-GW-08, T-KB-01, T-KB-02, T-KB-03, T-KB-04, T-KB-05, T-KB-06 | █░░░░ 1/9 |
 | F7 | PLAT-R4, BANK-R7, GW-R6, AGENT-R11 | T-AGENT-08, T-BANK-06, T-GW-07, T-PLAT-04 | █░░░░ 1/4 |
 | F8 | BANK-R6, COMP-R1, COMP-R2, COMP-R3, COMP-R4, COMP-R5, COMP-R6, COMP-R8, AGENT-R3, AGENT-R4, AGENT-R13, SCHED-R2, SCHED-R4, SCHED-R5 | T-AGENT-01, T-AGENT-02, T-AGENT-03, T-AGENT-04, T-AGENT-10, T-BANK-05, T-COMP-01, T-COMP-02, T-COMP-03, T-COMP-04, T-COMP-05, T-SCHED-01, T-SCHED-03, T-SCHED-04 | ░░░░░ 0/14 |
 | F9 | BANK-R7, AGENT-R9, TEL-R6 | T-AGENT-11, T-BANK-06, T-TEL-04 | ░░░░░ 0/3 |
@@ -146,7 +146,7 @@
 | NFR-SEC | PLAT-R1, PLAT-R2, BANK-R2, GW-R1, GW-R2, GW-R5, GW-R9, GW-R10, GW-R11, OBS-R1, OBS-R2, CON-R1, CON-R7 | T-BANK-02, T-CON-01, T-GW-01, T-GW-02, T-GW-03, T-GW-04, T-GW-05, T-GW-06, T-GW-07, T-GW-08, T-GW-09, T-GW-10, T-OBS-01, T-PLAT-02 | ░░░░░ 1/14 |
 | NFR-AUDIT | KB-R2, KB-R5, GW-R8, COMP-R7, TEL-R8, OBS-R3, OBS-R4, OBS-R7, CON-R4 | T-COMP-01, T-COMP-04, T-COMP-05, T-CON-03, T-GW-04, T-GW-09, T-GW-10, T-KB-02, T-KB-05, T-OBS-02, T-OBS-03, T-OBS-05, T-TEL-06 | ░░░░░ 0/13 |
 | NFR-CAP | VOICE-R1, VOICE-R8, SCHED-R3 | T-SCHED-02, T-VOICE-01, T-VOICE-06 | ░░░░░ 0/3 |
-| NFR-PORT | PLAT-R1, PLAT-R3, PLAT-R5, PLAT-R7, KB-R4, TEL-R1, TEL-R2 | T-KB-04, T-PLAT-01, T-PLAT-02, T-PLAT-03, T-PLAT-06, T-TEL-01, T-TEL-02 | █░░░░ 2/7 |
+| NFR-PORT | PLAT-R1, PLAT-R3, PLAT-R5, PLAT-R7, KB-R4, TEL-R1, TEL-R2 | T-KB-04, T-PLAT-01, T-PLAT-02, T-PLAT-03, T-PLAT-06, T-TEL-01, T-TEL-02 | ██░░░ 3/7 |
 | AC-TASK | EVAL-R2, EVAL-R5 | T-EVAL-02, T-EVAL-05 | ░░░░░ 0/2 |
 | AC-GUARD | COMP-R2, COMP-R3, COMP-R4, COMP-R6, COMP-R8, CON-R6, EVAL-R3, EVAL-R5 | T-COMP-01, T-COMP-02, T-COMP-03, T-COMP-04, T-COMP-05, T-CON-05, T-EVAL-03, T-EVAL-05 | ░░░░░ 0/8 |
 | AC-GROUND | KB-R7, KB-R8, EVAL-R4, EVAL-R5 | T-EVAL-04, T-EVAL-05, T-KB-06 | ░░░░░ 0/3 |
