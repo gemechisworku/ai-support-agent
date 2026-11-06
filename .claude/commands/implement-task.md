@@ -12,7 +12,7 @@ Implement task **$ARGUMENTS** following the loop and Definition of Done in AGENT
    Stay strictly within the task's scope.
 5. Run `make check` and fix everything until it is green.
 6. Update `tasks.md`: set `Status: done` and tick the acceptance criteria. Update `spec.md`/`plan.md`
-   if reality differs. Run `make tasks-status`.
+   if reality differs. Do not edit `specs/STATUS.md` (CI regenerates it on main).
 7. Commit as `feat(<module>): <summary> ($ARGUMENTS)`, push, and open a PR with `gh pr create`. Use
    the title `[$ARGUMENTS] <title>` and fill in the PR template, including `Closes #<issue>` (the
    issue number is in the task's Issue field).

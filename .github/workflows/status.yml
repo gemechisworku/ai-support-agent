@@ -1,0 +1,36 @@
+# Regenerates specs/STATUS.md on main after every merge, so PRs never edit it and parallel PRs
+# don't conflict. Pushes made with GITHUB_TOKEN do not trigger other workflows (no CI loop).
+# If main gets branch protection that blocks direct pushes, allow github-actions[bot] to bypass it.
+name: Status
+
+on:
+  push:
+    branches: [main]
+    paths: ["specs/**", "docs/prd.md", "scripts/tasks.py"]
+  workflow_dispatch:
+
+concurrency:
+  group: status-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python scripts/tasks.py validate
+      - run: python scripts/tasks.py status --write
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- specs/STATUS.md; then echo "STATUS.md unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add specs/STATUS.md
+          git commit -m "chore(specs): regenerate STATUS.md [skip ci]"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
+          exit 1

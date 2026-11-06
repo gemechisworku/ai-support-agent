@@ -15,7 +15,8 @@ PRD id (F4, U2, NFR-SEC …)          docs/prd.md
 The workflow is a simplified [GitHub Spec Kit](https://github.com/github/spec-kit) loop
 (constitution → specify → plan → tasks → implement). There is one change: specs here are per **module**,
 not per feature branch, and `scripts/tasks.py` mirrors tasks to GitHub issues and milestones.
-Progress and the PRD traceability matrix are generated in [STATUS.md](STATUS.md).
+Progress and the PRD traceability matrix are generated in [STATUS.md](STATUS.md) by a bot commit on
+main after every merge (`.github/workflows/status.yml`). PRs never edit it, so parallel PRs don't conflict.
 
 ## The loop (for humans and coding agents)
 
@@ -28,7 +29,7 @@ Progress and the PRD traceability matrix are generated in [STATUS.md](STATUS.md)
 5. **Verify:** `make check` runs lint, types, import boundaries, unit and integration tests, and the
    specs check.
 6. **Close the loop in the same PR:** set `- **Status:** done`, tick the acceptance criteria, update the
-   spec or plan if reality differed, run `make tasks-status`, and open the PR with `Closes #<issue>`.
+   spec or plan if reality differed, and open the PR with `Closes #<issue>`. Leave `STATUS.md` alone.
 7. CI must be green. Merge with squash. GitHub closes the issue.
 
 Changing the plan: add, split or re-scope tasks by editing `tasks.md` (new ids only, never reuse one),
