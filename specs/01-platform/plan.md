@@ -47,21 +47,25 @@ tests/common/, tests/contracts/
 | contact_result | `ContactResult` = right_party \| third_party \| no_answer \| voicemail \| wrong_number \| busy |
 | verified | `bool` |
 | disclosures_given | `list[str]` (disclosure ids with version, e.g. `ai_recording@1`) |
-| intent | `list[Intent]` |
+| intent | `list[Intent]` = account_question \| policy_question \| intent_to_pay \| promise_to_pay \| already_paid \| callback_request \| human_request \| hardship \| dispute \| complaint \| cease_contact \| legal \| other |
 | reason_code | `ReasonCode \| None` = forgot \| insufficient_funds \| income_disruption \| dispute \| other |
 | promise_to_pay | `PromiseToPay \| None` {date, amount: Money} |
 | callback | `Callback \| None` {datetime (tz-aware)} |
-| escalated | `Escalation \| None` {reason, target} |
+| escalated | `Escalation \| None` {reason: str (gateway's `EscalationReason` value, T-GW-01), target: str} |
 | dispute_flag, cease_contact_flag | `bool` |
-| sentiment | `Sentiment` = positive \| neutral \| negative |
+| sentiment | `Sentiment` = positive \| neutral \| negative \| unknown (default) |
 | summary | `str` (redacted) |
 | kb_sources | `list[str]` (`doc_id@version#section`) |
 | versions | `Versions` {prompt, policy, model} |
 | latency_p50, latency_p90 | `int \| None` (ms, end-of-speech → first agent audio; filled by VOICE `LatencyTracker`) |
 | latency_stages | `dict[str, StageLatency]` {p50_ms, p90_ms} per stage (stt, llm_ttft, tts_ttfb, e2e) |
 | recording_uri | `str \| None` |
+| transcript_uri | `str \| None` (redacted JSONL, T-OBS-03) |
 
-`busy` extends PRD §8 because F3 requires detecting it. This is noted as a deliberate addition.
+Deliberate additions to PRD §8: `busy` (F3 requires detecting it), `playground` campaign, `latency_stages`,
+`transcript_uri` (NFR-AUDIT) and `Sentiment.unknown`. Models are frozen with `extra="forbid"`.
+`call_id` must be a UUID4 string. Two consistency rules are enforced: `verified=true` requires
+`contact_result=right_party`, and `promise_to_pay` requires `verified=true` (constitution III).
 
 Settings env names are exactly the `.env.example` keys (a test checks both directions). Field names
 equal the lower-cased variable, except `postgres` and `langfuse`, which use `validation_alias`
