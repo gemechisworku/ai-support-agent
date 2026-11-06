@@ -76,7 +76,7 @@ trail joined with `" > "`.
 **Files:** `src/supportagent/kb/chunker.py`, `tests/kb/test_chunker.py`
 
 ### T-KB-04 · Embedder interface: Ollama and deterministic fake
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #24
 - **Depends on:** T-PLAT-02
@@ -87,9 +87,9 @@ The `Embedder` protocol (`dim`, `embed_documents(texts)`, `embed_query(text)`). 
 `HashEmbedder` is offline and deterministic. `get_embedder(settings)` selects by `KB_EMBEDDER=ollama|fake`.
 
 **Acceptance criteria**
-- [ ] Both return unit-norm 768-d `list[float]`; `OllamaEmbedder` raises a clear error on dimension mismatch or connection failure
-- [ ] `HashEmbedder` gives identical vectors across runs and similar vectors for texts sharing words
-- [ ] Prefixes `search_document: ` / `search_query: ` applied by the Ollama embedder only
+- [x] Both return unit-norm 768-d `list[float]`; `OllamaEmbedder` raises a clear error on dimension mismatch or connection failure
+- [x] `HashEmbedder` gives identical vectors across runs and similar vectors for texts sharing words
+- [x] Prefixes `search_document: ` / `search_query: ` applied by the Ollama embedder only
 
 **Tests**
 - `tests/kb/test_embed.py` (unit): HashEmbedder determinism/norm/similarity ordering; OllamaEmbedder against `httpx.MockTransport` (request shape, batching, prefixing, error mapping)
