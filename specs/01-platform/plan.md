@@ -5,8 +5,9 @@
 ## Approach
 Keep the foundation thin, so it doesn't fight the modules built on top of it:
 - **Settings** use pydantic-settings with nested groups. Each module reads only its own group.
-- **Logging** uses the stdlib `logging` module with a JSON formatter and a masking filter. There is no
-  structlog dependency.
+- **Logging** uses the stdlib `logging` module with a JSON formatter that masks PII in `extra=` fields
+  (by key) as it serialises, so nothing reaches a handler unmasked. There is no structlog dependency.
+  Message text is not scanned: data goes in `extra=`, and free-text redaction is OBS's job.
 - **Databases** use synchronous SQLAlchemy 2.0 with psycopg 3. The services are low-concurrency, so
   sync keeps tests simple. FastAPI runs sync endpoints in its threadpool.
 - **Migrations:** each database gets its own Alembic directory (`migrations/bank`, `migrations/kb`),
@@ -15,8 +16,10 @@ Keep the foundation thin, so it doesn't fight the modules built on top of it:
 ## File layout
 ```
 src/supportagent/common/
-  settings.py      Settings(postgres, services, models, livekit, langfuse, persona), get_settings()
-  logging.py       JsonFormatter, PiiMaskingFilter, configure_logging(), get_logger(), bind_call()
+  settings.py      Settings(postgres, data, services, models, livekit, langfuse, persona), get_settings(),
+                   load_settings(env_file), env_var_names()
+  logging.py       JsonFormatter (masks `extra=` fields via mask_pii), configure_logging(), get_logger(),
+                   bind_call()
   db.py            engines, session_scope(), BankBase, KbBase (DeclarativeBase)
   clock.py         now(), today(), freeze_clock() (contextvar-based)
 src/supportagent/contracts/
@@ -60,8 +63,12 @@ tests/common/, tests/contracts/
 
 `busy` extends PRD §8 because F3 requires detecting it. This is noted as a deliberate addition.
 
-Settings env names follow `.env.example`. Nested groups use flat names plus `validation_alias`, so
-`.env` stays readable.
+Settings env names are exactly the `.env.example` keys (a test checks both directions). Field names
+equal the lower-cased variable, except `postgres` and `langfuse`, which use `validation_alias`
+(`settings.postgres.host` ← `POSTGRES_HOST`). The `data` group holds bank/KB/policy values (`BANK_AS_OF`,
+`KB_*`, `CONTACT_RULES_PATH`, `PROMISE_MAX_DAYS`, `TRANSCRIPTS_DIR`). Required secrets (DB password,
+gateway service/worker tokens, audit salt, scheduler token) have no default; CI and `make setup` copy
+`.env.example`, whose placeholders are local-only. `LLM_PROVIDER=anthropic` requires `ANTHROPIC_API_KEY`.
 
 ## Key decisions
 | Decision | Choice | Why |

@@ -67,6 +67,8 @@ jobs:
       POSTGRES_PASSWORD: ci-only
     steps:
       - uses: actions/checkout@v4
+      - name: Local-only placeholder config (job env vars above take precedence)
+        run: cp .env.example .env
       - name: Create databases
         env: { PGPASSWORD: ci-only }
         run: psql -h localhost -U supportagent -d postgres -v ON_ERROR_STOP=1 -f infra/postgres/init/01-databases.sql
