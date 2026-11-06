@@ -16,6 +16,10 @@ setup: ## Install deps, create .env, start Postgres
 	@test -f .env || (cp .env.example .env && echo "created .env from .env.example")
 	$(MAKE) up
 
+.PHONY: doctor
+doctor: ## Check local prerequisites; model servers optional until M2 (ARGS=--strict to require them)
+	@bash scripts/doctor.sh $(ARGS)
+
 up: ## Start Linux services (Postgres) and wait until healthy
 	docker compose up -d --wait postgres
 

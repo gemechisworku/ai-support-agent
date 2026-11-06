@@ -124,7 +124,7 @@ unless `CI=true`, in which case they fail.
 **Files:** `tests/conftest.py`, `src/supportagent/common/clock.py`, `tests/common/`
 
 ### T-PLAT-06 · make doctor and native dev-setup guide
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M0
 - **Issue:** #5
 - **Depends on:** T-PLAT-01
@@ -136,9 +136,9 @@ port, Ollama (and that `qwen3:8b` and `nomic-embed-text` are pulled), whisper.cp
 `docs/dev-setup.md` covering the native (Metal) components that Docker cannot run on macOS.
 
 **Acceptance criteria**
-- [ ] `make doctor` exits 0 only when every **required** check passes; model servers are reported as optional until M2
-- [ ] Each ✗ line names the exact install or start command
-- [ ] `docs/dev-setup.md` covers first-time setup on a 16 GB M4 Mac, including the memory budget from the architecture
+- [x] `make doctor` exits 0 only when every **required** check passes; model servers are reported as optional until M2
+- [x] Each ✗ line names the exact install or start command
+- [x] `docs/dev-setup.md` covers first-time setup on a 16 GB M4 Mac, including the memory budget from the architecture
 
 **Tests**
 - `tests/tooling/test_doctor.py` (unit): runs `scripts/doctor.sh --dry-run`, which lists the checks without probing them, and asserts every check is present
