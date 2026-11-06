@@ -6,11 +6,14 @@ always come from `ledger.py` (BANK-R5).
 
 import datetime as dt
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from supportagent.bank import ledger, models
+from supportagent.common import clock
 from supportagent.contracts import bank as c
 
 
@@ -204,3 +207,138 @@ def eligible_loans(
             )
         )
     return out
+
+
+# --------------------------------------------------------------------------- writes (T-BANK-06)
+# Only interaction tables are written here (BANK-R7, constitution II.3). Business validation of
+# promises and tasks is the gateway's job; the bank checks types and that referenced rows exist.
+
+
+class NotFoundError(LookupError):
+    """A referenced customer, loan or preference row does not exist."""
+
+
+def get_interaction(s: Session, call_id: str) -> c.Interaction | None:
+    row = s.scalars(
+        select(models.Interaction)
+        .where(models.Interaction.call_id == call_id)
+        .execution_options(populate_existing=True)
+    ).one_or_none()
+    return c.Interaction.model_validate(row) if row else None
+
+
+def upsert_interaction(s: Session, data: c.InteractionIn, bank_name: str) -> c.Interaction:
+    """Insert or update by `call_id`, and enqueue the post-call summary (F13) in the same savepoint.
+
+    The first write's `started_at` is kept. Nullable fields keep their stored value unless the new
+    write sets them, so the scheduler's attempt row and the worker's final outcome merge.
+    """
+    outcome = data.outcome
+    values = {
+        "call_id": data.call_id,
+        "customer_id": data.customer_id
+        if data.customer_id is not None
+        else (outcome.customer_id if outcome else None),
+        "loan_id": data.loan_id if data.loan_id is not None else (outcome.loan_id if outcome else None),
+        "direction": data.direction.value,
+        "campaign": data.campaign.value if data.campaign else None,
+        "started_at": data.started_at,
+        "ended_at": data.ended_at,
+        "contact_result": data.contact_result.value,
+        "outcome": outcome.model_dump(mode="json") if outcome else None,
+        "transcript_uri": data.transcript_uri or (outcome.transcript_uri if outcome else None),
+        "recording_uri": data.recording_uri or (outcome.recording_uri if outcome else None),
+        "versions": outcome.versions.model_dump(mode="json") if outcome else None,
+    }
+    table = models.Interaction.__table__
+    stmt = pg_insert(models.Interaction).values(**values)
+    keep_if_null = (
+        "customer_id",
+        "loan_id",
+        "campaign",
+        "ended_at",
+        "outcome",
+        "transcript_uri",
+        "recording_uri",
+        "versions",
+    )
+    update: dict[str, Any] = {k: func.coalesce(stmt.excluded[k], table.c[k]) for k in keep_if_null}
+    update["contact_result"] = stmt.excluded.contact_result
+    update["direction"] = stmt.excluded.direction
+    stmt = stmt.on_conflict_do_update(index_elements=["call_id"], set_=update)
+    with s.begin_nested():
+        s.execute(stmt)
+        if outcome is not None and outcome.summary.strip():
+            enqueue_summary(s, data.call_id, values["customer_id"], outcome.summary, bank_name)  # type: ignore[arg-type]
+    result = get_interaction(s, data.call_id)
+    assert result is not None
+    return result
+
+
+def enqueue_summary(s: Session, call_id: str, customer_id: int | None, summary: str, bank_name: str) -> None:
+    """One outbox row per call (SMS if the customer has a phone, else email). Nothing is sent (mock)."""
+    if customer_id is None:
+        return
+    exists = s.scalar(select(func.count()).select_from(models.Outbox).where(models.Outbox.call_id == call_id))
+    if exists:
+        return
+    customer = s.get(models.Customer, customer_id)
+    if customer is None or not (customer.phone or customer.email):
+        return
+    channel, recipient = ("sms", customer.phone) if customer.phone else ("email", customer.email)
+    s.add(
+        models.Outbox(
+            call_id=call_id,
+            channel=channel,
+            recipient=recipient,
+            body=f"{bank_name}: {summary.strip()} Reply or call us if you have questions.",
+            status="pending",
+        )
+    )
+    s.flush()
+
+
+def create_promise(s: Session, data: c.PromiseIn) -> c.Promise:
+    if s.get(models.Loan, data.loan_id) is None:
+        raise NotFoundError(f"loan {data.loan_id} not found")
+    row = models.PromiseToPay(
+        call_id=data.call_id,
+        loan_id=data.loan_id,
+        promised_date=data.promised_date,
+        amount=data.amount,
+        status="open",
+    )
+    s.add(row)
+    s.flush()
+    s.refresh(row)
+    return c.Promise.model_validate(row)
+
+
+def create_task(s: Session, data: c.TaskIn) -> c.Task:
+    if s.get(models.Customer, data.customer_id) is None:
+        raise NotFoundError(f"customer {data.customer_id} not found")
+    if data.loan_id is not None and s.get(models.Loan, data.loan_id) is None:
+        raise NotFoundError(f"loan {data.loan_id} not found")
+    row = models.Task(**data.model_dump(), status="open")
+    s.add(row)
+    s.flush()
+    s.refresh(row)
+    return c.Task.model_validate(row)
+
+
+def patch_contact_preferences(
+    s: Session, customer_id: int, patch: c.ContactPreferencesPatch
+) -> c.ContactPreferences:
+    row = s.get(models.ContactPreference, customer_id)
+    if row is None:
+        raise NotFoundError(f"contact preferences for customer {customer_id} not found")
+    for key, value in patch.model_dump(exclude_unset=True).items():
+        setattr(row, key, value)
+    row.updated_at = clock.now()
+    s.flush()
+    return c.ContactPreferences.model_validate(row)
+
+
+def append_audit(s: Session, data: c.AuditIn) -> None:
+    s.add(models.AuditLog(**data.model_dump()))
+    s.flush()

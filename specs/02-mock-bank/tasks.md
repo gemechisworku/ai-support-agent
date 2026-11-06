@@ -127,7 +127,7 @@ interactions). The bank does **not** filter on contact rules. It supplies the fa
 **Files:** `src/supportagent/bank/api/routes_collections.py`, `src/supportagent/bank/queries.py`, tests above
 
 ### T-BANK-06 · Write API: interactions, promises, tasks, contact preferences, audit, outbox
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #11
 - **Depends on:** T-BANK-04
@@ -140,17 +140,17 @@ enqueue an `outbox` row in the same transaction (F13). Business validation of pr
 amount) is the gateway's job. The bank only enforces types and foreign keys.
 
 **Acceptance criteria**
-- [ ] Re-posting the same `call_id` updates rather than duplicates
-- [ ] PATCH sets only the provided flags (`dnc`, `cease_contact`, `dispute_open`, `preferred_window`, `consent_voice_ai`) and bumps `updated_at`
-- [ ] Outbox row created atomically with the interaction; no outbox row when there is no summary
-- [ ] Route-table test proves no POST/PUT/PATCH/DELETE exists on accounts, loans, installments or transactions
-- [ ] `POST /audit` is idempotent-safe (append-only; returns 204)
+- [x] Re-posting the same `call_id` updates rather than duplicates
+- [x] PATCH sets only the provided flags (`dnc`, `cease_contact`, `dispute_open`, `preferred_window`, `consent_voice_ai`) and bumps `updated_at`
+- [x] Outbox row created atomically with the interaction; no outbox row when there is no summary
+- [x] Route-table test proves no POST/PUT/PATCH/DELETE exists on accounts, loans, installments or transactions
+- [x] `POST /audit` is idempotent-safe (append-only; returns 204)
 
 **Tests**
 - `tests/bank/test_api_write.py` (integration): each write route, upsert, partial PATCH, outbox atomicity (forced failure rolls back)
 - `tests/bank/test_routes_readonly_ledger.py` (unit): route table inspection
 
-**Files:** `src/supportagent/bank/api/routes_{interactions,promises,tasks,prefs,audit}.py`, `src/supportagent/bank/queries.py`, tests above
+**Files:** `src/supportagent/bank/api/routes_write.py`, `src/supportagent/bank/queries.py`, `src/supportagent/bank/models.py` (JSONB `none_as_null`), tests above
 
 ### T-BANK-07 · Operations read endpoints for the console
 - **Status:** todo

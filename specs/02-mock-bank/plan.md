@@ -104,7 +104,9 @@ gateway writes them mid-call, before the interaction row exists. `outbox.call_id
 | Sync vs async SQLAlchemy | sync + FastAPI threadpool | simpler; load is 1–2 calls |
 | Derived figures | computed in `ledger.py` per request | single source of truth for NFR-ACC |
 | Auth | static service token header | internal API; mTLS later (architecture §7) |
-| Interaction write | upsert by `call_id` | scheduler creates attempt row, worker completes it |
+| Interaction write | upsert by `call_id`; first `started_at` wins; nullable fields (outcome, ended_at, URIs, versions, ids, campaign) keep their stored value unless the new write sets them; `contact_result` is overwritten | scheduler creates attempt row, worker completes it |
+| Outbox (F13) | one row per call, written in the same savepoint as the interaction when `outcome.summary` is non-empty; SMS to the customer's phone (email if none); body `"<BANK_NAME>: <summary> …"` | atomic; re-posts never duplicate |
+| Write errors | unknown loan/customer/preferences → 404; schema errors → 422; promises/tasks/audit `call_id` not checked | gateway validates business rules |
 
 ## Dependencies
 `fastapi`, `uvicorn[standard]`, `sqlalchemy>=2`, `psycopg[binary]>=3`, `alembic`, `faker`. Dev:

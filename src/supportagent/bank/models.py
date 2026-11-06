@@ -164,10 +164,11 @@ class Interaction(BankBase):
     started_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
     ended_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     contact_result: Mapped[str] = mapped_column(String(32))
-    outcome: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # none_as_null: Python None is SQL NULL (not JSON null), so upserts can COALESCE over it
+    outcome: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
     transcript_uri: Mapped[str | None] = mapped_column(Text)
     recording_uri: Mapped[str | None] = mapped_column(Text)
-    versions: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    versions: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
 
 
 class PromiseToPay(BankBase):
