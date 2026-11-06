@@ -47,7 +47,7 @@ KB owns the `kb` schema.
 - **PLAT-R4:** `CallOutcome.model_validate(example_json)` round-trips. An unknown `contact_result` fails validation. `CallOutcome.model_json_schema()` is exported to `docs/contracts/call_outcome.schema.json`, and CI checks that the export is current.
 - **PLAT-R5:** On a clean clone, `make setup && make check` passes. A PR that breaks lint, types, boundaries, tests or specs fails CI.
 - **PLAT-R6:** Two integration tests that insert the same unique row both pass, which proves per-test rollback. `freeze_clock("2026-11-09T14:00:00Z")` controls `clock.now()`.
-- **PLAT-R7:** With Ollama stopped, `make doctor` exits non-zero and prints `ollama: not reachable on :11434 → brew services start ollama`.
+- **PLAT-R7:** With Ollama stopped, `make doctor` prints `✗ ollama: not reachable on http://localhost:11434 (optional until M2) → brew install ollama && brew services start ollama`. It exits 0 while every required check (uv, Docker, Compose, Postgres port) passes, and `make doctor ARGS=--strict` (from M2 on) exits non-zero.
 
 ## Interfaces
 **Provides:**
