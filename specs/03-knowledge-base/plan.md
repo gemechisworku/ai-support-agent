@@ -14,7 +14,28 @@ queryable for audit and replay.
 ## Corpus
 `data/policies/<doc_id>.md`. Every doc has front-matter `doc_id, title, product, version, effective_date,
 audience` and is written in plain customer-facing language. Figures (fees, days) must match the bank's
-`loan_products` and the COMP config.
+`loan_products` and the COMP config. Product docs (product ≠ `all`) also carry machine-readable
+`grace_days` and `late_fee: {type: flat|pct, value, cap?}` (the bank's `late_fee_rule` shape), so the
+bank cross-check compares values exactly; other docs must not set them. `doc_id` equals the file name.
+All v1.0 docs are effective 2026-01-01.
+
+Product figures chosen in T-KB-01 (T-BANK-02 seeds the same):
+
+| Product | rate_type | APR | Term (months) | Prepayment fee |
+|---|---|---|---|---|
+| PERSONAL | fixed | 8.99–24.99% | 12–60 | none |
+| AUTO | fixed | 5.49–14.99% | 24–72 | none |
+| MORTGAGE | variable | 5.25–7.75% | 120–360 | 2% of principal repaid early in first 36 months |
+| SME_WC | variable | 9.50–19.50% | 6–36 | 1% of principal repaid early in first 12 months |
+| SALARY_ADV | fixed | 18.00–35.99% | 1–6 | none |
+
+Other stated values: no penalty interest (normal contract rate keeps accruing); a payment is past due
+from the day after its due date, and the late fee is added when still unpaid at the end of the grace
+period; returned-payment fee $15; payoff quote free and valid 10 days; mobile payments post same business
+day before 8 p.m. local, branch immediately, transfers pending up to 2 business days; disputes answered
+within 30 days; complaints acknowledged in 2 and resolved in 15 business days; hardship deferral up to 3
+months (a specialist decides). `required-disclosures` holds each text as `## <key> (version 1.0)`
+followed by a `> text` line, identical to `data/config/disclosures.yaml`.
 
 | doc_id | product | audience | Content |
 |---|---|---|---|
