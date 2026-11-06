@@ -185,4 +185,4 @@ async def run_tool(
 
 
 # Importing the tool modules registers their tools in REGISTRY.
-from supportagent.gateway.tools import identity  # noqa: E402, F401
+from supportagent.gateway.tools import account, identity  # noqa: E402, F401

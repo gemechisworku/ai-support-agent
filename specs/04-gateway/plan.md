@@ -71,7 +71,9 @@ tests/gateway/
   oldest_unpaid_due_date, next_due_date, next_due_amount, days_past_due, fees_accrued, status, speakable}`
   (named `LoanSummary` so it is not confused with the bank's unmasked `contracts.bank.LoanStatus`). `speakable` is, for example,
   "$245.10 due on 12 November 2026". It is built with `Decimal` quantised to 2 dp.
-- `TransactionOut{date, amount, channel, status: posted|pending, reference_masked}`.
+- `TransactionOut{date, amount, channel, status: posted|pending, reference_masked, speakable}`. Digit runs
+  of 5+ in references (which embed the loan number) are masked to their last 4. Without `loan_last4` the
+  read tools cover all of the bound customer's loans; transactions are merged newest first, max 5.
 - **Audit row** (the bank's `AuditIn`): `{ts, call_id, tool, args_hash, customer_id?, decision: allow|deny|error, latency_ms}`.
   `deny` covers every refusal (scope, validation, rate limit, business rule); `error` is an upstream bank
   failure. Requests without a valid session token are audited with `call_id="unauthenticated"`.

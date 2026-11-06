@@ -125,7 +125,7 @@ match, and locks after 2 failures. See [plan.md](plan.md#data-model--contracts).
 **Files:** `src/supportagent/gateway/identity.py`, `src/supportagent/gateway/tools/identity.py`
 
 ### T-GW-06 · Verified read tools: loan status, transactions, interaction history
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #17
 - **Depends on:** T-GW-05
@@ -137,9 +137,9 @@ date/amount/status, task type/due/status, with no free-text notes). All three ar
 customer; an optional `loan_last4` picks among that customer's loans only.
 
 **Acceptance criteria**
-- [ ] Values equal FakeBank values exactly; `speakable` strings match the values
-- [ ] A `loan_last4` that is not owned by the bound customer → `not_found` (no information about other customers' loans leaks)
-- [ ] Priya's pending payment appears with `status="pending"`
+- [x] Values equal FakeBank values exactly; `speakable` strings match the values
+- [x] A `loan_last4` that is not owned by the bound customer → `not_found` (no information about other customers' loans leaks)
+- [x] Priya's pending payment appears with `status="pending"`
 
 **Tests**
 - `tests/gateway/test_read_tools.py` (unit): exact values for Frank, Hana and Priya; unverified → `not_verified`; foreign last4 → `not_found`; parametrised `assert_no_pii` over all outputs
