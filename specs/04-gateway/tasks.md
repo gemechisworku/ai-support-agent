@@ -55,20 +55,20 @@ sessions resolve candidates from `caller_phone`. `bind(customer_id)` is callable
 **Files:** `src/supportagent/gateway/session.py`, `src/supportagent/gateway/tools/__init__.py`, `src/supportagent/gateway/app.py`, `src/supportagent/gateway/config.py`
 
 ### T-GW-03 · Field masking and response shaping
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #14
 - **Depends on:** T-GW-01
 - **Requirements:** GW-R5, GW-R10
 
-Write `mask_number` (`****1234`), `mask_phone` (`***-***-1234`) and `speakable` money/date formatting
-(Decimal to 2 dp, "12 November 2026"). Add `sanitize_text` for policy chunks: strip control and
+Write `mask_number` (`****1234`), `mask_phone` (`***-***-1234`) and `speakable_money` / `speakable_date`
+(Decimal to 2 dp half-up, "$1,245.10", "12 November 2026"). Add `sanitize_text` for policy chunks: strip control and
 zero-width characters, truncate to 2,000 characters. Add the `assert_no_pii(obj, secrets)` test
 helper. All tool outputs are built from explicit field lists; bank DTOs are never passed through.
 
 **Acceptance criteria**
-- [ ] No output model contains surname, full DOB, address, email or national id fields
-- [ ] `assert_no_pii` flags any run of 5 or more consecutive digits of a seeded number
+- [x] No output model contains surname, full DOB, address, email or national id fields
+- [x] `assert_no_pii` flags any run of 5 or more consecutive digits of a seeded number
 
 **Tests**
 - `tests/gateway/test_masking.py` (unit): masking edge cases (short numbers, None); Decimal rounding (half-up); `sanitize_text` strips `​` and ANSI codes and truncates

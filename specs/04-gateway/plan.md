@@ -38,7 +38,7 @@ src/supportagent/gateway/
   bank_client.py      # BankClient protocol + HttpBankClient (httpx.AsyncClient, timeouts 2 s, 1 retry on GET)
   session.py          # Session dataclass, SessionStore (TTL, binding, attempt counter, lock, closed)
   identity.py         # name normalisation + matching, verify logic against candidates
-  masking.py          # mask_number, mask_phone, assert_no_pii(obj) helper used by tests
+  masking.py          # mask_number, mask_phone, speakable_money/date, sanitize_text, assert_no_pii(obj, secrets)
   audit.py            # args_hash, AuditWriter (POST /audit via BankClient, fail closed)
   ratelimit.py        # sliding-window limiter keyed by session / credential, injectable clock
   tools/
