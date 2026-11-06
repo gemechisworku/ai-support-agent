@@ -27,6 +27,7 @@ from supportagent.gateway.audit import AuditUnavailable, AuditWriter, Decision
 from supportagent.gateway.bank_client import BankClient, BankError
 from supportagent.gateway.config import GatewayConfig
 from supportagent.gateway.ratelimit import RateLimiter
+from supportagent.gateway.retriever import Retriever
 from supportagent.gateway.session import Session, SessionStore
 
 Scope = Literal["unverified", "verified", "any", "worker"]
@@ -47,6 +48,7 @@ class Gateway:
     config: GatewayConfig
     store: SessionStore = field(default_factory=SessionStore)
     limiter: RateLimiter = field(default_factory=RateLimiter)
+    retriever: Retriever | None = None
     audit: AuditWriter = field(init=False)
 
     def __post_init__(self) -> None:
@@ -185,4 +187,4 @@ async def run_tool(
 
 
 # Importing the tool modules registers their tools in REGISTRY.
-from supportagent.gateway.tools import account, identity, writes  # noqa: E402, F401
+from supportagent.gateway.tools import account, identity, policy, writes  # noqa: E402, F401

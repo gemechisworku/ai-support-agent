@@ -173,7 +173,7 @@ partial allowed per settings), `request_callback`, `escalate` (creates a task; r
 **Files:** `src/supportagent/gateway/tools/writes.py`, `tests/gateway/test_write_tools.py`
 
 ### T-GW-08 · search_policy tool
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #19
 - **Depends on:** T-GW-02, T-KB-06
@@ -186,9 +186,9 @@ sanitise the text, set `low_confidence` from the KB threshold, and append the so
 to that loan's product.
 
 **Acceptance criteria**
-- [ ] Returns at most 4 chunks; `low_confidence` matches the threshold rule
-- [ ] Callable unverified (U4 needs no verification)
-- [ ] An injection string inside a chunk is returned as plain data and does not alter the session
+- [x] Returns at most 4 chunks; `low_confidence` matches the threshold rule
+- [x] Callable unverified (U4 needs no verification)
+- [x] An injection string inside a chunk is returned as plain data and does not alter the session
 
 **Tests**
 - `tests/gateway/test_search_policy.py` (unit): FakeRetriever high/low scores; product defaulting; sources recorded; injection chunk unchanged scope

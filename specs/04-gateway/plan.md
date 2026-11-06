@@ -25,7 +25,9 @@ One FastAPI app (`supportagent.gateway.app:app`, port 8002) hosts three surfaces
 3. **Service API** (`/service/*`, service token). Thin REST over the same `BankClient`, for the scheduler.
 
 The gateway is stateless apart from the in-memory `SessionStore`. Bank access goes through
-`BankClient` (httpx, async), and policy search goes through an injected `Retriever` (the KB library).
+`BankClient` (httpx, async), and policy search goes through an injected `Retriever` (the KB library:
+`KbRetriever` runs the synchronous `kb.retrieval.search` in a worker thread; `score` is the chunk's
+cosine similarity, or its RRF score when it was a full-text-only hit; `low_confidence = not confident`).
 Both are protocols, so unit tests swap in `FakeBank` and `FakeRetriever`.
 
 ## File layout
@@ -47,6 +49,7 @@ src/supportagent/gateway/
     account.py        # get_loan_status, get_recent_transactions, get_interaction_history
     writes.py         # record_promise_to_pay, request_callback, escalate, set_contact_flag, record_call_outcome
     policy.py         # search_policy
+  retriever.py        # Retriever protocol + KbRetriever (kb.retrieval.search in a worker thread)
   mcp_server.py       # FastMCP instance; registers TOOL_REGISTRY with typed signatures
   service.py          # APIRouter for /service/*
 tests/gateway/
