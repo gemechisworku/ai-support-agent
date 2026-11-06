@@ -60,7 +60,12 @@ outstanding_balance, overdue_amount, oldest_unpaid_due_date, next_due_date, next
 days_past_due, bucket, fees_accrued, status}` (`overdue_amount` and `oldest_unpaid_due_date` give the U2
 opener "your payment of [amount] due on [date]"). `EligibleLoan` = `{loan_id,
 customer_id, timezone, phone, days_past_due, next_due_date, amount_due, prefs: ContactPreferences,
-attempts_last_7d: int, last_conversation_at: datetime|None}`. The attempt figures come from interactions.
+attempts_last_7d: int, last_conversation_at: datetime|None}` (plus `product_code`, `bucket`). The attempt
+figures come from interactions: `attempts_last_7d` counts outbound interactions for the loan since
+`clock.now() - 7 days`; `last_conversation_at` is the loan's latest `right_party` interaction. With
+`bucket=` the `amount_due` is the overdue amount; with `due_within=N` it is the remaining amount of the
+first unpaid instalment due in [as_of, as_of+N] (delinquent loans with such an instalment are included
+too; the scheduler decides the campaign). Closed loans are never returned.
 
 ### Personas (`seed/personas.py`; dates relative to `as_of`)
 | id | Persona | Phone (ext) | Product | Situation |

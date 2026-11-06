@@ -105,7 +105,7 @@ history. Also add `/healthz` and the `bank-api` service on port 8001 in `docker-
 **Files:** `src/supportagent/bank/api/{__init__,deps,routes_read}.py`, `src/supportagent/bank/queries.py`, `docker-compose.yml`, `tests/bank/conftest.py`, tests above
 
 ### T-BANK-05 · Collections and pre-due eligibility query
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #10
 - **Depends on:** T-BANK-04
@@ -116,10 +116,10 @@ with contact preferences and attempt history (`attempts_last_7d`, `last_conversa
 interactions). The bank does **not** filter on contact rules. It supplies the facts and COMP decides.
 
 **Acceptance criteria**
-- [ ] `bucket=1-30` returns only loans with 1 ≤ DPD ≤ 30, including Frank, Hana, Dawit and Sam (Sam's `cease_contact` is returned as-is)
-- [ ] `due_within=3` returns loans with an unpaid instalment due in [as_of, as_of+3], including Olivia
-- [ ] `attempts_last_7d` counts outbound interactions for that loan in the last 7×24 h; `last_conversation_at` is the latest `contact_result=right_party`
-- [ ] Exactly one of `bucket`/`due_within` is required (422 otherwise)
+- [x] `bucket=1-30` returns only loans with 1 ≤ DPD ≤ 30, including Frank, Hana, Dawit and Sam (Sam's `cease_contact` is returned as-is)
+- [x] `due_within=3` returns loans with an unpaid instalment due in [as_of, as_of+3], including Olivia
+- [x] `attempts_last_7d` counts outbound interactions for that loan in the last 7×24 h; `last_conversation_at` is the latest `contact_result=right_party`
+- [x] Exactly one of `bucket`/`due_within` is required (422 otherwise)
 
 **Tests**
 - `tests/bank/test_eligibility.py` (integration): persona inclusion/exclusion, attempt counting with inserted interactions, 422 path
