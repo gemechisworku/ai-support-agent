@@ -1,0 +1,51 @@
+# Linux services for the POC. Native (Metal) components run outside Docker — see docs/architecture.md §6.
+#   make up                                    -> postgres (bank + kb databases, pgvector)
+#   docker compose --profile telephony up -d   -> + redis (Asterisk / LiveKit SIP are added by T-TEL tasks)
+#   make docker-test                           -> unit + integration tests inside a container
+# Application services (bank-api, gateway, scheduler, console) are added by their module tasks and
+# reuse the `x-app` anchor below.
+name: supportagent
+
+x-app: &app
+  build: { context: ., dockerfile: docker/app.Dockerfile, target: runtime }
+  image: supportagent-app:dev
+  env_file: [{ path: .env, required: false }]
+  environment:
+    POSTGRES_HOST: postgres
+    POSTGRES_USER: ${POSTGRES_USER:-supportagent}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
+  depends_on:
+    postgres: { condition: service_healthy }
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-supportagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
+      POSTGRES_DB: postgres
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # TCP (-h 127.0.0.1) on purpose: during first-start init Postgres runs a socket-only temp server,
+      # and a socket check would report healthy before infra/postgres/init/ has finished.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    profiles: [telephony]
+    ports: ["6379:6379"]
+
+  test:
+    <<: *app
+    build: { context: ., dockerfile: docker/app.Dockerfile, target: test }
+    image: supportagent-test:dev
+    profiles: [test]
+
+volumes:
+  pgdata:

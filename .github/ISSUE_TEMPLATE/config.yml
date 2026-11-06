@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: New task
+    url: https://github.com/gemechisworku/ai-support-agent/blob/main/specs/README.md#the-loop-for-humans-and-coding-agents
+    about: Tasks are created from specs/*/tasks.md by `make issues-sync` — add the task there, not here.
