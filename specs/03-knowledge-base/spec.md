@@ -46,12 +46,14 @@ COMP tests that they agree).
 
 ## Interfaces
 **Provides** (Python library, imported by the gateway only):
-- `supportagent.kb.retrieval.search(query: PolicyQuery, *, session, embedder) -> PolicySearchResult`
+- `supportagent.kb.retrieval.search(query: PolicyQuery, *, session, embedder, min_similarity: float | None = None) -> PolicySearchResult`
+  (`min_similarity=None` → `KB_MIN_SIMILARITY`; `as_of=None` → `clock.today()`)
 - `supportagent.kb.embed.Embedder` (protocol), `OllamaEmbedder`, `HashEmbedder`, `get_embedder(settings)`
 - CLI `python -m supportagent.kb.ingest [PATH=data/policies] [--embedder ollama|fake] [--dry-run]`
 - Contracts in `supportagent/contracts/kb.py`: `PolicyQuery{query, product: str|None, audience="customer",
   as_of: date|None, top_k=4}`, `PolicyChunk{doc_id, version, title, section, product, text, rrf_score,
-  similarity: float|None}`, `PolicySearchResult{chunks: list[PolicyChunk], confident: bool, best_similarity: float}`.
+  similarity: float|None}` (`.citation` → `doc_id@version#section` for `kb_sources`), `PolicySearchResult{chunks:
+  list[PolicyChunk], confident: bool, best_similarity: float}`.
 
 **Consumes:** `supportagent.common.settings` (`KB_DB`, `OLLAMA_URL`, `EMBED_MODEL`, `KB_MIN_SIMILARITY`),
 `supportagent.common.db` (kb session factory).
