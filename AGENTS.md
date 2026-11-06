@@ -17,7 +17,8 @@ calls off to humans. Everything runs locally on one Mac (M4, 16 GB) against a sy
 
 ## Work only from a task
 All work maps to a task `T-XXX-NN` in `specs/NN-module/tasks.md`. Each task is one GitHub issue and
-one PR.
+**one commit**. Each **milestone** is one branch (`milestone/Mn`) and one draft PR that collects the
+commits of all its tasks; it is marked ready and merged as a whole when every task in it is done.
 
 ```bash
 make tasks-next                          # ready tasks (deps done), lowest milestone first
@@ -28,16 +29,21 @@ For the chosen task:
 1. Read the task, its module's `spec.md` (requirements and acceptance criteria) and its `plan.md`
    (file layout, contracts, decisions). Read the upstream module's spec **Interfaces** section for
    anything you consume.
-2. `git switch -c task/T-XXX-NN-short-slug`
+2. Work on the task's milestone branch: `git switch milestone/Mn` (create it from an up-to-date `main`
+   with `git switch -c milestone/Mn origin/main` if it doesn't exist yet; otherwise `git pull`).
 3. Write the task's listed tests first, then implement until they pass. Stay inside the task's scope.
    If you find needed work outside it, add a new task to the right `tasks.md` instead of doing it.
 4. Run `make check` until it is green.
-5. In the same PR:
+5. In the same commit:
    - set `- **Status:** done`
    - tick the acceptance criteria
    - fix `spec.md` / `plan.md` if the implementation differs
-6. Commit as `feat(<module>): <summary> (T-XXX-NN)`. Open the PR titled `[T-XXX-NN] <title>` with
-   `Closes #<issue>` in the body, using the PR template.
+6. Commit as `feat(<module>): <summary> (T-XXX-NN)` (one commit per task; follow-up fixes to a task
+   say `fix(<module>): … (T-XXX-NN)`). Push the milestone branch, then run `make milestone-pr M=Mn`:
+   it creates the draft PR the first time and regenerates its body (task checklist + `Closes #N`
+   for every done task) every time after.
+7. When every task of the milestone is done, mark the PR ready (`gh pr ready`). A human reviews and
+   merges it. Never merge it yourself.
 
 Never mark a task done if its tests are skipped, xfailed or missing.
 
@@ -48,7 +54,8 @@ Never mark a task done if its tests are skipped, xfailed or missing.
 - [ ] `spec.md` and `plan.md` match what was built. New dependencies and services are listed in `plan.md`.
 - [ ] Any new config is in `.env.example`. Don't edit `specs/STATUS.md`: a bot regenerates it on main
       after each merge, and CI rejects PRs that touch it (so parallel PRs never conflict).
-- [ ] CI is green on the PR. CI rejects a PR that closes a task issue without marking the task done.
+- [ ] CI is green on the milestone PR. CI rejects: `task/*` branches, a milestone PR body that is out of
+      date, and a milestone PR marked ready while any of its tasks is still `todo`.
 
 ## Commands
 ```bash

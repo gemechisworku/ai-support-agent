@@ -51,7 +51,9 @@ Prefer the smallest change that satisfies the task. Open-source, local component
 No speculative abstractions; one provider switch (F14) is the only planned pluggability beyond the
 contracts.
 
-## IX. One task → one issue → one branch → one PR
-Branch `task/T-XXX-NN-short-slug`; PR title `[T-XXX-NN] Title`; PR body `Closes #<issue>`; the PR sets the
-task's `Status: done` (the bot regenerates `specs/STATUS.md` on main). CI rejects a PR that closes a task issue
-without marking it done.
+## IX. One task → one issue → one commit; one milestone → one branch → one PR
+Task commits go on `milestone/Mn` as `feat(<module>): … (T-XXX-NN)` and set the task's `Status: done`.
+The milestone's draft PR (`[Mn] Title`) has a generated body (`make milestone-pr M=Mn`) that closes every
+done task's issue. It is marked ready and merged as a whole only when all its tasks are done. CI enforces
+the branch naming, the body and the readiness rule; workflow-only changes use `chore/*` PRs, which may not
+close task issues. The bot regenerates `specs/STATUS.md` on main.

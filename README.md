@@ -29,5 +29,6 @@ Native model servers (Ollama, whisper.cpp, Kokoro, LiveKit) are needed from mile
 `make doctor` to see what is missing, and follow [docs/dev-setup.md](docs/dev-setup.md).
 
 ## Workflow in one line
-Pick a ready task, write its tests, implement, mark it `done` in `tasks.md`, then open a PR that says
-`Closes #<issue>`. CI checks code quality and spec traceability.
+Pick a ready task, write its tests, implement, mark it `done` in `tasks.md`, and commit it to the
+milestone branch. Each milestone is one draft PR (`make milestone-pr M=Mn`), merged once all its tasks
+are done. CI checks code quality, spec traceability and the milestone PR rules.

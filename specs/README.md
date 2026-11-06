@@ -8,8 +8,8 @@ under the rules in [constitution.md](constitution.md).
 PRD id (F4, U2, NFR-SEC …)          docs/prd.md
   └─ requirement (GW-R3)             specs/NN-module/spec.md     WHAT + acceptance criteria
        └─ design                     specs/NN-module/plan.md     HOW: files, interfaces, data, tests
-            └─ task (T-GW-04)        specs/NN-module/tasks.md    one PR-sized unit, status todo|done
-                 └─ GitHub issue #N  → branch task/T-GW-04-… → PR "Closes #N" → status done
+            └─ task (T-GW-04)        specs/NN-module/tasks.md    one commit-sized unit, status todo|done
+                 └─ GitHub issue #N  → commit on milestone/M1 → milestone PR "Closes #N" → merged with M1
 ```
 
 The workflow is a simplified [GitHub Spec Kit](https://github.com/github/spec-kit) loop
@@ -24,13 +24,16 @@ main after every merge (`.github/workflows/status.yml`). PRs never edit it, so p
    Prefer the lowest milestone.
 2. **Read:** `python3 scripts/tasks.py show T-XXX-NN`, then the module's `spec.md` and `plan.md`, and any
    `contracts` the task touches.
-3. **Branch:** `git switch -c task/T-XXX-NN-short-slug`.
+3. **Branch:** the milestone branch `milestone/Mn` (one per milestone; create it from `main` the
+   first time).
 4. **Test first:** write the tests listed in the task (they should fail), then implement until they pass.
 5. **Verify:** `make check` runs lint, types, import boundaries, unit and integration tests, and the
    specs check.
-6. **Close the loop in the same PR:** set `- **Status:** done`, tick the acceptance criteria, update the
-   spec or plan if reality differed, and open the PR with `Closes #<issue>`. Leave `STATUS.md` alone.
-7. CI must be green. Merge with squash. GitHub closes the issue.
+6. **Close the loop in the same commit:** set `- **Status:** done`, tick the acceptance criteria, update
+   the spec or plan if reality differed. Commit `feat(<module>): … (T-XXX-NN)`, push, and run
+   `make milestone-pr M=Mn` (creates the draft PR, or regenerates its body). Leave `STATUS.md` alone.
+7. **Milestone complete:** when all its tasks are done, mark the PR ready. CI must be green; a human
+   reviews (commit by commit) and merges it; GitHub closes every task issue it lists.
 
 Changing the plan: add, split or re-scope tasks by editing `tasks.md` (new ids only, never reuse one),
 run `make tasks-validate`, then `make issues-sync` to create the new issues.

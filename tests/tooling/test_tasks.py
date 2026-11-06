@@ -71,11 +71,56 @@ def test_cycle_detected(tmp_path: Path) -> None:
     assert any("cycle" in e for e in _errors(root))
 
 
-def test_check_pr(tmp_path: Path) -> None:
-    root = _project(tmp_path, _task("T-DEMO-01", issue="#7") + _task("T-DEMO-02", "done", issue="#8"))
-    proj = tasks.load(root)
-    assert tasks.check_pr(proj, "Closes #8") == []
-    assert tasks.check_pr(proj, "fixes #7")  # not marked done → error
+def _milestone_project(tmp_path: Path) -> tasks.Project:
+    root = _project(
+        tmp_path,
+        _task("T-DEMO-01", "done", issue="#7")
+        + _task("T-DEMO-02", issue="#8")
+        + _task("T-DEMO-03", issue="—"),
+    )
+    return tasks.load(root)
+
+
+def test_pr_body_lists_tasks_and_closes_only_done(tmp_path: Path) -> None:
+    proj = _milestone_project(tmp_path)
+    body = tasks.pr_body(proj, "M1")
+    assert body.startswith("## [M1] First")
+    assert "- [x] T-DEMO-01 · Title for T-DEMO-01 (#7)" in body
+    assert "- [ ] T-DEMO-02 · Title for T-DEMO-02 (#8)" in body
+    assert "Closes #7" in body
+    assert "Closes #8" not in body
+    assert tasks.check_pr(proj, body, "milestone/M1") == []
+
+
+def test_milestone_pr_body_must_be_current(tmp_path: Path) -> None:
+    proj = _milestone_project(tmp_path)
+    errs = tasks.check_pr(proj, "Closes #7\nCloses #8", "milestone/M1")
+    assert any("#8" in e and "not 'done'" in e for e in errs)
+    errs = tasks.check_pr(proj, "no closes here", "milestone/M1")
+    assert any("Closes #7" in e for e in errs)
+
+
+def test_ready_milestone_pr_requires_every_task_done(tmp_path: Path) -> None:
+    proj = _milestone_project(tmp_path)
+    body = tasks.pr_body(proj, "M1")
+    errs = tasks.check_pr(proj, body, "milestone/M1", ready=True)
+    assert any("T-DEMO-02" in e and "T-DEMO-03" in e for e in errs)
+
+
+def test_unknown_milestone_branch(tmp_path: Path) -> None:
+    proj = _milestone_project(tmp_path)
+    assert any("unknown milestone" in e for e in tasks.check_pr(proj, "", "milestone/M9"))
+
+
+def test_task_branches_are_rejected(tmp_path: Path) -> None:
+    proj = _milestone_project(tmp_path)
+    assert any("one PR per milestone" in e for e in tasks.check_pr(proj, "Closes #7", "task/T-DEMO-01-x"))
+
+
+def test_chore_pr_may_not_close_task_issues(tmp_path: Path) -> None:
+    proj = _milestone_project(tmp_path)
+    assert tasks.check_pr(proj, "Tidy docs. Fixes #99", "chore/docs") == []
+    assert any("milestone PR" in e for e in tasks.check_pr(proj, "Closes #7", "chore/docs"))
 
 
 def test_write_issue_number(tmp_path: Path) -> None:
