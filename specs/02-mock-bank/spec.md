@@ -57,8 +57,8 @@ the gateway's job.
 `X-Service-Token: $GATEWAY_SERVICE_TOKEN`. CLI `python -m supportagent.bank.seed`. Pydantic contracts in
 `supportagent/contracts/bank.py`: `Customer`, `Account`, `LoanProduct`, `Loan`, `LoanStatus`,
 `Installment`, `Transaction`, `ContactPreferences`, `ContactPreferencesPatch`, `EligibleLoan`,
-`InteractionIn`, `Interaction`, `PromiseIn`, `Promise`, `TaskIn`, `Task`, `AuditIn`, `OutboxMessage`,
-`Page[T]`.
+`InteractionIn`, `Interaction`, `InteractionHistory`, `PromiseIn`, `Promise`, `TaskIn`, `Task`, `AuditIn`,
+`OutboxMessage`, `LateFeeRule`, `Page[T]`.
 **Consumes:** `supportagent.common.settings` (DB URL, token), `supportagent.common.db`,
 `supportagent.contracts.outcome.CallOutcome` (stored as the interaction outcome JSON).
 
@@ -70,7 +70,7 @@ the gateway's job.
 | GET | `/loans/{id}` | — | `LoanStatus` |
 | GET | `/loans/{id}/installments` | — | `list[Installment]` |
 | GET | `/accounts/{id}/transactions` | `limit` (≤50), `loan_id?` | `list[Transaction]` |
-| GET | `/customers/{id}/interactions` | `limit` | `list[Interaction]` (+ open promises/tasks) |
+| GET | `/customers/{id}/interactions` | `limit` | `InteractionHistory` (interactions + open promises/tasks) |
 | GET | `/collections/eligible` | `bucket=1-30` or `due_within=N` | `list[EligibleLoan]` |
 | POST | `/interactions` | `InteractionIn` | `Interaction` (upsert by `call_id`) |
 | POST | `/promises` | `PromiseIn` | `Promise` |

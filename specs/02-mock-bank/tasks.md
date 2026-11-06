@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-BANK-01 · Bank schema, API contracts and initial migration
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #6
 - **Depends on:** T-PLAT-03, T-PLAT-04
@@ -18,16 +18,16 @@ Alembic migration for database `bank`, and the Pydantic contracts in `supportage
 The gateway (T-GW-01) codes against those contracts, so they land first.
 
 **Acceptance criteria**
-- [ ] `alembic -n bank upgrade head` (or the PLAT-03 equivalent `make migrate`) creates all 12 tables with indexes on `customers.phone`, `loans.customer_id`, `installments.due_date`, `transactions(account_id, ts)`
-- [ ] `downgrade base` drops them cleanly
-- [ ] All contract models from spec §Interfaces exist, use `Decimal` for money and `date`/`datetime` (tz-aware) for time, and round-trip to JSON
-- [ ] `interactions.outcome` is typed as `CallOutcome` in `InteractionIn`
+- [x] `alembic -n bank upgrade head` (or the PLAT-03 equivalent `make migrate`) creates all 12 tables with indexes on `customers.phone`, `loans.customer_id`, `installments.due_date`, `transactions(account_id, ts)`
+- [x] `downgrade base` drops them cleanly
+- [x] All contract models from spec §Interfaces exist, use `Decimal` for money and `date`/`datetime` (tz-aware) for time, and round-trip to JSON
+- [x] `interactions.outcome` is typed as `CallOutcome` in `InteractionIn`
 
 **Tests**
 - `tests/bank/test_models.py` (integration): upgrade → inspect tables/columns/indexes → downgrade
 - `tests/contracts/test_bank_contracts.py` (unit): JSON round-trip, Decimal serialised as string with 2 dp, naive datetimes rejected
 
-**Files:** `src/supportagent/bank/models.py`, `src/supportagent/contracts/bank.py`, `migrations/bank/versions/0001_initial.py`, tests above
+**Files:** `src/supportagent/bank/models.py`, `src/supportagent/contracts/bank.py`, `migrations/bank/versions/bank_0002_initial_bank_schema.py`, tests above
 
 ### T-BANK-02 · Deterministic synthetic population seed
 - **Status:** todo

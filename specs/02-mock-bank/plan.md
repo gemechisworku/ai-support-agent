@@ -28,7 +28,7 @@ src/supportagent/bank/
   seed/population.py   Faker population
   seed/personas.py     persona definitions (table below)
 src/supportagent/contracts/bank.py
-migrations/bank/versions/0001_initial.py
+migrations/bank/versions/bank_0002_initial_bank_schema.py   (bank_0001 is PLAT's empty baseline)
 tests/bank/ test_models.py test_ledger.py test_seed.py test_personas.py test_api_read.py
             test_eligibility.py test_api_write.py test_api_ops.py
 ```
@@ -49,8 +49,10 @@ tests/bank/ test_models.py test_ledger.py test_seed.py test_personas.py test_api
 | audit_log | id bigserial · ts · call_id · tool text · args_hash text(sha256) · customer_id null · decision(allow/deny/error) · latency_ms int |
 | outbox | id pk · call_id fk · channel(sms/email) · recipient text · body text · status(pending/sent) · created_at |
 
-`LoanStatus` = `{loan_id, number_last4, product_code, product_name, outstanding_balance, next_due_date,
-next_due_amount, days_past_due, bucket, fees_accrued, status}`. `EligibleLoan` = `{loan_id,
+`LoanStatus` = `{loan_id, customer_id, number_last4, product_code, product_name, as_of,
+outstanding_balance, overdue_amount, oldest_unpaid_due_date, next_due_date, next_due_amount,
+days_past_due, bucket, fees_accrued, status}` (`overdue_amount` and `oldest_unpaid_due_date` give the U2
+opener "your payment of [amount] due on [date]"). `EligibleLoan` = `{loan_id,
 customer_id, timezone, phone, days_past_due, next_due_date, amount_due, prefs: ContactPreferences,
 attempts_last_7d: int, last_conversation_at: datetime|None}`. The attempt figures come from interactions.
 
@@ -72,6 +74,11 @@ attempts_last_7d: int, last_conversation_at: datetime|None}`. The attempt figure
 
 All personas have `consent_voice_ai=true`, `dnc=false` and timezone `America/New_York`. DOBs are fixed
 (e.g. Frank 1985-03-14) and listed in `personas.py`, which T-EVAL and T-TEL read.
+
+`call_id` on `promises_to_pay`, `tasks` and `audit_log` is a plain column, not a foreign key: the
+gateway writes them mid-call, before the interaction row exists. `outbox.call_id` is a foreign key
+(written together with the interaction). `GET /customers/{id}/interactions` returns
+`InteractionHistory{interactions, open_promises, open_tasks}`.
 
 ## Key decisions
 | Decision | Choice | Why |
