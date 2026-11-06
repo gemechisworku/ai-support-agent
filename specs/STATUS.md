@@ -2,13 +2,13 @@
 
 <!-- GENERATED on main by .github/workflows/status.yml after each merge. Do not edit. -->
 
-**Overall:** ██░░░░░░░░░░░░░░░░░░ 8/80 tasks done
+**Overall:** ██░░░░░░░░░░░░░░░░░░ 9/80 tasks done
 
 ## By milestone
 
 | Milestone | Due | Progress |
 |---|---|---|
-| M0 · Foundation | 2026-11-10 | ████████░░ 5/6 |
+| M0 · Foundation | 2026-11-10 | ██████████ 6/6 |
 | M1 · Data and knowledge | 2026-11-13 | █░░░░░░░░░ 3/21 |
 | M2 · Conversation | 2026-11-20 | ░░░░░░░░░░ 0/19 |
 | M3 · Telephony and outbound | 2026-11-27 | ░░░░░░░░░░ 0/20 |
@@ -18,7 +18,7 @@
 
 | Module | Progress |
 |---|---|
-| [01-platform](01-platform/tasks.md) | ████████░░ 5/6 |
+| [01-platform](01-platform/tasks.md) | ██████████ 6/6 |
 | [02-mock-bank](02-mock-bank/tasks.md) | ░░░░░░░░░░ 0/7 |
 | [03-knowledge-base](03-knowledge-base/tasks.md) | █████░░░░░ 3/6 |
 | [04-gateway](04-gateway/tasks.md) | ░░░░░░░░░░ 0/10 |
@@ -39,7 +39,7 @@
 | ✅ | T-PLAT-02 | Typed settings and PII-safe structured logging | M0 | T-PLAT-01 | #1 |
 | ✅ | T-PLAT-03 | Database plumbing and Alembic for bank and kb | M0 | T-PLAT-02 | #2 |
 | ✅ | T-PLAT-04 | Shared contracts: CallOutcome and common enums | M0 | T-PLAT-01 | #3 |
-| ⬜ | T-PLAT-05 | Test infrastructure: DB fixtures, frozen clock, factories | M0 | T-PLAT-03 | #4 |
+| ✅ | T-PLAT-05 | Test infrastructure: DB fixtures, frozen clock, factories | M0 | T-PLAT-03 | #4 |
 | ✅ | T-PLAT-06 | make doctor and native dev-setup guide | M0 | T-PLAT-01 | #5 |
 | ⬜ | T-BANK-01 | Bank schema, API contracts and initial migration | M1 | T-PLAT-03, T-PLAT-04 | #6 |
 | ⬜ | T-BANK-02 | Deterministic synthetic population seed | M1 | T-BANK-01 | #7 |
@@ -142,7 +142,7 @@
 | F14 | VOICE-R3 | T-VOICE-02 | ░░░░░ 0/1 |
 | D-OUTCOME | PLAT-R4, BANK-R1, BANK-R7, GW-R6, AGENT-R2, AGENT-R11 | T-AGENT-02, T-AGENT-04, T-AGENT-08, T-BANK-01, T-BANK-06, T-GW-07, T-PLAT-04 | █░░░░ 1/7 |
 | NFR-LAT | VOICE-R4, VOICE-R6, VOICE-R8 | T-VOICE-03, T-VOICE-04, T-VOICE-06 | ░░░░░ 0/3 |
-| NFR-ACC | PLAT-R6, BANK-R2, BANK-R3, BANK-R5, KB-R6, GW-R4, EVAL-R1, EVAL-R3 | T-BANK-02, T-BANK-03, T-BANK-04, T-EVAL-01, T-EVAL-03, T-GW-06, T-KB-06, T-PLAT-05 | ░░░░░ 0/8 |
+| NFR-ACC | PLAT-R6, BANK-R2, BANK-R3, BANK-R5, KB-R6, GW-R4, EVAL-R1, EVAL-R3 | T-BANK-02, T-BANK-03, T-BANK-04, T-EVAL-01, T-EVAL-03, T-GW-06, T-KB-06, T-PLAT-05 | █░░░░ 1/8 |
 | NFR-SEC | PLAT-R1, PLAT-R2, BANK-R2, GW-R1, GW-R2, GW-R5, GW-R9, GW-R10, GW-R11, OBS-R1, OBS-R2, CON-R1, CON-R7 | T-BANK-02, T-CON-01, T-GW-01, T-GW-02, T-GW-03, T-GW-04, T-GW-05, T-GW-06, T-GW-07, T-GW-08, T-GW-09, T-GW-10, T-OBS-01, T-PLAT-02 | ░░░░░ 1/14 |
 | NFR-AUDIT | KB-R2, KB-R5, GW-R8, COMP-R7, TEL-R8, OBS-R3, OBS-R4, OBS-R7, CON-R4 | T-COMP-01, T-COMP-04, T-COMP-05, T-CON-03, T-GW-04, T-GW-09, T-GW-10, T-KB-02, T-KB-05, T-OBS-02, T-OBS-03, T-OBS-05, T-TEL-06 | ░░░░░ 0/13 |
 | NFR-CAP | VOICE-R1, VOICE-R8, SCHED-R3 | T-SCHED-02, T-VOICE-01, T-VOICE-06 | ░░░░░ 0/3 |
