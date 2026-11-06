@@ -182,3 +182,7 @@ async def run_tool(
     except AuditUnavailable:
         return ToolResult.failure("audit_unavailable")
     return result
+
+
+# Importing the tool modules registers their tools in REGISTRY.
+from supportagent.gateway.tools import identity  # noqa: E402, F401

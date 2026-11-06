@@ -99,7 +99,7 @@ If the audit write fails, return `audit_unavailable` and no data.
 **Files:** `src/supportagent/gateway/audit.py`, `src/supportagent/gateway/ratelimit.py`, pipeline in `tools/__init__.py`
 
 ### T-GW-05 · Identity tools: lookup_by_phone and verify_identity
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #16
 - **Depends on:** T-GW-02, T-GW-03
@@ -111,14 +111,16 @@ fuzzy-matches the name (≤ 1 edit per token), matches DOB and loan last 4 exact
 match, and locks after 2 failures. See [plan.md](plan.md#data-model--contracts).
 
 **Acceptance criteria**
-- [ ] Outbound: only `expected_customer_id` can be bound
-- [ ] Inbound: phone candidates first, then bank identity match; more than one match counts as a failure
-- [ ] `attempts_remaining` counts down 2 → 1 → 0 and `locked=true` at 0; once locked, further `verify_identity` calls return `locked`
-- [ ] The response never says *which* factor failed
+- [x] Outbound: only `expected_customer_id` can be bound
+- [x] Inbound: the phone's candidates; more than one match counts as a failure. (The bank-side identity
+  match for unknown numbers is not built: the bank API has no identity-search endpoint — see the spec's
+  open questions. Until then an unknown number's attempt counts as a failure, tested.)
+- [x] `attempts_remaining` counts down 2 → 1 → 0 and `locked=true` at 0; once locked, further `verify_identity` calls return `locked`
+- [x] The response never says *which* factor failed
 
 **Tests**
 - `tests/gateway/test_identity.py` (unit): name normalisation ("José  O'Neil" vs "jose oneil"); distance-1 tolerance; distance-2 rejected
-- `tests/gateway/test_identity_tools.py` (unit): Frank outbound success binds; wrong DOB twice locks; inbound unknown number with valid DOB+last4 binds; spouse (third party) cannot bind; inbound lookup returns no name
+- `tests/gateway/test_identity_tools.py` (unit): Frank outbound success binds; wrong DOB twice locks; inbound unknown number cannot verify yet (counts as a failure); spouse (third party) cannot bind; inbound lookup returns no name
 
 **Files:** `src/supportagent/gateway/identity.py`, `src/supportagent/gateway/tools/identity.py`
 
