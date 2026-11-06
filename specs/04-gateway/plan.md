@@ -17,8 +17,11 @@ One FastAPI app (`supportagent.gateway.app:app`, port 8002) hosts three surfaces
      → validate input (Pydantic, extra="forbid") → handler (BankClient / Retriever)
      → shape + mask output → audit (fail closed) → ToolResult envelope
    ```
-   The pipeline is a single decorator, `@gateway_tool(scope=...)`, in `tools/__init__.py`, so every
-   tool gets the same guardrails and tests can call the pipeline without MCP.
+   Tools register with `@gateway_tool(name, scope=..., input_model=..., output_model=...)` and all run
+   through one function, `run_tool(gateway, name, token, args)` in `tools/__init__.py`, so every tool
+   gets the same guardrails and tests call the pipeline without MCP. Scope `any` and `worker` tools
+   also work on locked sessions (escalation must stay possible); `unverified` tools are refused once
+   locked. Validation errors name fields and error types only, never the input values.
 3. **Service API** (`/service/*`, service token). Thin REST over the same `BankClient`, for the scheduler.
 
 The gateway is stateless apart from the in-memory `SessionStore`. Bank access goes through
@@ -39,7 +42,7 @@ src/supportagent/gateway/
   audit.py            # args_hash, AuditWriter (POST /audit via BankClient, fail closed)
   ratelimit.py        # sliding-window limiter keyed by session / credential, injectable clock
   tools/
-    __init__.py       # gateway_tool decorator (pipeline), TOOL_REGISTRY
+    __init__.py       # Gateway (deps), ToolRegistry/REGISTRY + gateway_tool decorator, run_tool (pipeline)
     identity.py       # lookup_by_phone, verify_identity
     account.py        # get_loan_status, get_recent_transactions, get_interaction_history
     writes.py         # record_promise_to_pay, request_callback, escalate, set_contact_flag, record_call_outcome

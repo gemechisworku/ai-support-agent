@@ -30,7 +30,7 @@ over the bank API DTOs from `contracts/bank.py`. See [plan.md](plan.md#data-mode
 **Files:** `src/supportagent/contracts/gateway.py`, `src/supportagent/gateway/bank_client.py`, `tests/gateway/fakes.py`, tests above
 
 ### T-GW-02 · Per-call session manager and identity binding
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #13
 - **Depends on:** T-GW-01
@@ -43,10 +43,10 @@ sessions resolve candidates from `caller_phone`. `bind(customer_id)` is callable
 `identity.py`. Add the `@gateway_tool(scope=…)` pipeline skeleton: resolve session → scope → validate → handler → envelope.
 
 **Acceptance criteria**
-- [ ] Missing, unknown or expired token → `forbidden`; a closed session → `session_closed`
-- [ ] Scopes are enforced by the pipeline: `verified` tools return `not_verified` before binding, and `locked` after a lock
-- [ ] Creating a second session for the same `call_id` returns the existing token (idempotent)
-- [ ] A session's ids and token never appear in any tool output
+- [x] Missing, unknown or expired token → `forbidden`; a closed session → `session_closed`
+- [x] Scopes are enforced by the pipeline: `verified` tools return `not_verified` before binding, and `locked` after a lock
+- [x] Creating a second session for the same `call_id` returns the existing token (idempotent)
+- [x] A session's ids and token never appear in any tool output
 
 **Tests**
 - `tests/gateway/test_session.py` (unit): TTL expiry with fake clock; idempotent create; close; wrong worker token → 401
