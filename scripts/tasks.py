@@ -551,8 +551,9 @@ def pr_body(proj: Project, milestone: str) -> str:
 def check_pr(proj: Project, body: str, branch: str = "", ready: bool = False) -> list[str]:
     """Enforce one PR per milestone.
 
-    - `milestone/Mn`: the body must close exactly the done tasks of Mn (regenerate it with
-      `make milestone-pr M=Mn`); a PR marked ready (not draft) needs every task of Mn done.
+    - `milestone/Mn`: the body may only close done tasks of Mn; once the PR is marked ready it must
+      close exactly those (regenerate with `make milestone-pr M=Mn`) and every task of Mn must be done.
+      A draft's body may lag one push behind (CI runs between `git push` and `make milestone-pr`).
     - `task/*` branches are rejected: task work goes onto its milestone branch.
     - any other branch (chore/…) may not close task issues.
     """
@@ -574,9 +575,11 @@ def check_pr(proj: Project, body: str, branch: str = "", ready: bool = False) ->
     expected = {t.issue for t in ts if t.done and t.issue}
     errs = []
     for n in sorted(expected - closes):
-        errs.append(
-            f"body is missing 'Closes #{n}' ({by_issue[n].id} is done) — run `make milestone-pr M={ms}`"
-        )
+        msg = f"body is missing 'Closes #{n}' ({by_issue[n].id} is done) — run `make milestone-pr M={ms}`"
+        if ready:
+            errs.append(msg)
+        else:  # a draft's body may lag one push behind (push first, then `make milestone-pr`)
+            print(f"note: {msg}")
     for n in sorted(closes - expected):
         t = by_issue.get(n)
         if t is None:
