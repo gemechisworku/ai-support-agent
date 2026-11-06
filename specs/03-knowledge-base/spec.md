@@ -36,7 +36,7 @@ COMP tests that they agree).
   (`vector_cosine_ops`) and `chunks_tsv_gin` indexes.
 - **KB-R3:** Given a doc whose section has a 12-row table, then the table appears whole in exactly one
   chunk. No chunk exceeds 600 tokens (tiktoken `cl100k_base` approximation).
-- **KB-R4:** `HashEmbedder().embed(["x"])` is identical across processes and returns unit-norm 768-d vectors.
+- **KB-R4:** `HashEmbedder().embed_documents(["x"])` is identical across processes and returns unit-norm 768-d vectors.
 - **KB-R5:** Running ingestion twice changes nothing (row counts and ids are stable). Ingesting
   `late-fees` v1.1 keeps v1.0 rows, and retrieval at `as_of` before v1.1's `effective_date` returns v1.0.
 - **KB-R6:** `search("Can I pay my car loan off early?", product="AUTO")` returns ≤ 4 chunks, all with
