@@ -35,7 +35,7 @@ COMP tests that they agree).
 - **KB-R2:** After `make migrate`, `kb.documents` and `kb.chunks` exist with `chunks_embedding_hnsw`
   (`vector_cosine_ops`) and `chunks_tsv_gin` indexes.
 - **KB-R3:** Given a doc whose section has a 12-row table, then the table appears whole in exactly one
-  chunk. No chunk exceeds 600 tokens (tiktoken `cl100k_base` approximation).
+  chunk. No chunk exceeds 600 tokens (estimated as `ceil(len(text)/4)`, per plan.md).
 - **KB-R4:** `HashEmbedder().embed_documents(["x"])` is identical across processes and returns unit-norm 768-d vectors.
 - **KB-R5:** Running ingestion twice changes nothing (row counts and ids are stable). Ingesting
   `late-fees` v1.1 keeps v1.0 rows, and retrieval at `as_of` before v1.1's `effective_date` returns v1.0.
