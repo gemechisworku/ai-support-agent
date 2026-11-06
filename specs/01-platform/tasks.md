@@ -98,14 +98,15 @@ Implement `contracts/outcome.py` and `contracts/money.py` exactly as in the
 **Files:** `src/supportagent/contracts/outcome.py`, `src/supportagent/contracts/money.py`, `src/supportagent/contracts/export.py`, `docs/contracts/`
 
 ### T-PLAT-05 · Test infrastructure: DB fixtures, frozen clock, factories
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M0
 - **Issue:** #4
 - **Depends on:** T-PLAT-03
 - **Requirements:** PLAT-R6
 
 Write `tests/conftest.py` with fixtures:
-- `settings`: test env pointed at the `*_test` databases
+- `db_settings` (session): settings pointed at the `*_test` databases, migrated to head once
+  (the unit `settings` fixture from T-PLAT-02 stays environment-only)
 - `bank_db` and `kb_db`: session-scoped migration, then a per-test connection-level transaction with a SAVEPOINT that is rolled back
 - `frozen_clock`
 
@@ -113,9 +114,9 @@ Add `common/clock.py`. Integration fixtures skip with a clear message when Postg
 unless `CI=true`, in which case they fail.
 
 **Acceptance criteria**
-- [ ] Two tests inserting the same unique row both pass (isolation)
-- [ ] Without Postgres, `pytest -m integration` skips locally and fails in CI
-- [ ] `freeze_clock` works as a context manager and as a fixture, and `clock.today()` follows it
+- [x] Two tests inserting the same unique row both pass (isolation)
+- [x] Without Postgres, `pytest -m integration` skips locally and fails in CI
+- [x] `freeze_clock` works as a context manager and as a fixture, and `clock.today()` follows it
 
 **Tests**
 - `tests/common/test_clock.py` (unit): freeze and advance

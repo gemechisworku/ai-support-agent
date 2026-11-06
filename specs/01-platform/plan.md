@@ -83,6 +83,8 @@ gateway service/worker tokens, audit salt, scheduler token) have no default; CI 
 | Sync vs async DB | sync SQLAlchemy + psycopg 3 | low concurrency (NFR-CAP); simpler tests |
 | Migrations | Alembic, one env per DB | BANK and KB evolve independently |
 | Test DB isolation | session-scoped migrated `*_test` DB + per-test SAVEPOINT rollback | fast, no cross-test leakage |
+| Test fixtures | `db_settings` (session) + `bank_db`/`kb_db` Sessions with `join_transaction_mode="create_savepoint"`; env patched only while migrating | code under test receives the session; later unit tests never see test-DB env |
+| Factories | none in PLAT; each module adds its own test factories next to its tests | domain data belongs to its module |
 | Logging | stdlib + JSON formatter | no extra dependency; easy masking filter |
 | Clock | contextvar-overridable `now()` | deterministic calling-window and DPD tests |
 
