@@ -19,12 +19,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: Validate specs, tasks and PRD traceability
         run: python scripts/tasks.py validate
-      - name: STATUS.md is up to date
-        run: python scripts/tasks.py status --check
+      - name: PR does not edit the generated STATUS.md
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git diff --name-only "$BASE_SHA" HEAD -- specs/STATUS.md | grep -q .; then
+            echo "::error file=specs/STATUS.md::Don't edit specs/STATUS.md in a PR; it is regenerated on main after merge."
+            exit 1
+          fi
       - name: PR marks its task done
         if: github.event_name == 'pull_request'
         env:

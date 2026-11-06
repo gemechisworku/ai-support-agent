@@ -12,6 +12,6 @@ Closes #<!-- task issue number -->
 - [ ] Tests listed in the task exist and pass (`make check`)
 - [ ] Task set to `- **Status:** done` and its acceptance criteria ticked in `tasks.md`
 - [ ] `spec.md` / `plan.md` updated if the implementation differs from them
-- [ ] `make tasks-status` run (STATUS.md regenerated)
+- [ ] `specs/STATUS.md` not edited (regenerated on main after merge)
 - [ ] No secrets, no real PII; new config documented in `.env.example`
 - [ ] New dependency or service named in the module's `plan.md`

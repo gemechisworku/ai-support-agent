@@ -53,5 +53,5 @@ contracts.
 
 ## IX. One task → one issue → one branch → one PR
 Branch `task/T-XXX-NN-short-slug`; PR title `[T-XXX-NN] Title`; PR body `Closes #<issue>`; the PR sets the
-task's `Status: done` and regenerates `specs/STATUS.md`. CI rejects a PR that closes a task issue
+task's `Status: done` (the bot regenerates `specs/STATUS.md` on main). CI rejects a PR that closes a task issue
 without marking it done.

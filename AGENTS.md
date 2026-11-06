@@ -36,7 +36,6 @@ For the chosen task:
    - set `- **Status:** done`
    - tick the acceptance criteria
    - fix `spec.md` / `plan.md` if the implementation differs
-   - run `make tasks-status`
 6. Commit as `feat(<module>): <summary> (T-XXX-NN)`. Open the PR titled `[T-XXX-NN] <title>` with
    `Closes #<issue>` in the body, using the PR template.
 
@@ -47,7 +46,8 @@ Never mark a task done if its tests are skipped, xfailed or missing.
       mypy, import boundaries, specs and traceability, unit and integration tests.
 - [ ] The task's acceptance criteria are ticked, and its Status is `done`.
 - [ ] `spec.md` and `plan.md` match what was built. New dependencies and services are listed in `plan.md`.
-- [ ] `specs/STATUS.md` is regenerated, and any new config is in `.env.example`.
+- [ ] Any new config is in `.env.example`. Don't edit `specs/STATUS.md`: a bot regenerates it on main
+      after each merge, and CI rejects PRs that touch it (so parallel PRs never conflict).
 - [ ] CI is green on the PR. CI rejects a PR that closes a task issue without marking the task done.
 
 ## Commands
@@ -59,7 +59,7 @@ make test-int      # integration tests (Postgres)
 make check         # everything CI runs
 make docker-test   # tests inside Docker
 make fmt           # ruff format + autofix
-make tasks-validate | tasks-status | tasks-next
+make tasks-validate | tasks-status (print only) | tasks-next
 make issues-sync   # mirror tasks → GitHub issues/milestones (writes issue numbers back)
 make help          # everything else
 ```

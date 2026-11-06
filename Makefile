@@ -56,10 +56,10 @@ docker-test: ## Run unit + integration tests inside Docker
 	docker compose --profile test run --rm --build test
 
 tasks-validate: ## Validate specs, tasks and traceability
-	$(TASKS) validate && $(TASKS) status --check
+	$(TASKS) validate
 
-tasks-status: ## Regenerate specs/STATUS.md
-	$(TASKS) status --write
+tasks-status: ## Print progress (specs/STATUS.md itself is regenerated on main by CI)
+	$(TASKS) status
 
 tasks-next: ## List tasks ready to start (ARGS="--milestone M1")
 	$(TASKS) next $(ARGS)
@@ -68,4 +68,4 @@ issues-dry-run: ## Show what issues-sync would create
 	$(TASKS) sync-issues --dry-run
 
 issues-sync: ## Create GitHub labels, milestones and issues for tasks (ARGS=--update refreshes bodies)
-	$(TASKS) sync-issues $(ARGS) && $(TASKS) status --write
+	$(TASKS) sync-issues $(ARGS)
