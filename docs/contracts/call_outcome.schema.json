@@ -1,0 +1,397 @@
+{
+  "$defs": {
+    "Callback": {
+      "additionalProperties": false,
+      "properties": {
+        "datetime": {
+          "format": "date-time",
+          "title": "Datetime",
+          "type": "string"
+        }
+      },
+      "required": [
+        "datetime"
+      ],
+      "title": "Callback",
+      "type": "object"
+    },
+    "Campaign": {
+      "enum": [
+        "pre_due",
+        "missed_payment",
+        "callback",
+        "inbound",
+        "playground"
+      ],
+      "title": "Campaign",
+      "type": "string"
+    },
+    "ContactResult": {
+      "enum": [
+        "right_party",
+        "third_party",
+        "no_answer",
+        "voicemail",
+        "wrong_number",
+        "busy"
+      ],
+      "title": "ContactResult",
+      "type": "string"
+    },
+    "Direction": {
+      "enum": [
+        "inbound",
+        "outbound"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "Escalation": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "target": {
+          "minLength": 1,
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "target"
+      ],
+      "title": "Escalation",
+      "type": "object"
+    },
+    "Intent": {
+      "description": "What the caller wanted or did on the call; a call can have several.",
+      "enum": [
+        "account_question",
+        "policy_question",
+        "intent_to_pay",
+        "promise_to_pay",
+        "already_paid",
+        "callback_request",
+        "human_request",
+        "hardship",
+        "dispute",
+        "complaint",
+        "cease_contact",
+        "legal",
+        "other"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
+    "PromiseToPay": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Amount"
+        },
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "amount"
+      ],
+      "title": "PromiseToPay",
+      "type": "object"
+    },
+    "ReasonCode": {
+      "description": "Why a payment was missed (PRD §7 Discover).",
+      "enum": [
+        "forgot",
+        "insufficient_funds",
+        "income_disruption",
+        "dispute",
+        "other"
+      ],
+      "title": "ReasonCode",
+      "type": "string"
+    },
+    "Sentiment": {
+      "enum": [
+        "positive",
+        "neutral",
+        "negative",
+        "unknown"
+      ],
+      "title": "Sentiment",
+      "type": "string"
+    },
+    "StageLatency": {
+      "additionalProperties": false,
+      "properties": {
+        "p50_ms": {
+          "minimum": 0,
+          "title": "P50 Ms",
+          "type": "integer"
+        },
+        "p90_ms": {
+          "minimum": 0,
+          "title": "P90 Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "p50_ms",
+        "p90_ms"
+      ],
+      "title": "StageLatency",
+      "type": "object"
+    },
+    "Versions": {
+      "additionalProperties": false,
+      "description": "What produced this call's behaviour (F11, constitution VII). Computed by T-OBS-02.",
+      "properties": {
+        "model": {
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "policy": {
+          "minLength": 1,
+          "title": "Policy",
+          "type": "string"
+        },
+        "prompt": {
+          "minLength": 1,
+          "title": "Prompt",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt",
+        "policy",
+        "model"
+      ],
+      "title": "Versions",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One row of structured data per call — PRD §8.",
+  "properties": {
+    "call_id": {
+      "title": "Call Id",
+      "type": "string"
+    },
+    "callback": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Callback"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "campaign": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Campaign"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "cease_contact_flag": {
+      "default": false,
+      "title": "Cease Contact Flag",
+      "type": "boolean"
+    },
+    "contact_result": {
+      "$ref": "#/$defs/ContactResult"
+    },
+    "customer_id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Customer Id"
+    },
+    "direction": {
+      "$ref": "#/$defs/Direction"
+    },
+    "disclosures_given": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Disclosures Given",
+      "type": "array"
+    },
+    "dispute_flag": {
+      "default": false,
+      "title": "Dispute Flag",
+      "type": "boolean"
+    },
+    "escalated": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Escalation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "intent": {
+      "items": {
+        "$ref": "#/$defs/Intent"
+      },
+      "title": "Intent",
+      "type": "array"
+    },
+    "kb_sources": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Kb Sources",
+      "type": "array"
+    },
+    "latency_p50": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Latency P50"
+    },
+    "latency_p90": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Latency P90"
+    },
+    "latency_stages": {
+      "additionalProperties": {
+        "$ref": "#/$defs/StageLatency"
+      },
+      "title": "Latency Stages",
+      "type": "object"
+    },
+    "loan_id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Loan Id"
+    },
+    "promise_to_pay": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PromiseToPay"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReasonCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "recording_uri": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recording Uri"
+    },
+    "sentiment": {
+      "$ref": "#/$defs/Sentiment",
+      "default": "unknown"
+    },
+    "summary": {
+      "default": "",
+      "title": "Summary",
+      "type": "string"
+    },
+    "transcript_uri": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transcript Uri"
+    },
+    "verified": {
+      "default": false,
+      "title": "Verified",
+      "type": "boolean"
+    },
+    "versions": {
+      "$ref": "#/$defs/Versions"
+    }
+  },
+  "required": [
+    "call_id",
+    "direction",
+    "contact_result",
+    "versions"
+  ],
+  "title": "CallOutcome",
+  "type": "object"
+}

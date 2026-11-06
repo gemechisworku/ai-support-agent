@@ -76,7 +76,7 @@ Add SQLAlchemy 2.0, psycopg 3 and Alembic. Create `common/db.py` (engines, `sess
 **Files:** `src/supportagent/common/db.py`, `alembic.ini`, `migrations/bank/`, `migrations/kb/`, `Makefile`, `pyproject.toml`
 
 ### T-PLAT-04 · Shared contracts: CallOutcome and common enums
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M0
 - **Issue:** #3
 - **Depends on:** T-PLAT-01
@@ -87,10 +87,10 @@ Implement `contracts/outcome.py` and `contracts/money.py` exactly as in the
 `docs/contracts/call_outcome.schema.json` with `python -m supportagent.contracts.export`.
 
 **Acceptance criteria**
-- [ ] Every PRD §8 field is present with the planned type
-- [ ] `promise_to_pay` requires `amount > 0`, and `callback.datetime` must be timezone-aware
-- [ ] `Money` rejects floats with more than 2 dp and serialises as a string
-- [ ] The JSON schema export is checked in, and a test fails if it is stale
+- [x] Every PRD §8 field is present with the planned type
+- [x] `promise_to_pay` requires `amount > 0`, and `callback.datetime` must be timezone-aware
+- [x] `Money` rejects floats with more than 2 dp and serialises as a string
+- [x] The JSON schema export is checked in, and a test fails if it is stale
 
 **Tests**
 - `tests/contracts/test_outcome.py` (unit): round-trip, enum rejection, promise/callback validation, schema export is current
