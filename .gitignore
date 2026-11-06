@@ -16,3 +16,4 @@ build/
 /recordings/
 /var/
 .claude/settings.local.json
+.claude/worktrees/

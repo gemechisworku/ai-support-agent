@@ -75,6 +75,11 @@ tasks-status: ## Print progress (specs/STATUS.md itself is regenerated on main b
 tasks-next: ## List tasks ready to start (ARGS="--milestone M1")
 	$(TASKS) next $(ARGS)
 
+.PHONY: milestone-pr
+milestone-pr: ## Create (draft) or update the PR for branch milestone/$(M), e.g. make milestone-pr M=M1
+	@test -n "$(M)" || (echo "usage: make milestone-pr M=M1" && exit 1)
+	$(TASKS) milestone-pr $(M)
+
 issues-dry-run: ## Show what issues-sync would create
 	$(TASKS) sync-issues --dry-run
 

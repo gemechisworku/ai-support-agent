@@ -1,17 +1,14 @@
-## [T-XXX-NN] Title
-
-Closes #<!-- task issue number -->
-
-### What
-<!-- One paragraph: what changed and why. Link the task in specs/NN-module/tasks.md. -->
+<!--
+Task work does NOT use this template: it goes onto the milestone branch `milestone/Mn`, and
+`make milestone-pr M=Mn` creates/updates that PR with a generated body (see AGENTS.md).
+This template is for `chore/*` PRs (workflow, tooling, docs). They may not close task issues.
+-->
+## What and why
 
 ### How it was tested
-<!-- Tests added/changed and how to run them. Paste `make check` tail if useful. -->
 
-### Checklist (Definition of done — AGENTS.md)
-- [ ] Tests listed in the task exist and pass (`make check`)
-- [ ] Task set to `- **Status:** done` and its acceptance criteria ticked in `tasks.md`
-- [ ] `spec.md` / `plan.md` updated if the implementation differs from them
+### Checklist
+- [ ] `make check` is green
+- [ ] No task issue closed here (task work belongs to its milestone PR)
 - [ ] `specs/STATUS.md` not edited (regenerated on main after merge)
 - [ ] No secrets, no real PII; new config documented in `.env.example`
-- [ ] New dependency or service named in the module's `plan.md`

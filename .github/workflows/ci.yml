@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, edited, synchronize, reopened, ready_for_review, converted_to_draft]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -33,13 +33,16 @@ jobs:
             echo "::error file=specs/STATUS.md::Don't edit specs/STATUS.md in a PR; it is regenerated on main after merge."
             exit 1
           fi
-      - name: PR marks its task done
+      - name: One PR per milestone (branch, body and readiness)
         if: github.event_name == 'pull_request'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
-          python scripts/tasks.py check-pr --body-file "$RUNNER_TEMP/pr_body.md"
+          ready=""; [ "$IS_DRAFT" = "false" ] && ready="--ready"
+          python scripts/tasks.py check-pr --body-file "$RUNNER_TEMP/pr_body.md" --branch "$HEAD_REF" $ready
 
   lint:
     name: Lint, types, boundaries
