@@ -54,7 +54,7 @@ SQLAlchemy models and the first Alembic migration for database `kb`: `documents`
 **Files:** `src/supportagent/kb/models.py`, `migrations/kb/versions/0001_initial.py`, `src/supportagent/contracts/kb.py`, tests above
 
 ### T-KB-03 · Heading-based markdown chunker
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #23
 - **Depends on:** T-PLAT-01
@@ -66,9 +66,9 @@ merges short sibling sections up to ~500 tokens, splits long sections on paragra
 trail joined with `" > "`.
 
 **Acceptance criteria**
-- [ ] Section paths reflect nesting (`"Late fees > Auto loan"`)
-- [ ] Tables and list items never split; no chunk > 600 tokens
-- [ ] Output is deterministic and preserves source order (`ord`)
+- [x] Section paths reflect nesting (`"Late fees > Auto loan"`)
+- [x] Tables and list items never split; no chunk > 600 tokens
+- [x] Output is deterministic and preserves source order (`ord`)
 
 **Tests**
 - `tests/kb/test_chunker.py` (unit): nesting, merge of short sections, split of a long section, table integrity, token bounds over the whole corpus
