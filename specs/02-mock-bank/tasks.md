@@ -58,7 +58,7 @@ are refreshed from `ledger.py`. Product grace days and late-fee rules must equal
 **Files:** `src/supportagent/bank/ledger.py`, `src/supportagent/bank/seed/{__init__,__main__,builder,population,products,writer}.py`, tests above
 
 ### T-BANK-03 · Scripted persona seed
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #8
 - **Depends on:** T-BANK-02
@@ -70,9 +70,9 @@ situation relative to `as_of`. Export `PERSONAS` (name, customer_id, phone, exte
 loan_last4, expected outcome) for evals and telephony provisioning.
 
 **Acceptance criteria**
-- [ ] Each persona's computed `LoanStatus` matches its situation (e.g. Frank DPD == 5, Olivia next due in 2 days, Priya has a pending transaction equal to amount due, Bianca has an open promise dated `as_of − 1`)
-- [ ] Persona rows are identical across seeds (only the population varies with `--seed`)
-- [ ] `PERSONAS` is importable without a DB connection
+- [x] Each persona's computed `LoanStatus` matches its situation (e.g. Frank DPD == 5, Olivia next due in 2 days, Priya has a pending transaction equal to amount due, Bianca has an open promise dated `as_of − 1`)
+- [x] Persona rows are identical across seeds (only the population varies with `--seed`)
+- [x] `PERSONAS` is importable without a DB connection
 
 **Tests**
 - `tests/bank/test_personas.py` (integration): one parametrised assertion per persona situation

@@ -77,8 +77,15 @@ attempts_last_7d: int, last_conversation_at: datetime|None}`. The attempt figure
 | 9011 | Wrong-number Wendy | +15550100311 (311) | PERSONAL | 4 DPD; the number now belongs to someone else |
 | 9012 | Broken-promise Bianca | +15550100312 (312) | PERSONAL | 10 DPD, open promise dated `as_of − 1` (missed) |
 
-All personas have `consent_voice_ai=true`, `dnc=false` and timezone `America/New_York`. DOBs are fixed
-(e.g. Frank 1985-03-14) and listed in `personas.py`, which T-EVAL and T-TEL read.
+All personas have `consent_voice_ai=true`, `dnc=false`, no contact flags set and timezone
+`America/New_York`. Full names, DOBs (e.g. Frank Fischer 1985-03-14) and loan numbers (`552026` + last 4,
+e.g. Frank `5520264417`) are fixed in `personas.py`; `PERSONAS` / `PERSONA_BY_ID` (pure data:
+`customer_id`, `name`, `first_name`, `phone`, `extension`, `dob`, `loan_id` = customer id, `loan_number`,
+`loan_last4`, `days_past_due`, `next_due_in_days`, `situation`, `expected_outcome`) are what T-EVAL and
+T-TEL read. Persona rows come from a fixed RNG, so they never change with `--seed`; the population is
+sized 188/248/308 so totals stay 200 customers / 260 accounts / 320 loans. Hana's "two partials" are two
+earlier instalments each paid in two transactions. Bianca also has the earlier outbound call (8 days
+before `as_of`, outside the 7-day cool-off) that produced her open promise.
 
 `call_id` on `promises_to_pay`, `tasks` and `audit_log` is a plain column, not a foreign key: the
 gateway writes them mid-call, before the interaction row exists. `outbox.call_id` is a foreign key

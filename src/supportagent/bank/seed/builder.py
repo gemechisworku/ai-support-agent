@@ -30,6 +30,7 @@ class SeedData:
     loans: list[dict[str, object]] = field(default_factory=list)
     installments: list[dict[str, object]] = field(default_factory=list)
     transactions: list[dict[str, object]] = field(default_factory=list)
+    interactions: list[dict[str, object]] = field(default_factory=list)
     promises_to_pay: list[dict[str, object]] = field(default_factory=list)
 
     def tables(self) -> Iterator[tuple[str, list[dict[str, object]]]]:
@@ -55,6 +56,7 @@ class LoanPlan:
     partial_paid: Decimal = ledger.ZERO  # paid towards the anchor instalment (status "partial")
     split_history: int = 0  # the last N paid instalments were paid in two transactions
     pending_payment: Decimal = ledger.ZERO  # a pending (not yet posted) transfer, ts = as_of - 1 day
+    on_time_history: bool = False  # paid instalments were all paid on or before their due date
 
 
 def _ts(day: dt.date, rng: random.Random) -> dt.datetime:
@@ -92,7 +94,8 @@ def build_loan(
         paid_date: dt.date | None = None
         if seq < plan.anchor_seq:
             paid = ledger.money(principal_due + interest_due)
-            paid_date = min(due + dt.timedelta(days=rng.randint(-5, 2)), as_of - dt.timedelta(days=1))
+            jitter = rng.randint(-5, 0) if plan.on_time_history else rng.randint(-5, 2)
+            paid_date = min(due + dt.timedelta(days=jitter), as_of - dt.timedelta(days=1))
             if seq >= plan.anchor_seq - plan.split_history:
                 first = ledger.money(paid / 2)
                 pay(seq, first, paid_date - dt.timedelta(days=3), "a")

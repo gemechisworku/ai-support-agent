@@ -30,7 +30,7 @@ TIMEZONES = (
 SEGMENTS = ("retail", "retail", "retail", "premium", "sme")
 
 # Share of loans per product (fractions of n_loans) and the term choices used for each.
-PRODUCT_SHARE = {"PERSONAL": 0.37, "AUTO": 0.22, "MORTGAGE": 0.03, "SME_WC": 0.14, "SALARY_ADV": 0.24}
+PRODUCT_SHARE = {"PERSONAL": 0.38, "AUTO": 0.22, "MORTGAGE": 0.02, "SME_WC": 0.14, "SALARY_ADV": 0.24}
 TERMS = {
     "PERSONAL": (12, 24, 36, 48),
     "AUTO": (24, 36, 48, 60),
@@ -135,10 +135,18 @@ def generate_population(
     buckets = _quotas(BUCKET_SHARE, n_loans)
     rng.shuffle(products)
     rng.shuffle(buckets)
+    # Terms: each product's choices cycled over its loans, then shuffled, so the total number of
+    # instalments is (nearly) the same for every seed.
+    terms_left: dict[str, list[int]] = {}
+    for code in PRODUCT_SHARE:
+        count = products.count(code)
+        cycle = [TERMS[code][i % len(TERMS[code])] for i in range(count)]
+        rng.shuffle(cycle)
+        terms_left[code] = cycle
     tx_ids = itertools.count(1)
     for lid, (cid, code, target) in enumerate(zip(borrowers, products, buckets, strict=True), start=1):
         product = PRODUCTS[code]
-        term = rng.choice(TERMS[code])
+        term = terms_left[code].pop()
         lo, hi = PRINCIPAL[code]
         principal = Decimal(rng.randint(lo // 50, hi // 50) * 50)
         dpd = rng.randint(*DPD_RANGE[target])
