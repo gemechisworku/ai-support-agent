@@ -1,5 +1,9 @@
 # AI Voice Support Agent — loan servicing POC
 
+[![CI](https://github.com/gemechisworku/ai-support-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/gemechisworku/ai-support-agent/actions/workflows/ci.yml)
+[![Release](https://github.com/gemechisworku/ai-support-agent/actions/workflows/release.yml/badge.svg)](https://github.com/gemechisworku/ai-support-agent/actions/workflows/release.yml)
+[Issues by milestone](https://github.com/gemechisworku/ai-support-agent/milestones) · [Status](specs/STATUS.md)
+
 This is a voice AI agent for a bank. It calls customers about upcoming and missed loan payments,
 answers first-level support calls, and hands off to humans when needed. It runs fully locally on one
 Mac, with open-source components and a synthetic mock bank.

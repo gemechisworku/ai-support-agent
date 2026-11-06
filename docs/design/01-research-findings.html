@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Research Findings</title><link rel="stylesheet" href="style.css">
+<style>
+  body { font-size: 10.4pt; line-height: 1.32; }
+  h2 { font-size: 12.5pt; margin: 9pt 0 3pt; }
+  p { margin-bottom: 4.5pt; }
+  li { margin-bottom: 1.5pt; }
+  table { font-size: 9.2pt; margin: 3pt 0 6pt; }
+  td { padding: 2.5pt 6pt 2.5pt 0; }
+</style></head>
+<body>
+<div class="masthead">
+  <div class="kicker">AI Voice Support Agent · Document 1 of 3</div>
+  <h1>How production voice agents for banking are built</h1>
+  <div class="meta">Research findings · 5 November 2026 · Basis for a proof of concept on a single Mac (Apple M4, 16 GB)</div>
+</div>
+
+<p class="lede">Production voice agents for lenders and banks have settled on a common shape: a telephony edge, a real-time media pipeline, an LLM that is constrained by a script-like state machine, a narrow and audited gateway to bank data, a retrieval-backed policy knowledge base, and compliance rules enforced in code rather than in the prompt. Almost every piece of that stack now has a mature open-source option.</p>
+
+<h2><span class="num">1</span>The reference architecture</h2>
+<table>
+<thead><tr><th style="width:21%">Layer</th><th style="width:43%">What production systems do</th><th>Typical tools</th></tr></thead>
+<tbody>
+<tr><td>Telephony edge</td><td class="plain">Phone numbers and SIP trunks from a carrier; a PBX or SIP gateway turns each call into a media session the agent can join. Outbound needs caller-ID reputation (STIR/SHAKEN) and answering-machine detection.</td><td class="plain">Twilio, Telnyx, Plivo (carriers); Asterisk, FreeSWITCH, LiveKit SIP (open source)</td></tr>
+<tr><td>Media &amp; agent runtime</td><td class="plain">One stateless worker per call streams audio through voice activity detection (VAD), turn detection, speech-to-text (STT), the LLM and text-to-speech (TTS), and handles interruptions (“barge-in”).</td><td class="plain">LiveKit Agents (Apache 2.0), Pipecat (BSD-2); hosted: Vapi, Retell, Bland</td></tr>
+<tr><td>Models</td><td class="plain">Most regulated deployments use a <em>cascaded</em> STT → LLM → TTS pipeline rather than speech-to-speech, because the text in the middle can be checked, logged and audited.</td><td class="plain">Whisper, Deepgram; GPT/Claude/Qwen/Llama; Kokoro, Cartesia, ElevenLabs</td></tr>
+<tr><td>Dialer / campaigns</td><td class="plain">Picks eligible accounts (due soon, days past due), applies contact rules, paces calls, retries no-answers and records outcomes.</td><td class="plain">Custom schedulers; contact-centre platforms</td></tr>
+<tr><td>Data gateway</td><td class="plain">The agent never queries core banking directly. A gateway exposes a few allow-listed tools, scoped to one verified customer per call, with masking, rate limits and an audit trail. MCP is becoming the standard interface.</td><td class="plain">MCP servers and MCP gateways; API gateways</td></tr>
+<tr><td>Knowledge</td><td class="plain">Policies, product terms and procedures are chunked, embedded and retrieved (RAG) so answers cite a specific, versioned policy document.</td><td class="plain">pgvector, Chroma, LanceDB, Qdrant</td></tr>
+<tr><td>Human hand-off</td><td class="plain">Warm transfer to a human for disputes, hardship, complaints, legal threats or repeated misunderstanding, with a summary passed along.</td><td class="plain">SIP REFER / transfer; CCaaS queues</td></tr>
+<tr><td>Observability &amp; QA</td><td class="plain">Per-turn traces (latency per stage, tool calls, transcript), recordings, automated QA scoring of calls, and simulated-caller test suites run before each release.</td><td class="plain">Langfuse, Arize Phoenix (OpenTelemetry); Hamming, Coval</td></tr>
+</tbody></table>
+
+<h2><span class="num">2</span>What matters most in practice</h2>
+<p><strong>Latency drives perceived quality.</strong> The usual target is about 800 ms from when the caller stops speaking to the agent’s first audio: roughly 50 ms capture, 150 ms STT, 400 ms LLM to first token, 150 ms TTS to first audio and 50 ms network. In practice, one analysis of over two million production calls found median response times of 1.4–1.7 s, so teams track P50/P90/P99 per stage. Fast responses depend on streaming at every stage, so TTS starts speaking on the first sentence while the LLM is still generating.</p>
+<p><strong>Turn detection matters more than raw speed.</strong> Silence thresholds alone either cut people off or add 800 ms or more of dead air. Model-based end-of-turn detection, which combines VAD with a semantic “has the caller finished?” check, fires in 200–400 ms. Barge-in needs echo cancellation, a probability-based VAD such as Silero, and immediate TTS cancellation.</p>
+<p><strong>Deterministic structure with a conversational surface.</strong> Collections calls follow a regulated sequence: identify the right party, give the required disclosure, state the balance, discuss and capture a promise to pay. Vendors model this as a state machine (or several hand-off agents) with the LLM handling language inside each state. They do not leave it to one free-form prompt.</p>
+<p><strong>Compliance is the design specification.</strong> In the US, for example, debt-collection law (FDCPA) applies to an AI caller exactly as to a human one, including the “mini-Miranda” disclosure. Regulation F presumes harassment above 7 call attempts in 7 days per debt, or any call within 7 days of a conversation, and restricts calls to 8 am–9 pm local time. In February 2024 the FCC ruled that AI-generated voices are “artificial voices” under the TCPA, so outbound AI calls need prior consent. Production systems enforce these rules in the dialer and the gateway, before the model is involved. An oral dispute stops collection and goes to a human, and the agent never argues. Rules differ by country, so the POC keeps them as configurable policy.</p>
+<p><strong>Identity before data.</strong> No account details are given until the right party is verified (for example date of birth plus the last four digits of the account). If a third party answers, the agent leaves only a neutral callback message.</p>
+
+<h2><span class="num">3</span>How they are deployed and managed</h2>
+<ul>
+<li><strong>Stateless, horizontally scaled workers:</strong> a dispatcher assigns each call to a containerised agent worker, and capacity is planned in concurrent calls. Media servers run close to the carrier to keep latency low.</li>
+<li><strong>Versioned behaviour:</strong> prompts, scripts, disclosures and policy documents are versioned together and rolled out with canaries. Each call records the versions it used.</li>
+<li><strong>Testing with simulated callers:</strong> before a release, an LLM plays customer personas (angry, confused, hardship, wrong person) through hundreds of scripted conversations, and an LLM judge checks that the agent followed the rules.</li>
+<li><strong>Human oversight:</strong> live dashboards, sampled human QA of recordings, escalation queues, and outcome analytics such as right-party contact rate, promise-to-pay rate and promises kept.</li>
+<li><strong>Data protection:</strong> PII is redacted from logs and traces (for example with Microsoft Presidio), recordings are encrypted, and the gateway and tools follow least privilege.</li>
+</ul>
+
+<h2><span class="num">4</span>What this means for the POC</h2>
+<div class="callout">
+<p><strong>Replicate the architecture, shrink the scale.</strong> Use the open-source path end to end: <strong>LiveKit</strong> server, agents and SIP for media and telephony, with <strong>Asterisk</strong> and free softphones standing in for the phone network. Run the models locally on the Mac’s GPU (<strong>whisper.cpp</strong> for STT, <strong>Qwen3</strong> via <strong>Ollama</strong> for the LLM, <strong>Kokoro</strong> for TTS), with an optional hosted LLM for comparison. Put the mock core bank and the knowledge base in <strong>PostgreSQL + pgvector</strong> behind an <strong>MCP data gateway</strong>, and add <strong>Langfuse</strong> for tracing. Expect about 1.5–2.5 s per response locally, against roughly 1 s in production; that is fine for validating flows, tools and guardrails. Real phone numbers can be added later with a carrier SIP trunk and no architectural change.</p>
+</div>
+
+<ol class="refs">
+<li>LiveKit, “LiveKit vs Pipecat” field guide — livekit.io/field-guides/guide/livekit-vs-pipecat</li>
+<li>Fora Soft, “Pipecat vs LiveKit Agents” (2026) — forasoft.com/blog/article/pipecat-vs-livekit-agents</li>
+<li>Twig, “Latency budgets for voice AI: the 800 ms rule” — twig.so/blog/voice-ai-agents-latency-budget-800ms</li>
+<li>Hamming AI, “Voice AI latency: what’s fast, what’s slow” — hamming.ai/blog</li>
+<li>Seiright, “Playbook to deploy voice AI for debt collection in regulated finance” — seiright.com/blog</li>
+<li>Retell AI, “FDCPA compliance for automated calls” — retellai.com/blog/fdcpa-compliance-automated-calls</li>
+<li>FCC, “FCC makes AI-generated voices in robocalls illegal” (Feb 2024) — fcc.gov</li>
+<li>12 CFR Part 1006 (Regulation F), §1006.6(b) and §1006.14(b) — consumerfinance.gov</li>
+<li>Expertflow, “AI voice agent system (LiveKit + FreeSWITCH)” — docs.expertflow.com</li>
+<li>“Local voice AI stack: Whisper + Ollama + Kokoro on Apple Silicon” — dev.to</li>
+<li>Langfuse, LiveKit Agents and Pipecat integrations — langfuse.com/integrations</li>
+<li>MCPcat, “Server-side redaction with Presidio”; mcp-audit-gateway — docs.mcpcat.io, pypi.org</li>
+</ol>
+<p class="small muted" style="margin-top:4pt">Note: many industry sources are vendor-authored; figures are directional. Regulatory points use US rules as the worked example and are not legal advice.</p>
+</body></html>

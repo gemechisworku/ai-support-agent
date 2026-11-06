@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Product Requirements</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="masthead">
+  <div class="kicker">AI Voice Support Agent · Document 2 of 3</div>
+  <h1>Product requirements: AI voice agent for loan servicing</h1>
+  <div class="meta">PRD for a proof of concept · Version 0.1 · 5 November 2026 · Language: English (others later)</div>
+</div>
+
+<h2><span class="num">1</span>Summary</h2>
+<p class="lede">A voice AI agent for a bank that <strong>calls customers</strong> about upcoming and missed loan payments, and <strong>answers customers who call in</strong> with first-level support. It verifies who it is speaking to, looks up the customer’s loans through a secured gateway, explains the bank’s policies from a knowledge base, collects structured information (reason for non-payment, promise-to-pay date, callback preference), and hands the call to a human whenever the situation needs one.</p>
+<p>The POC runs entirely on one Mac against a <strong>mock bank</strong>: synthetic customers, loans, transactions and policy documents. Its purpose is to prove the conversation design, the tool and data boundary, and the guardrails, not scale or telephony carrier integration.</p>
+
+<h2><span class="num">2</span>Problem and opportunity</h2>
+<ul>
+<li>Early-stage delinquency (1–30 days past due) is mostly forgetfulness, timing or temporary hardship. A timely, polite call resolves most of these, but human call capacity is expensive and limited, so many customers are never called before they become seriously delinquent.</li>
+<li>Inbound lines are dominated by repetitive questions such as “what do I owe?”, “when is it due?”, “what happens if I’m late?” and “how do I pay?”, which a well-grounded agent can answer at any hour.</li>
+<li>Every call should leave structured data behind (reason codes, promises, follow-ups) that is often missing from manual call notes.</li>
+</ul>
+
+<h2><span class="num">3</span>Goals and non-goals</h2>
+<div class="two">
+<div><h3>Goals (POC)</h3>
+<ul>
+<li>Hold a natural, interruptible English voice conversation over a SIP phone call.</li>
+<li>Run two outbound campaigns (pre-due reminder and missed payment) and inbound support.</li>
+<li>Answer only from bank data and policy documents, never from model memory.</li>
+<li>Capture structured call outcomes into the mock bank.</li>
+<li>Enforce identity verification, disclosures and contact rules in code.</li>
+<li>Run fully locally with open-source components.</li>
+</ul></div>
+<div><h3>Non-goals (POC)</h3>
+<ul>
+<li>Taking payments, or changing balances, terms or contact details.</li>
+<li>Making credit decisions, granting restructuring or waiving fees (the agent can only refer these).</li>
+<li>Real carrier numbers, high call concurrency and multi-language support.</li>
+<li>Integration with a real core banking system or CRM.</li>
+<li>Formal regulatory sign-off.</li>
+</ul></div>
+</div>
+
+<h2><span class="num">4</span>Users</h2>
+<table>
+<thead><tr><th style="width:22%">User</th><th>Needs</th></tr></thead>
+<tbody>
+<tr><td>Borrower (customer)</td><td class="plain">Clear information on what is owed and when, what happens if they pay late and what their options are, and the ability to reach a human. To be treated respectfully and not called excessively.</td></tr>
+<tr><td>Collections / support officer</td><td class="plain">To receive escalated calls with context already captured, and to see promises and callbacks that need follow-up.</td></tr>
+<tr><td>Operations / compliance lead</td><td class="plain">To configure campaigns and contact rules, review transcripts and outcomes, and confirm that disclosures and verification happened on every call.</td></tr>
+</tbody></table>
+
+<h2><span class="num">5</span>Core use cases</h2>
+<table>
+<thead><tr><th style="width:5%">ID</th><th style="width:25%">Use case</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td>U1</td><td>Outbound: pre-due reminder</td><td class="plain">Call customers with an instalment due within 3 days. Verify identity, state the amount and due date, offer payment channels, confirm intent to pay and record the outcome.</td></tr>
+<tr><td>U2</td><td>Outbound: missed payment (1–30 days past due)</td><td class="plain">Verify, give the required disclosure, state the overdue amount, ask <em>why</em> the payment was missed (and record a reason code), explain the consequences from policy (late fee, credit-bureau reporting, next stages), and capture a promise-to-pay date and amount. Refer hardship cases to a human.</td></tr>
+<tr><td>U3</td><td>Inbound: account questions</td><td class="plain">Caller asks for balance, next due date, last payment, payoff estimate or loan status. The agent verifies, then answers from the gateway.</td></tr>
+<tr><td>U4</td><td>Inbound: policy and product questions</td><td class="plain">“What happens if I pay late?”, “Can I pay early?”, “How does restructuring work?” Answered from the knowledge base, citing the policy, without requiring verification for general questions.</td></tr>
+<tr><td>U5</td><td>Follow-up and callback</td><td class="plain">Schedule a callback at the customer’s preferred time. The agent calls back with context, for example about a promise-to-pay that was missed.</td></tr>
+<tr><td>U6</td><td>Escalation to a human</td><td class="plain">Triggered by a dispute, hardship, complaint, mention of a lawyer or bankruptcy, a request for a human, two failed verification attempts, or repeated misunderstanding. The agent does a warm transfer with a spoken and written summary, or creates a callback ticket if no human is available.</td></tr>
+</tbody></table>
+
+<h2><span class="num">6</span>Functional requirements</h2>
+<p class="small muted">Priority: <strong>P0</strong> is needed for the POC demo; <strong>P1</strong> is included if time allows.</p>
+<table>
+<thead><tr><th style="width:8%">ID</th><th>Requirement</th><th style="width:7%">Pri.</th></tr></thead>
+<tbody>
+<tr><td>F1</td><td class="plain"><strong>Voice conversation.</strong> Streaming STT, LLM and TTS with barge-in, end-of-turn detection, and graceful handling of silence (re-prompt, then politely end the call).</td><td>P0</td></tr>
+<tr><td>F2</td><td class="plain"><strong>Inbound calls.</strong> Answer calls to the support extension, greet the caller, identify the intent and route it to the right flow.</td><td>P0</td></tr>
+<tr><td>F3</td><td class="plain"><strong>Outbound calls.</strong> Place calls from a campaign queue or on demand from the console. Detect no-answer, busy and voicemail, and retry according to rules.</td><td>P0</td></tr>
+<tr><td>F4</td><td class="plain"><strong>Identity verification.</strong> Confirm the right party (full name, then date of birth plus the last 4 digits of the loan number) before revealing any account data. Lock after 2 failures. Third parties get only a neutral callback message.</td><td>P0</td></tr>
+<tr><td>F5</td><td class="plain"><strong>Customer data via gateway.</strong> Read-only tools for profile, loans, schedule, recent transactions and past interactions, scoped to the verified customer only.</td><td>P0</td></tr>
+<tr><td>F6</td><td class="plain"><strong>Policy answers (RAG).</strong> Retrieve from the policy knowledge base and answer with the source document cited in the log. If confidence is low, say so and offer a follow-up instead of guessing.</td><td>P0</td></tr>
+<tr><td>F7</td><td class="plain"><strong>Information capture.</strong> Write a structured outcome for every call: contact result, verification result, reason code, promise-to-pay (date and amount), callback request, escalation flag, summary and sentiment.</td><td>P0</td></tr>
+<tr><td>F8</td><td class="plain"><strong>Compliance guardrails.</strong> AI and recording disclosure at the start of the call; collections disclosure on U2 calls; calling-window, frequency cap, do-not-call and consent checks before dialling; an oral dispute or a “stop calling me” request is honoured immediately.</td><td>P0</td></tr>
+<tr><td>F9</td><td class="plain"><strong>Human hand-off.</strong> Warm transfer to a human extension with a summary, or create a callback ticket.</td><td>P0</td></tr>
+<tr><td>F10</td><td class="plain"><strong>Operations console.</strong> Trigger campaigns and single calls; view live and past calls, transcripts, tool calls, outcomes and the follow-up queue.</td><td>P0</td></tr>
+<tr><td>F11</td><td class="plain"><strong>Audit and tracing.</strong> Record every turn, tool call, retrieved document and latency figure. Redact PII in traces. Each call records the prompt, policy and model versions it used.</td><td>P0</td></tr>
+<tr><td>F12</td><td class="plain"><strong>Simulated-caller test suite.</strong> Text-mode scenarios (cooperative, hardship, dispute, wrong person, angry, off-topic, prompt-injection) scored automatically.</td><td>P1</td></tr>
+<tr><td>F13</td><td class="plain"><strong>Post-call summary</strong> by SMS or email (mocked as an outbox table).</td><td>P1</td></tr>
+<tr><td>F14</td><td class="plain"><strong>Swappable model providers</strong>: local LLM by default, with a hosted LLM switchable by configuration for quality and latency comparison.</td><td>P1</td></tr>
+</tbody></table>
+
+<h2><span class="num">7</span>Conversation design: missed-payment call (U2)</h2>
+<ol>
+<li><strong>Open:</strong> “Hello, this is the virtual assistant from [Bank]. This call is recorded. May I speak with [first name]?”</li>
+<li><strong>Right-party check:</strong> if a third party answers, ask for a good time to call back and end the call with no details given. If the customer is confirmed, verify their date of birth and the last 4 digits of the loan number.</li>
+<li><strong>Disclosure:</strong> the configured collections disclosure text, which is versioned.</li>
+<li><strong>Purpose:</strong> “Your payment of [amount] due on [date] hasn’t been received yet.” If the customer says they already paid, check recent transactions and record a payment-in-transit outcome.</li>
+<li><strong>Discover:</strong> ask the reason, in an open-ended way, and map it to a reason code (forgot, insufficient funds, income disruption, dispute, other).</li>
+<li><strong>Inform:</strong> explain the consequences and timeline from the policy knowledge base: late fee, reporting at 30 days past due, and the next stages.</li>
+<li><strong>Resolve:</strong> capture a promise-to-pay (date within the policy window, and amount), or refer hardship or dispute cases to a human.</li>
+<li><strong>Confirm and close:</strong> read back the commitment, list the payment channels, and offer a callback or human contact.</li>
+</ol>
+
+<h2><span class="num">8</span>Data captured per call</h2>
+<p><code>call_id</code>, <code>direction</code>, <code>campaign</code>, <code>customer_id</code>, <code>loan_id</code>, <code>contact_result</code> (right_party | third_party | no_answer | voicemail | wrong_number), <code>verified</code>, <code>disclosures_given[]</code>, <code>intent[]</code>, <code>reason_code</code>, <code>promise_to_pay{date, amount}</code>, <code>callback{datetime}</code>, <code>escalated{reason, target}</code>, <code>dispute_flag</code>, <code>cease_contact_flag</code>, <code>sentiment</code>, <code>summary</code>, <code>kb_sources[]</code>, <code>versions{prompt, policy, model}</code>, <code>latency_p50/p90</code>, <code>recording_uri</code>.</p>
+
+<h2><span class="num">9</span>Non-functional requirements</h2>
+<table><tbody>
+<tr><td style="width:22%">Latency</td><td class="plain">Median time from end of speech to first agent audio of 2.0 s or less on the Mac with local models, and 1.2 s or less with a hosted LLM. Barge-in stops TTS in under 300 ms.</td></tr>
+<tr><td>Accuracy</td><td class="plain">Zero amounts or dates that disagree with bank data (checked in tests). Policy answers come from retrieved text only.</td></tr>
+<tr><td>Privacy and security</td><td class="plain">The agent has no direct database access; the gateway is least-privilege and scoped per call. PII is masked in logs. All data is synthetic. Secrets live in a <code>.env</code> file, not in code.</td></tr>
+<tr><td>Auditability</td><td class="plain">Every call can be fully reconstructed: audio, transcript, tool calls, sources and versions.</td></tr>
+<tr><td>Capacity (POC)</td><td class="plain">One or two concurrent calls on a 16 GB M4 Mac.</td></tr>
+<tr><td>Portability</td><td class="plain">Components are containerised or scriptable, so the move to a server or cloud and real SIP trunks needs configuration changes only.</td></tr>
+</tbody></table>
+
+<h2><span class="num">10</span>Success metrics and acceptance criteria</h2>
+<ul>
+<li><strong>Task success:</strong> at least 80% of scripted scenarios reach the correct outcome (correct reason code, promise captured, or correct escalation).</li>
+<li><strong>Guardrails:</strong> 100% of calls with account data had verification first; 100% of calls have the required disclosures; zero calls placed outside the window or over the cap in tests; 100% of disputes and cease-contact requests honoured.</li>
+<li><strong>Grounding:</strong> at least 95% of policy answers judged faithful to the cited document; zero fabricated figures.</li>
+<li><strong>Experience:</strong> latency targets met at P50; a human reviewer rates at least 4 out of 5 calls as “natural and respectful”.</li>
+<li><strong>Demo:</strong> live end-to-end inbound call, outbound missed-payment call, and warm transfer to a human softphone.</li>
+</ul>
+
+<h2><span class="num">11</span>Milestones (indicative)</h2>
+<table>
+<thead><tr><th style="width:14%">Week</th><th>Deliverable</th></tr></thead>
+<tbody>
+<tr><td>1</td><td class="plain">Mock bank (schema, seed data, API), policy knowledge base ingested, data gateway with tools and audit.</td></tr>
+<tr><td>2</td><td class="plain">Local voice pipeline in browser test mode; inbound flows U3 and U4 working against the gateway and knowledge base.</td></tr>
+<tr><td>3</td><td class="plain">SIP telephony (Asterisk and softphones); outbound campaigns U1 and U2 with the compliance gate; hand-off U6.</td></tr>
+<tr><td>4</td><td class="plain">Console, tracing, simulated-caller test suite, tuning against the metrics, and the demo.</td></tr>
+</tbody></table>
+
+<h2><span class="num">12</span>Risks and open questions</h2>
+<ul>
+<li><strong>Local LLM quality:</strong> an 8B-parameter model may be weaker at tool calling and following the flow. Mitigations: a strict state machine, few tools per state, and a hosted LLM switch.</li>
+<li><strong>Latency on a laptop:</strong> Whisper is not a true streaming model. Mitigations: VAD-segmented transcription, smaller models and sentence-level TTS streaming.</li>
+<li><strong>Jurisdiction:</strong> which regulator’s rules (disclosures, calling hours, frequency caps) should the policy configuration model? US rules are used as the placeholder.</li>
+<li><strong>Voice and persona:</strong> the bank name, agent name, tone, and whether the agent may negotiate amounts or only record them.</li>
+</ul>
+</body></html>

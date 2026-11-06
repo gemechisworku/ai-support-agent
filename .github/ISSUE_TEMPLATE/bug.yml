@@ -1,0 +1,21 @@
+name: Bug
+description: Something does not behave as its spec says
+labels: [bug]
+body:
+  - type: input
+    id: requirement
+    attributes:
+      label: Requirement or task
+      description: The spec requirement (e.g. GW-R3) or task (T-GW-04) whose behaviour is wrong
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened vs. what the spec says
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Commands, persona, call_id. Synthetic data only — never paste real PII.
+    validations: { required: true }
