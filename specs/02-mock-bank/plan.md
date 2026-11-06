@@ -25,7 +25,8 @@ src/supportagent/bank/
   queries.py           read/write functions → contracts.bank models
   api/__init__.py      create_app(); app = create_app()
   api/deps.py          session dependency, service-token auth
-  api/routes_*.py      customers, loans, accounts, collections, interactions, promises, tasks, prefs, audit, ops
+  api/routes_read.py   GET customers, loans, installments, transactions, interaction history
+  api/routes_*.py      collections (T-BANK-05), writes (T-BANK-06), ops (T-BANK-07)
   seed/__main__.py     CLI: python -m supportagent.bank.seed --seed 42 --as-of 2026-11-09 [--reset]
   seed/products.py     PRODUCTS (= data/policies/product-*.md front matter)
   seed/builder.py      LoanPlan → loan + schedule + payments, placed by its first unpaid instalment
@@ -104,13 +105,17 @@ gateway writes them mid-call, before the interaction row exists. `outbox.call_id
 `fastapi`, `uvicorn[standard]`, `sqlalchemy>=2`, `psycopg[binary]>=3`, `alembic`, `faker`. Dev:
 `httpx` (TestClient). Ledger property tests use seeded `random` loops instead of `hypothesis` (no extra
 dependency). Compose service `bank-api` (the `x-app`
-anchor, `command: uvicorn supportagent.bank.api:app --host 0.0.0.0 --port 8001`, port 8001).
+anchor; runs `alembic -n bank upgrade head`, then `uvicorn supportagent.bank.api:app` on port 8001;
+required secrets default to the `.env.example` placeholders; healthcheck on `/healthz`). Seed it with
+`docker compose exec bank-api python -m supportagent.bank.seed --as-of 2026-11-09 --reset`.
 
 ## Test strategy
 - **unit:** `ledger.py` (200 seeded random schedules), persona definitions (pure), route table
   (no mutating routes on ledger resources), seed determinism of the in-memory generator.
 - **integration:** migrations up/down; seed → counts and checksum; every endpoint through FastAPI
-  `TestClient` against `bank_test`, using the T-PLAT-05 per-test transaction fixture.
+  `TestClient` against `bank_test`, using the T-PLAT-05 per-test transaction fixture. `tests/bank/conftest.py`
+  seeds `bank_test` once per module (`seeded_bank`, committed) and gives an `api` client bound to the
+  rolled-back `bank_db` session with the clock frozen at 2026-11-09.
 
 ## Risks
 - Seed runtime: bulk insert with `executemany`/COPY; target < 10 s.

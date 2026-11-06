@@ -36,6 +36,26 @@ services:
       timeout: 3s
       retries: 30
 
+  bank-api:
+    <<: *app
+    # Mock core bank internal API (specs/02-mock-bank). Migrates `bank` on start; seed it with
+    # `docker compose exec bank-api python -m supportagent.bank.seed --as-of 2026-11-09 --reset`.
+    command: ["sh", "-c", "alembic -n bank upgrade head && exec uvicorn supportagent.bank.api:app --host 0.0.0.0 --port 8001"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-supportagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-change-me-local-only}
+      GATEWAY_WORKER_TOKEN: ${GATEWAY_WORKER_TOKEN:-change-me-local-only}
+      AUDIT_HASH_SALT: ${AUDIT_HASH_SALT:-change-me-local-only}
+      SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-change-me-local-only}
+    ports: ["8001:8001"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   redis:
     image: redis:7-alpine
     profiles: [telephony]

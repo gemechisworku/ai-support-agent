@@ -81,7 +81,7 @@ loan_last4, expected outcome) for evals and telephony provisioning.
 **Files:** `src/supportagent/bank/seed/personas.py`, tests above
 
 ### T-BANK-04 · Read API and bank-api compose service
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #9
 - **Depends on:** T-BANK-01, T-PLAT-05
@@ -92,17 +92,17 @@ and phone), customer loans, loan status, installments, account transactions and 
 history. Also add `/healthz` and the `bank-api` service on port 8001 in `docker-compose.yml`.
 
 **Acceptance criteria**
-- [ ] Missing/wrong `X-Service-Token` → 401 on every route except `/healthz`
-- [ ] Unknown ids → 404 with `{"detail": …}`; invalid phone → 422
-- [ ] `GET /loans/{id}` returns `LoanStatus` computed via `ledger.py` for the current `as_of` (settings override `BANK_AS_OF` for tests/demos)
-- [ ] Transactions are newest first, `limit` capped at 50, and pending are flagged
-- [ ] `docker compose up bank-api` serves `/healthz` and the image passes the CI docker job
+- [x] Missing/wrong `X-Service-Token` → 401 on every route except `/healthz`
+- [x] Unknown ids → 404 with `{"detail": …}`; invalid phone → 422
+- [x] `GET /loans/{id}` returns `LoanStatus` computed via `ledger.py` for the current `as_of` (settings override `BANK_AS_OF` for tests/demos)
+- [x] Transactions are newest first, `limit` capped at 50, and pending are flagged
+- [x] `docker compose up bank-api` serves `/healthz` and the image passes the CI docker job
 
 **Tests**
 - `tests/bank/test_api_read.py` (integration): each route, 401/404/422 paths, Frank's loan status values, Priya's pending transaction
 - `tests/bank/test_ledger_api_consistency.py` (integration): for all seeded loans, API outstanding == ledger outstanding
 
-**Files:** `src/supportagent/bank/api/*`, `src/supportagent/bank/queries.py`, `docker-compose.yml`, tests above
+**Files:** `src/supportagent/bank/api/{__init__,deps,routes_read}.py`, `src/supportagent/bank/queries.py`, `docker-compose.yml`, `tests/bank/conftest.py`, tests above
 
 ### T-BANK-05 · Collections and pre-due eligibility query
 - **Status:** todo
