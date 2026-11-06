@@ -54,7 +54,7 @@ cover every variable in `.env.example`, grouped (`postgres`, `data`, `services`,
 **Files:** `src/supportagent/common/settings.py`, `src/supportagent/common/logging.py`, `tests/common/`
 
 ### T-PLAT-03 · Database plumbing and Alembic for bank and kb
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M0
 - **Issue:** #2
 - **Depends on:** T-PLAT-02
@@ -65,10 +65,10 @@ Add SQLAlchemy 2.0, psycopg 3 and Alembic. Create `common/db.py` (engines, `sess
 `make migrate` / `make migrate-test`.
 
 **Acceptance criteria**
-- [ ] `make migrate` upgrades both `bank` and `kb` to head against compose Postgres
-- [ ] `alembic -n kb upgrade head` works on its own (independent environments)
-- [ ] `session_scope` commits on success and rolls back on exception
-- [ ] CI's test job runs migrations against `bank_test` and `kb_test` before pytest (via fixtures)
+- [x] `make migrate` upgrades both `bank` and `kb` to head against compose Postgres
+- [x] `alembic -n kb upgrade head` works on its own (independent environments)
+- [x] `session_scope` commits on success and rolls back on exception
+- [x] CI's test job runs migrations against `bank_test` and `kb_test` before pytest (via fixtures)
 
 **Tests**
 - `tests/common/test_db.py` (integration): upgrade/downgrade both databases; `session_scope` commit and rollback

@@ -20,7 +20,9 @@ src/supportagent/common/
                    load_settings(env_file), env_var_names()
   logging.py       JsonFormatter (masks `extra=` fields via mask_pii), configure_logging(), get_logger(),
                    bind_call()
-  db.py            engines, session_scope(), BankBase, KbBase (DeclarativeBase)
+  db.py            bank_engine()/kb_engine() (cached), reset_engines(), session_scope(), BankBase, KbBase
+                   (separate metadata, shared constraint naming convention)
+  migrate.py       alembic_config(db), upgrade()/downgrade()/current_revision(), run_env() used by env.py
   clock.py         now(), today(), freeze_clock() (contextvar-based)
 src/supportagent/contracts/
   outcome.py       CallOutcome + enums (PRD §8)
@@ -28,7 +30,8 @@ src/supportagent/contracts/
 migrations/
   bank/env.py, versions/      (target_metadata = BankBase.metadata)
   kb/env.py, versions/        (target_metadata = KbBase.metadata)
-alembic.ini                   [bank] and [kb] sections
+alembic.ini                   [bank] and [kb] sections (`alembic -n bank|kb …`); URL always from Settings
+                              revision ids prefixed per database: bank_0001, kb_0001, …
 scripts/doctor.sh             make doctor
 docs/contracts/call_outcome.schema.json   generated
 tests/conftest.py             settings / bank_db / kb_db / frozen_clock fixtures
