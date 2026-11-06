@@ -70,7 +70,7 @@ All return `ToolResult[T] = {ok: bool, data: T | null, error: ToolError | null}`
 | `get_interaction_history` | verified | `InteractionHistoryInput{}` | `InteractionHistoryOutput{recent_calls, open_promises, open_tasks}` |
 | `record_promise_to_pay` | verified | `RecordPromiseInput{promise_date, amount, loan_last4?}` | `RecordPromiseOutput{accepted, reason, promise_id?, max_date, amount_due}` |
 | `request_callback` | any | `RequestCallbackInput{preferred_at, reason≤200}` | `TaskCreatedOutput{task_id, type, due_at}` |
-| `escalate` | any | `EscalateInput{reason: EscalationReason, summary≤600}` | `EscalateOutput{task_id, human_available, transfer_extension?}` |
+| `escalate` | any | `EscalateInput{reason: EscalationReason, summary≤600}` | `EscalateOutput{task_id?, human_available, transfer_extension?}` |
 | `set_contact_flag` | verified | `SetContactFlagInput{flag: dispute\|cease_contact\|preferred_window, preferred_window?, note≤200}` | `ContactFlagOutput{flag, applied}` |
 | `record_call_outcome` | worker | `CallOutcome` (contracts/outcome.py) | `OutcomeRecordedOutput{interaction_id}` |
 

@@ -265,7 +265,7 @@ class EscalateInput(_Contract):
 
 
 class EscalateOutput(_Contract):
-    task_id: int
+    task_id: int | None  # None only when the call has no known customer to attach a ticket to
     human_available: bool
     transfer_extension: str | None = None
 

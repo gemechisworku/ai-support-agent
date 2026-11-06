@@ -88,7 +88,9 @@ tests/gateway/
 | Session store | In memory, one process | POC capacity is 1–2 calls (NFR-CAP); Redis would be a later swap behind the same class |
 | Audit | Synchronous, fail closed | Constitution III and NFR-AUDIT: no unaudited data access |
 | Outcome write | `record_call_outcome` MCP tool, worker scope, closes the session | One path for all writes; the agent never registers it as an LLM tool |
-| Promise rules | Gateway settings until COMP-01 | Keeps M1 independent of M2 |
+| Promise rules | Gateway settings until COMP-01; "today" = the bank's `LoanStatus.as_of`; amount due = overdue amount, else the next instalment | Keeps M1 independent of M2; figures agree with what the agent just read |
+| Task owner | bound customer → outbound call's customer → sole phone candidate → none | The bank needs a customer per task; an unknown caller still gets a transfer |
+| Outcome guard | `record_call_outcome` rejects another call's id, or a customer/loan the call was not about | The worker cannot attribute an outcome to someone else |
 
 ## Dependencies
 Runtime: `mcp` (Python SDK), `fastapi`, `uvicorn`, `httpx`. No extra dev dependency: `HttpBankClient` is

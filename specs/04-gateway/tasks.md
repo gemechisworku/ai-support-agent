@@ -147,7 +147,7 @@ customer; an optional `loan_last4` picks among that customer's loans only.
 **Files:** `src/supportagent/gateway/tools/account.py`, `tests/gateway/test_read_tools.py`
 
 ### T-GW-07 · Write tools: promise, callback/escalate, contact flag, call outcome
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #18
 - **Depends on:** T-GW-05
@@ -160,10 +160,12 @@ partial allowed per settings), `request_callback`, `escalate` (creates a task; r
 (validates `CallOutcome`, adds the session's `kb_sources`, posts `/interactions`, closes the session).
 
 **Acceptance criteria**
-- [ ] The promise reasons `ok | date_out_of_window | amount_invalid | loan_not_found` are returned with `max_date` and `amount_due`
-- [ ] No write targets balances, loans, installments or transactions (the `FakeBank` call log is asserted)
-- [ ] After `record_call_outcome`, every tool returns `session_closed`; a second outcome write is rejected
-- [ ] `escalate` works on unverified sessions; `customer_id` on the task is the bound id or null
+- [x] The promise reasons `ok | date_out_of_window | amount_invalid | loan_not_found` are returned with `max_date` and `amount_due`
+- [x] No write targets balances, loans, installments or transactions (the `FakeBank` call log is asserted)
+- [x] After `record_call_outcome`, every tool returns `session_closed`; a second outcome write is rejected
+- [x] `escalate` works on unverified and locked sessions. The bank requires a customer on every task, so
+  the task goes to the bound customer, else the customer the call is about (outbound) or the caller's only
+  registered customer; with none, `escalate` returns the transfer target with `task_id=null` (no ticket)
 
 **Tests**
 - `tests/gateway/test_write_tools.py` (unit): promise boundary dates (today, +14, +15); amounts (0, due, due+0.01); dispute flag sets `dispute_open`; cease flag; outcome closes the session; kb_sources merged into the outcome
