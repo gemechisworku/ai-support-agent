@@ -2,13 +2,13 @@
 
 <!-- GENERATED on main by .github/workflows/status.yml after each merge. Do not edit. -->
 
-**Overall:** ██░░░░░░░░░░░░░░░░░░ 7/80 tasks done
+**Overall:** ██░░░░░░░░░░░░░░░░░░ 8/80 tasks done
 
 ## By milestone
 
 | Milestone | Due | Progress |
 |---|---|---|
-| M0 · Foundation | 2026-11-10 | ███████░░░ 4/6 |
+| M0 · Foundation | 2026-11-10 | ████████░░ 5/6 |
 | M1 · Data and knowledge | 2026-11-13 | █░░░░░░░░░ 3/21 |
 | M2 · Conversation | 2026-11-20 | ░░░░░░░░░░ 0/19 |
 | M3 · Telephony and outbound | 2026-11-27 | ░░░░░░░░░░ 0/20 |
@@ -18,7 +18,7 @@
 
 | Module | Progress |
 |---|---|
-| [01-platform](01-platform/tasks.md) | ███████░░░ 4/6 |
+| [01-platform](01-platform/tasks.md) | ████████░░ 5/6 |
 | [02-mock-bank](02-mock-bank/tasks.md) | ░░░░░░░░░░ 0/7 |
 | [03-knowledge-base](03-knowledge-base/tasks.md) | █████░░░░░ 3/6 |
 | [04-gateway](04-gateway/tasks.md) | ░░░░░░░░░░ 0/10 |
@@ -37,7 +37,7 @@
 |---|---|---|---|---|---|
 | ✅ | T-PLAT-01 | Repository bootstrap: toolchain, Docker, CI/CD, spec workflow | M0 | — | #80 |
 | ✅ | T-PLAT-02 | Typed settings and PII-safe structured logging | M0 | T-PLAT-01 | #1 |
-| ⬜ | T-PLAT-03 | Database plumbing and Alembic for bank and kb | M0 | T-PLAT-02 | #2 |
+| ✅ | T-PLAT-03 | Database plumbing and Alembic for bank and kb | M0 | T-PLAT-02 | #2 |
 | ✅ | T-PLAT-04 | Shared contracts: CallOutcome and common enums | M0 | T-PLAT-01 | #3 |
 | ⬜ | T-PLAT-05 | Test infrastructure: DB fixtures, frozen clock, factories | M0 | T-PLAT-03 | #4 |
 | ✅ | T-PLAT-06 | make doctor and native dev-setup guide | M0 | T-PLAT-01 | #5 |
@@ -146,7 +146,7 @@
 | NFR-SEC | PLAT-R1, PLAT-R2, BANK-R2, GW-R1, GW-R2, GW-R5, GW-R9, GW-R10, GW-R11, OBS-R1, OBS-R2, CON-R1, CON-R7 | T-BANK-02, T-CON-01, T-GW-01, T-GW-02, T-GW-03, T-GW-04, T-GW-05, T-GW-06, T-GW-07, T-GW-08, T-GW-09, T-GW-10, T-OBS-01, T-PLAT-02 | ░░░░░ 1/14 |
 | NFR-AUDIT | KB-R2, KB-R5, GW-R8, COMP-R7, TEL-R8, OBS-R3, OBS-R4, OBS-R7, CON-R4 | T-COMP-01, T-COMP-04, T-COMP-05, T-CON-03, T-GW-04, T-GW-09, T-GW-10, T-KB-02, T-KB-05, T-OBS-02, T-OBS-03, T-OBS-05, T-TEL-06 | ░░░░░ 0/13 |
 | NFR-CAP | VOICE-R1, VOICE-R8, SCHED-R3 | T-SCHED-02, T-VOICE-01, T-VOICE-06 | ░░░░░ 0/3 |
-| NFR-PORT | PLAT-R1, PLAT-R3, PLAT-R5, PLAT-R7, KB-R4, TEL-R1, TEL-R2 | T-KB-04, T-PLAT-01, T-PLAT-02, T-PLAT-03, T-PLAT-06, T-TEL-01, T-TEL-02 | ███░░ 4/7 |
+| NFR-PORT | PLAT-R1, PLAT-R3, PLAT-R5, PLAT-R7, KB-R4, TEL-R1, TEL-R2 | T-KB-04, T-PLAT-01, T-PLAT-02, T-PLAT-03, T-PLAT-06, T-TEL-01, T-TEL-02 | ████░ 5/7 |
 | AC-TASK | EVAL-R2, EVAL-R5 | T-EVAL-02, T-EVAL-05 | ░░░░░ 0/2 |
 | AC-GUARD | COMP-R2, COMP-R3, COMP-R4, COMP-R6, COMP-R8, CON-R6, EVAL-R3, EVAL-R5 | T-COMP-01, T-COMP-02, T-COMP-03, T-COMP-04, T-COMP-05, T-CON-05, T-EVAL-03, T-EVAL-05 | ░░░░░ 0/8 |
 | AC-GROUND | KB-R7, KB-R8, EVAL-R4, EVAL-R5 | T-EVAL-04, T-EVAL-05, T-KB-06 | ░░░░░ 0/3 |
