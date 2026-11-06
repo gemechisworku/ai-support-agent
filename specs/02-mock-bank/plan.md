@@ -20,12 +20,17 @@ fixed ids ≥ 9001, so persona ids are stable even if population rules change. A
 src/supportagent/bank/
   models.py            SQLAlchemy models (all tables)
   ledger.py            pure: outstanding, next_due, dpd, bucket, fees_accrued(installments, as_of)
+                       DPD = days since the oldest unpaid instalment's due date (due + 1 day = 1 DPD);
+                       the grace period only decides when the late fee is added (as_of > due + grace)
   queries.py           read/write functions → contracts.bank models
   api/__init__.py      create_app(); app = create_app()
   api/deps.py          session dependency, service-token auth
   api/routes_*.py      customers, loans, accounts, collections, interactions, promises, tasks, prefs, audit, ops
   seed/__main__.py     CLI: python -m supportagent.bank.seed --seed 42 --as-of 2026-11-09 [--reset]
-  seed/population.py   Faker population
+  seed/products.py     PRODUCTS (= data/policies/product-*.md front matter)
+  seed/builder.py      LoanPlan → loan + schedule + payments, placed by its first unpaid instalment
+  seed/writer.py       bulk insert, reset, checksum
+  seed/population.py   Faker population (fixed per-product and per-bucket quotas, shuffled)
   seed/personas.py     persona definitions (table below)
 src/supportagent/contracts/bank.py
 migrations/bank/versions/bank_0002_initial_bank_schema.py   (bank_0001 is PLAT's empty baseline)
@@ -90,11 +95,12 @@ gateway writes them mid-call, before the interaction row exists. `outbox.call_id
 
 ## Dependencies
 `fastapi`, `uvicorn[standard]`, `sqlalchemy>=2`, `psycopg[binary]>=3`, `alembic`, `faker`. Dev:
-`httpx` (TestClient), `hypothesis` (ledger property tests). Compose service `bank-api` (the `x-app`
+`httpx` (TestClient). Ledger property tests use seeded `random` loops instead of `hypothesis` (no extra
+dependency). Compose service `bank-api` (the `x-app`
 anchor, `command: uvicorn supportagent.bank.api:app --host 0.0.0.0 --port 8001`, port 8001).
 
 ## Test strategy
-- **unit:** `ledger.py` (hypothesis over random schedules), persona definitions (pure), route table
+- **unit:** `ledger.py` (200 seeded random schedules), persona definitions (pure), route table
   (no mutating routes on ledger resources), seed determinism of the in-memory generator.
 - **integration:** migrations up/down; seed → counts and checksum; every endpoint through FastAPI
   `TestClient` against `bank_test`, using the T-PLAT-05 per-test transaction fixture.

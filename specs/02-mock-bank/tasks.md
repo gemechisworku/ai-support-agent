@@ -30,7 +30,7 @@ The gateway (T-GW-01) codes against those contracts, so they land first.
 **Files:** `src/supportagent/bank/models.py`, `src/supportagent/contracts/bank.py`, `migrations/bank/versions/bank_0002_initial_bank_schema.py`, tests above
 
 ### T-BANK-02 · Deterministic synthetic population seed
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #7
 - **Depends on:** T-BANK-01
@@ -45,17 +45,17 @@ are refreshed from `ledger.py`. Product grace days and late-fee rules must equal
 `doc_id`. Export them as `PRODUCTS` so the KB cross-check test can read them.
 
 **Acceptance criteria**
-- [ ] Two runs with the same `--seed`/`--as-of` produce identical row checksums (sha256 over ordered rows)
-- [ ] Row counts within ±5% of architecture §4 targets
-- [ ] Bucket distribution includes current, 1-30, 31-60, 61-90 and 90+ loans
-- [ ] Only `+1555…` phone numbers and `example.com` emails are generated
-- [ ] Seeding a fresh DB completes in under 10 s locally
+- [x] Two runs with the same `--seed`/`--as-of` produce identical row checksums (sha256 over ordered rows)
+- [x] Row counts within ±5% of architecture §4 targets
+- [x] Bucket distribution includes current, 1-30, 31-60, 61-90 and 90+ loans
+- [x] Only `+1555…` phone numbers and `example.com` emails are generated
+- [x] Seeding a fresh DB completes in under 10 s locally
 
 **Tests**
-- `tests/bank/test_ledger.py` (unit, hypothesis): outstanding = Σ unpaid components; DPD = days since oldest unpaid due date past grace; bucket boundaries 0/1/30/31/60/61/90
+- `tests/bank/test_ledger.py` (unit, 200 seeded random schedules): outstanding = Σ unpaid components; DPD = days since the oldest unpaid instalment's due date (due date + 1 day = 1 DPD; grace only decides the late fee); bucket boundaries 0/1/30/31/60/61/90
 - `tests/bank/test_seed.py` (integration): determinism checksum, counts, phone/email ranges
 
-**Files:** `src/supportagent/bank/ledger.py`, `src/supportagent/bank/seed/{__main__,population}.py`, tests above
+**Files:** `src/supportagent/bank/ledger.py`, `src/supportagent/bank/seed/{__init__,__main__,builder,population,products,writer}.py`, tests above
 
 ### T-BANK-03 · Scripted persona seed
 - **Status:** todo
