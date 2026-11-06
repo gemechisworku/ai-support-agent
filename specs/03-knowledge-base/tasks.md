@@ -32,7 +32,7 @@ reporting at 30 DPD, etc.) must be stated exactly. The bank seed (T-BANK-02) and
 **Files:** `data/policies/*.md`, `src/supportagent/kb/frontmatter.py`, tests above
 
 ### T-KB-02 · KB schema and migration (documents, chunks, HNSW, tsvector)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #22
 - **Depends on:** T-PLAT-03
@@ -43,15 +43,15 @@ SQLAlchemy models and the first Alembic migration for database `kb`: `documents`
 `supportagent/contracts/kb.py` (`PolicyQuery`, `PolicyChunk`, `PolicySearchResult`).
 
 **Acceptance criteria**
-- [ ] Migration enables `vector` (idempotent) and creates both tables and indexes from the plan
-- [ ] `unique(doc_id, version)` enforced
-- [ ] Contracts validate `top_k` in 1..8 and `product` in the allowed codes or `None`
+- [x] Migration enables `vector` (idempotent) and creates both tables and indexes from the plan
+- [x] `unique(doc_id, version)` enforced
+- [x] Contracts validate `top_k` in 1..8 and `product` in the allowed codes or `None`
 
 **Tests**
 - `tests/kb/test_schema.py` (integration): upgrade/downgrade; indexes exist with the right access methods; the generated tsv is populated on insert
 - `tests/contracts/test_kb_contracts.py` (unit): validation rules
 
-**Files:** `src/supportagent/kb/models.py`, `migrations/kb/versions/0001_initial.py`, `src/supportagent/contracts/kb.py`, tests above
+**Files:** `src/supportagent/kb/models.py`, `migrations/kb/versions/kb_0002_documents_chunks.py`, `src/supportagent/contracts/kb.py`, tests above
 
 ### T-KB-03 · Heading-based markdown chunker
 - **Status:** done

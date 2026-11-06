@@ -71,7 +71,7 @@ src/supportagent/kb/
   ingest.py        ingest(path, session, embedder) + __main__ CLI
   retrieval.py     search(query, session, embedder) -> PolicySearchResult; rrf()
 src/supportagent/contracts/kb.py   PolicyQuery, PolicyChunk, PolicySearchResult
-migrations/kb/versions/0001_initial.py
+migrations/kb/versions/kb_0002_documents_chunks.py   (kb_0001 is the PLAT baseline)
 tests/kb/ test_corpus.py test_chunker.py test_embed.py test_schema.py test_ingest.py
           test_rrf.py test_retrieval.py test_golden.py golden_questions.yaml
 ```
@@ -79,11 +79,13 @@ tests/kb/ test_corpus.py test_chunker.py test_embed.py test_schema.py test_inges
 ## Data model / contracts
 | Table | Columns |
 |---|---|
-| documents | id bigserial pk · doc_id text · version text · title · product text · audience text · effective_date date · content_hash text(sha256) · source_path · ingested_at · unique(doc_id, version) |
-| chunks | id bigserial pk · document_id fk · ord int · section_path text · text text · token_count int · embedding vector(768) · tsv tsvector generated always as (to_tsvector('english', section_path ‖ ' ' ‖ text)) stored |
+| documents | id bigserial pk · doc_id text · version text · title · product text · audience text · effective_date date · content_hash text(sha256) · source_path · embedder text (`Embedder.name`) · ingested_at · unique(doc_id, version) |
+| chunks | id bigserial pk · document_id fk (on delete cascade) · ord int · section_path text · text text · token_count int · embedding vector(768) · tsv tsvector generated always as (to_tsvector('english', coalesce(section_path,'') ‖ ' ' ‖ coalesce(text,''))) stored |
 
 Indexes: `chunks_embedding_hnsw` USING hnsw (embedding vector_cosine_ops) (m=16, ef_construction=64);
-`chunks_tsv_gin` USING gin(tsv); `documents(doc_id, effective_date)`.
+`chunks_tsv_gin` USING gin(tsv); `ix_documents_doc_id_effective_date`; `ix_chunks_document_id`. The
+`embedder` column records which model produced a document's vectors; ingestion and retrieval only mix
+rows from the same embedder (vectors from different models are not comparable).
 
 ## Key decisions
 | Decision | Choice | Why |
