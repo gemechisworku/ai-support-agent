@@ -47,6 +47,13 @@ test-int: up ## Integration tests (needs Postgres)
 test-all: up ## Unit + integration tests with coverage
 	$(PY) pytest -m "not eval and not live" --cov --cov-report=term-missing
 
+.PHONY: migrate migrate-test
+migrate: up ## Upgrade the bank and kb databases to head (Alembic, one env per database)
+	$(PY) alembic -n bank upgrade head && $(PY) alembic -n kb upgrade head
+
+migrate-test: up ## Upgrade bank_test and kb_test to head
+	BANK_DB=bank_test KB_DB=kb_test $(MAKE) migrate
+
 check: lint typecheck boundaries tasks-validate test-all ## Everything CI runs
 
 docker-build: ## Build the runtime image

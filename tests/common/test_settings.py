@@ -68,6 +68,12 @@ def test_env_example_loads(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_dsn_builds_psycopg_url(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> None:
+    for key, value in {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_USER": "supportagent",
+    }.items():
+        monkeypatch.setenv(key, value)  # independent of the runner's env (e.g. compose sets host=postgres)
     monkeypatch.setenv("POSTGRES_PASSWORD", "p@ss/word")
     monkeypatch.setenv("KB_DB", "kb_test")
     s = load_settings(None)
