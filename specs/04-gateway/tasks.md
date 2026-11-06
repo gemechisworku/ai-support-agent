@@ -6,7 +6,7 @@
 ## Tasks
 
 ### T-GW-01 · Tool contracts and bank API client
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #12
 - **Depends on:** T-PLAT-04, T-BANK-01
@@ -18,14 +18,14 @@ Define every gateway model in `contracts/gateway.py`: tool inputs and outputs, `
 over the bank API DTOs from `contracts/bank.py`. See [plan.md](plan.md#data-model--contracts).
 
 **Acceptance criteria**
-- [ ] All models in the spec's tool table exist; no input model has a `customer_id` field
-- [ ] Money fields are `Decimal`, and dates are `date`/`datetime` (timezone-aware)
-- [ ] `HttpBankClient` covers every bank endpoint the gateway consumes, with 2 s timeouts and one retry on GET only
-- [ ] `tests/gateway/fakes.py` provides `FakeBank` implementing `BankClient`, seeded with the personas Frank, Hana, Priya, Olivia and Sam
+- [x] All models in the spec's tool table exist; no input model has a `customer_id` field
+- [x] Money fields are `Decimal`, and dates are `date`/`datetime` (timezone-aware)
+- [x] `HttpBankClient` covers every bank endpoint the gateway consumes, with 2 s timeouts and one retry on GET only
+- [x] `tests/gateway/fakes.py` provides `FakeBank` implementing `BankClient`, seeded with the personas Frank, Hana, Priya, Olivia and Sam
 
 **Tests**
 - `tests/contracts/test_gateway_contracts.py` (unit): extra fields rejected; `loan_last4` pattern `^\d{4}$`; `ToolResult` round-trips
-- `tests/gateway/test_bank_client.py` (unit, respx): URL and params per method; DTO parsing; GET retry; no retry on POST
+- `tests/gateway/test_bank_client.py` (unit, `httpx.MockTransport`): URL and params per method; DTO parsing; GET retry; no retry on POST
 
 **Files:** `src/supportagent/contracts/gateway.py`, `src/supportagent/gateway/bank_client.py`, `tests/gateway/fakes.py`, tests above
 

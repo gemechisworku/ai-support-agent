@@ -47,7 +47,7 @@ src/supportagent/gateway/
   mcp_server.py       # FastMCP instance; registers TOOL_REGISTRY with typed signatures
   service.py          # APIRouter for /service/*
 tests/gateway/
-  fakes.py            # FakeBank (persona data: Frank, Hana, Priya, Olivia, Sam), FakeRetriever, FakeClock
+  fakes.py            # FakeBank (all 12 personas from bank.seed, LoanStatus via the bank ledger), FakeRetriever
   test_*.py
 ```
 
@@ -63,8 +63,9 @@ tests/gateway/
 - **Candidates:** an outbound call checks only `expected_customer_id`. An inbound call checks the
   phone candidates, and if there are none, the bank identity match by `dob` and `loan_last4`.
   Exactly one match is required; zero or more than one counts as a failed attempt.
-- `LoanStatus{loan_masked, product_code, product_name, outstanding_balance, next_due_date, next_due_amount,
-  overdue_amount, days_past_due, fees_accrued, status, speakable}`. `speakable` is, for example,
+- `LoanSummary{loan_masked, product_code, product_name, outstanding_balance, overdue_amount,
+  oldest_unpaid_due_date, next_due_date, next_due_amount, days_past_due, fees_accrued, status, speakable}`
+  (named `LoanSummary` so it is not confused with the bank's unmasked `contracts.bank.LoanStatus`). `speakable` is, for example,
   "$245.10 due on 12 November 2026". It is built with `Decimal` quantised to 2 dp.
 - `TransactionOut{date, amount, channel, status: posted|pending, reference_masked}`.
 - **Audit row:** `{ts, call_id, tool, args_hash, customer_id?, decision: allowed|denied:<code>|error, latency_ms}`.
@@ -80,7 +81,8 @@ tests/gateway/
 | Promise rules | Gateway settings until COMP-01 | Keeps M1 independent of M2 |
 
 ## Dependencies
-Runtime: `mcp` (Python SDK), `fastapi`, `uvicorn`, `httpx`. Dev: `respx` (HTTP fakes for `HttpBankClient`).
+Runtime: `mcp` (Python SDK), `fastapi`, `uvicorn`, `httpx`. No extra dev dependency: `HttpBankClient` is
+tested with `httpx.MockTransport`.
 Compose service `gateway` (uses the `x-app` anchor, `command: uvicorn supportagent.gateway.app:app --host 0.0.0.0 --port 8002`, depends on `bank-api`).
 Settings: `GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`, `PROMISE_MAX_DAYS`, `HUMAN_AGENT_AVAILABLE`, `HUMAN_AGENT_EXTENSION`.
 
@@ -88,7 +90,7 @@ Settings: `GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`, `P
 - **unit:** pipeline, session store, identity matching, masking, rate limiter (fake clock), every tool
   handler against `FakeBank` and `FakeRetriever`, MCP tool listing and schemas via an in-process MCP
   client session (`mcp.shared.memory` or the FastAPI `TestClient`), and the service API with `TestClient`.
-  `HttpBankClient` is tested with `respx`.
+  `HttpBankClient` is tested with `httpx.MockTransport`.
 - **PII guard:** `assert_no_pii(output, seeded_numbers)` runs in a shared parametrised test over every tool response.
 - **integration:** `tests/gateway/test_e2e_m1.py` runs the real bank API, the seeded Postgres and the KB
   with the fake embedder, and plays the M1 exit demo: session → verify Frank → loan status → search

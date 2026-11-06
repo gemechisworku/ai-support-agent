@@ -57,14 +57,15 @@ evaluation (COMP); dialling (SCHED/TEL); prompts and dialogue (AGENT).
 
 ### Provides — MCP tools (`/mcp`, header `Authorization: Bearer <session_token>`)
 All return `ToolResult[T] = {ok: bool, data: T | null, error: ToolError | null}`, where
-`ToolError.code ∈ {not_verified, locked, rate_limited, not_found, invalid_input, session_closed, forbidden, audit_unavailable}`.
+`ToolError.code ∈ {not_verified, locked, rate_limited, not_found, invalid_input, session_closed, forbidden, audit_unavailable, upstream_error}`
+(`upstream_error`: the bank API failed; writes are never retried).
 
 | Tool | Scope | Input model | Output model |
 |---|---|---|---|
 | `lookup_by_phone` | unverified | `LookupByPhoneInput{}` | `LookupByPhoneOutput{match, first_name?}` |
 | `verify_identity` | unverified | `VerifyIdentityInput{full_name, dob, loan_last4}` | `VerifyIdentityOutput{verified, attempts_remaining, locked, first_name?}` |
 | `search_policy` | any | `SearchPolicyInput{query≤300, product?}` | `SearchPolicyOutput{chunks[PolicySource], low_confidence}` |
-| `get_loan_status` | verified | `GetLoanStatusInput{loan_last4?}` | `LoanStatusOutput{loans[LoanStatus]}` |
+| `get_loan_status` | verified | `GetLoanStatusInput{loan_last4?}` | `LoanStatusOutput{loans[LoanSummary]}` |
 | `get_recent_transactions` | verified | `GetTransactionsInput{loan_last4?}` | `TransactionsOutput{transactions[TransactionOut]}` (≤5) |
 | `get_interaction_history` | verified | `InteractionHistoryInput{}` | `InteractionHistoryOutput{recent_calls, open_promises, open_tasks}` |
 | `record_promise_to_pay` | verified | `RecordPromiseInput{promise_date, amount, loan_last4?}` | `RecordPromiseOutput{accepted, reason, promise_id?, max_date, amount_due}` |
