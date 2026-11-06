@@ -30,22 +30,22 @@ workflow (`specs/`, `scripts/tasks.py`). Done in the initial commit.
 **Files:** `pyproject.toml`, `uv.lock`, `Makefile`, `docker-compose.yml`, `docker/app.Dockerfile`, `infra/postgres/init/`, `.github/`, `scripts/tasks.py`, `specs/`, `AGENTS.md`, `CLAUDE.md`
 
 ### T-PLAT-02 · Typed settings and PII-safe structured logging
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M0
 - **Issue:** #1
 - **Depends on:** T-PLAT-01
 - **Requirements:** PLAT-R1, PLAT-R2
 
 Implement `common/settings.py` and `common/logging.py` as in [plan.md](plan.md#file-layout). Settings
-cover every variable in `.env.example`, grouped (`postgres`, `services`, `models`, `livekit`,
-`langfuse`, `persona`). Logging emits one JSON object per line and masks PII keys recursively.
+cover every variable in `.env.example`, grouped (`postgres`, `data`, `services`, `models`,
+`livekit`, `langfuse`, `persona`). Logging emits one JSON object per line and masks PII keys recursively.
 
 **Acceptance criteria**
-- [ ] `get_settings()` is cached, and `get_settings.cache_clear()` is used by the test fixture
-- [ ] Every `.env.example` key maps to a settings field (a test parses `.env.example`)
-- [ ] `postgres.dsn("bank")` builds a psycopg URL
-- [ ] PII keys are masked recursively in dicts and lists; phone and number fields keep only the last 4 characters
-- [ ] `bind_call(call_id)` adds `call_id` to every log record in that context
+- [x] `get_settings()` is cached, and `get_settings.cache_clear()` is used by the test fixture
+- [x] Every `.env.example` key maps to a settings field (a test parses `.env.example`)
+- [x] `postgres.dsn("bank")` builds a psycopg URL
+- [x] PII keys are masked recursively in dicts and lists; phone and number fields keep only the last 4 characters
+- [x] `bind_call(call_id)` adds `call_id` to every log record in that context
 
 **Tests**
 - `tests/common/test_settings.py` (unit): env override, `.env.example` coverage, DSN building, missing-secret error
