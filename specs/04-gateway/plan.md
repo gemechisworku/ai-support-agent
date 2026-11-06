@@ -71,7 +71,11 @@ tests/gateway/
   (named `LoanSummary` so it is not confused with the bank's unmasked `contracts.bank.LoanStatus`). `speakable` is, for example,
   "$245.10 due on 12 November 2026". It is built with `Decimal` quantised to 2 dp.
 - `TransactionOut{date, amount, channel, status: posted|pending, reference_masked}`.
-- **Audit row:** `{ts, call_id, tool, args_hash, customer_id?, decision: allowed|denied:<code>|error, latency_ms}`.
+- **Audit row** (the bank's `AuditIn`): `{ts, call_id, tool, args_hash, customer_id?, decision: allow|deny|error, latency_ms}`.
+  `deny` covers every refusal (scope, validation, rate limit, business rule); `error` is an upstream bank
+  failure. Requests without a valid session token are audited with `call_id="unauthenticated"`.
+  The per-credential limit (120/min) applies to the worker's session API; per-session limits count
+  every attempt, including denied ones.
 
 ## Key decisions
 | Decision | Choice | Why |

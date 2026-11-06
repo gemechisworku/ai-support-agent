@@ -76,7 +76,7 @@ helper. All tool outputs are built from explicit field lists; bank DTOs are neve
 **Files:** `src/supportagent/gateway/masking.py`, `tests/gateway/test_masking.py`
 
 ### T-GW-04 · Audit logging and rate limiting
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #15
 - **Depends on:** T-GW-02
@@ -88,9 +88,9 @@ credential 120/min. `args_hash = sha256(salt + canonical_json(args))`. A denied 
 If the audit write fails, return `audit_unavailable` and no data.
 
 **Acceptance criteria**
-- [ ] One audit row per request with `call_id, tool, args_hash, customer_id, decision, latency_ms`
-- [ ] Raw argument values never appear in an audit row or a log line
-- [ ] The limits trigger exactly at the documented thresholds
+- [x] One audit row per request with `call_id, tool, args_hash, customer_id, decision, latency_ms`
+- [x] Raw argument values never appear in an audit row or a log line
+- [x] The limits trigger exactly at the documented thresholds
 
 **Tests**
 - `tests/gateway/test_audit.py` (unit): row fields; hash stable and salted; fail-closed on a 500 from FakeBank

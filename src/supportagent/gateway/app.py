@@ -36,9 +36,11 @@ def _gateway(request: Request) -> Gateway:
 def require_worker(
     request: Request, creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]
 ) -> None:
-    expected = _gateway(request).config.worker_token
-    if creds is None or not secrets.compare_digest(creds.credentials, expected):
+    gw = _gateway(request)
+    if creds is None or not secrets.compare_digest(creds.credentials, gw.config.worker_token):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="worker credential required")
+    if not gw.limiter.allow("credential:worker", gw.config.limits.credential_per_minute):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail="rate_limited")
 
 
 def create_app(gateway: Gateway | None = None) -> FastAPI:
