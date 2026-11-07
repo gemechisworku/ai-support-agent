@@ -70,7 +70,7 @@ services:
       AUDIT_HASH_SALT: ${AUDIT_HASH_SALT:-change-me-local-only}
       SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-change-me-local-only}
       BANK_API_URL: http://bank-api:8001
-      OLLAMA_URL: http://host.docker.internal:11434  # native Ollama on the Mac (embeddings)
+      EMBED_URL: http://host.docker.internal:8082/v1  # native llama.cpp embeddings server on the Mac
     depends_on:
       postgres: { condition: service_healthy }
       bank-api: { condition: service_healthy }

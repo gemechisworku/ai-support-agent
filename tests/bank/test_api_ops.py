@@ -48,7 +48,7 @@ def _outcome(direction: str, campaign: str | None, **extra: Any) -> dict[str, An
         "contact_result": "right_party",
         "verified": True,
         "summary": "Talked to Frank.",
-        "versions": {"prompt": "p1", "policy": "k1", "model": "ollama/qwen3:8b"},
+        "versions": {"prompt": "p1", "policy": "k1", "model": "llamacpp/llama-3.1-8b-instruct"},
         **extra,
     }
 

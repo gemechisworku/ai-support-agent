@@ -33,7 +33,7 @@ def test_get_settings_is_cached(settings: Settings) -> None:
 def test_env_override(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("POSTGRES_PORT", "6543")
     monkeypatch.setenv("BANK_AS_OF", "2026-11-09")
-    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("LLM_PROVIDER", "llamacpp")
     get_settings.cache_clear()
     s = get_settings()
     assert s.postgres.port == 6543
@@ -44,7 +44,12 @@ def test_defaults_without_env_file(settings: Settings) -> None:
     assert settings.postgres.port == 5432
     assert settings.postgres.bank_db == "bank"
     assert settings.data.bank_as_of is None
-    assert settings.models.llm_provider == "ollama"
+    assert settings.models.llm_provider == "llamacpp"
+    assert settings.models.llm_url == "http://localhost:8081/v1"
+    assert settings.models.embed_url == "http://localhost:8082/v1"
+    assert settings.models.llm_model == "llama-3.1-8b-instruct"
+    assert settings.models.embed_model == "nomic-embed-text-v1.5"
+    assert settings.data.kb_embedder == "llamacpp"
     assert settings.services.gateway_worker_token.get_secret_value() == "test-worker-token"
 
 
@@ -96,6 +101,16 @@ def test_hosted_llm_requires_api_key(settings: Settings, monkeypatch: pytest.Mon
         load_settings(None)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     assert load_settings(None).models.llm_provider == "anthropic"
+
+
+@pytest.mark.parametrize(("key", "value"), [("LLM_PROVIDER", "ollama"), ("KB_EMBEDDER", "ollama")])
+def test_retired_ollama_values_are_rejected(
+    key: str, value: str, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T-PLAT-07: llama.cpp replaced Ollama; an old .env fails at startup instead of mid-call."""
+    monkeypatch.setenv(key, value)
+    with pytest.raises(ValidationError, match=key.lower()):
+        load_settings(None)
 
 
 def test_secrets_are_not_printed(settings: Settings) -> None:

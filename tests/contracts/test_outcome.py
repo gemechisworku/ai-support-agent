@@ -55,7 +55,7 @@ def outcome(**overrides: Any) -> dict[str, Any]:
         "sentiment": "positive",
         "summary": "Customer forgot; promised to pay on 12 Nov.",
         "kb_sources": ["late-fees@2#personal-loan"],
-        "versions": {"prompt": "p-1a2b", "policy": "k-3c4d", "model": "ollama/qwen3:8b"},
+        "versions": {"prompt": "p-1a2b", "policy": "k-3c4d", "model": "llamacpp/llama-3.1-8b-instruct"},
         "latency_p50": 1650,
         "latency_p90": 2400,
         "latency_stages": {"stt": {"p50_ms": 300, "p90_ms": 450}},

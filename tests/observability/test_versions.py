@@ -58,7 +58,8 @@ def test_formula_shape(settings: Settings, dirs: dict[str, Path]) -> None:
     assert kb.startswith("kb:") and len(kb) == len("kb:") + 8
     assert rules == "rules:3"
     assert disc == "disc:2"
-    assert v.model == "llm:ollama/qwen3:8b;stt:large-v3-turbo;tts:af_heart;embed:nomic-embed-text"
+    llm = "llm:llamacpp/llama-3.1-8b-instruct"
+    assert v.model == f"{llm};stt:small.en;tts:af_heart;embed:nomic-embed-text-v1.5"
 
 
 def test_identical_inputs_identical_versions(settings: Settings, dirs: dict[str, Path]) -> None:
@@ -147,9 +148,9 @@ def test_rules_and_disclosure_versions_change_only_policy(settings: Settings, di
 @pytest.mark.parametrize(
     ("field", "value", "expected"),
     [
-        ("llm_provider", "anthropic", "llm:anthropic/qwen3:8b"),
-        ("llm_model", "qwen3:4b", "llm:ollama/qwen3:4b"),
-        ("whisper_model", "small.en", "stt:small.en"),
+        ("llm_provider", "anthropic", "llm:anthropic/llama-3.1-8b-instruct"),
+        ("llm_model", "llama-3.2-3b-instruct", "llm:llamacpp/llama-3.2-3b-instruct"),
+        ("whisper_model", "large-v3-turbo", "stt:large-v3-turbo"),
         ("tts_voice", "am_adam", "tts:am_adam"),
         ("embed_model", "mxbai-embed-large", "embed:mxbai-embed-large"),
     ],
@@ -175,7 +176,7 @@ def test_missing_inputs_give_none_components(settings: Settings, tmp_path: Path)
     v = compute_versions(settings, prompts_dir=missing, policies_dir=missing, config_dir=missing)
     assert v.prompt == f"{NONE}+{NONE}"
     assert v.policy == f"kb:{NONE};rules:{NONE};disc:{NONE}"
-    assert v.model.startswith("llm:ollama/")
+    assert v.model.startswith("llm:llamacpp/")
 
 
 def test_missing_version_file_and_config_keys(settings: Settings, dirs: dict[str, Path]) -> None:

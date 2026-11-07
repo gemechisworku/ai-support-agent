@@ -147,7 +147,7 @@ port, Ollama (and that `qwen3:8b` and `nomic-embed-text` are pulled), whisper.cp
 **Files:** `scripts/doctor.sh`, `docs/dev-setup.md`, `Makefile`, `tests/tooling/test_doctor.py`
 
 ### T-PLAT-07 · Local model serving on llama.cpp instead of Ollama
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #101
 - **Depends on:** T-PLAT-06, T-KB-04
@@ -176,10 +176,10 @@ llama.cpp was already installed, and existing GGUF files can be reused). Move th
 - **Test fixtures:** model-version strings become `llamacpp/llama-3.1-8b-instruct`.
 
 **Acceptance criteria**
-- [ ] No `ollama`, `OLLAMA_URL` or `qwen` remains in `src/`, `scripts/`, `tests/`, `.env.example` or `docker-compose.yml`
-- [ ] `OpenAICompatEmbedder` returns unit-norm 768-d vectors, applies the `search_document: ` / `search_query: ` prefixes, and raises a clear error on dimension mismatch or connection failure
-- [ ] With the model servers stopped, `make doctor` prints ✗ lines naming the `llama-server` start commands; exit codes follow PLAT-R7
-- [ ] The new settings are in `.env.example`, and `docs/dev-setup.md` matches them
+- [x] No `ollama`, `OLLAMA_URL` or `qwen` remains in `src/`, `scripts/`, `tests/`, `.env.example` or `docker-compose.yml`
+- [x] `OpenAICompatEmbedder` returns unit-norm 768-d vectors, applies the `search_document: ` / `search_query: ` prefixes, and raises a clear error on dimension mismatch or connection failure
+- [x] With the model servers stopped, `make doctor` prints ✗ lines naming the `llama-server` start commands; exit codes follow PLAT-R7
+- [x] The new settings are in `.env.example`, and `docs/dev-setup.md` matches them
 
 **Tests**
 - `tests/kb/test_embed.py` (unit): `OpenAICompatEmbedder` against `httpx.MockTransport` (request path and body, batching, prefixing, error mapping)

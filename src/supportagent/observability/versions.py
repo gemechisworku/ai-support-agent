@@ -8,7 +8,8 @@ once per call at session start (T-AGENT-02) and records it in the call outcome::
     compute_versions(get_settings())
     # Versions(prompt='1.2.0+3f9a0c12',
     #          policy='kb:8e21d0aa;rules:1;disc:1',
-    #          model='llm:ollama/qwen3:8b;stt:large-v3-turbo;tts:af_heart;embed:nomic-embed-text')
+    #          model='llm:llamacpp/llama-3.1-8b-instruct;stt:small.en;tts:af_heart;'
+    #                'embed:nomic-embed-text-v1.5')
 
 Formula (specs/10-observability/plan.md); `sha8` = first 8 hex chars of SHA-256:
 - `prompt` = `{registry_version}+{sha8(prompt files)}`. `registry_version` is the stripped text of
