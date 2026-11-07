@@ -198,25 +198,27 @@ names or other fields), with the `CustomerMatch` contract in `contracts/bank.py`
 **Files:** `src/supportagent/bank/api/routes_read.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py`, a migration if an index is needed, tests above
 
 ### T-BANK-09 · Explorer endpoints: customer search, loan list, preferences, personas
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #95
 - **Depends on:** T-BANK-07
 - **Requirements:** BANK-R11
 
 Read-only endpoints the console's data explorer (T-CON-06, T-CON-08) needs, reusing `Page[T]` from
-T-BANK-07: `GET /customers?q=&segment=&bucket=&limit=&offset=` (q matches name, phone, customer id or
+T-BANK-07: `GET /customers/search?q=&segment=&bucket=&limit=&offset=` (q matches name, phone, customer id or
 loan last 4; returns `CustomerSummary{customer_id, full_name, phone, segment, loan_count, worst_bucket}`),
 `GET /loans?bucket=&product=&limit=&offset=` (`Page[LoanStatus]`), `GET /customers/{id}/contact-preferences`
 and `GET /personas` (`list[PersonaCard]` built from `bank.seed.personas`: id, name, situation, expected
 outcome, extension, phone, DOB, loan last 4 — synthetic test identities).
 
 **Acceptance criteria**
-- [ ] The BANK-R11 acceptance criterion in spec.md holds
-- [ ] `limit` defaults to 50 and is capped at 200; results are ordered by customer id
-- [ ] Unknown customer → 404 on the preferences route
+- [x] The BANK-R11 acceptance criterion in spec.md holds
+- [x] `limit` defaults to 50 and is capped at 200; results are ordered by customer id
+- [x] Unknown customer → 404 on the preferences route
 
 **Tests**
 - `tests/bank/test_api_explorer.py` (integration): search by name / phone / id / last 4, filters, pagination totals, personas, auth
+
+Search is at `/customers/search` because `GET /customers?phone=` is taken (see spec Interfaces).
 
 **Files:** `src/supportagent/bank/api/routes_explorer.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py` (`CustomerSummary`, `PersonaCard`), tests above

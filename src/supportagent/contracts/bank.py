@@ -336,6 +336,36 @@ class CallDetail(_Contract):
     outbox: list[OutboxMessage]
 
 
+class CustomerSummary(_Contract):
+    """One row of the console's customer search (T-BANK-09)."""
+
+    customer_id: int
+    full_name: str
+    phone: Phone
+    segment: str
+    loan_count: int = Field(ge=0)
+    worst_bucket: Bucket | None  # the most delinquent loan's bucket at the bank's as_of; None = no loans
+
+
+class PersonaCard(_Contract):
+    """A scripted persona for role-play testing (T-BANK-09).
+
+    These are **synthetic test identities**: the name, DOB and loan last 4 a tester gives when playing
+    the persona on a softphone. They are fake and exist only in the mock bank's seed.
+    """
+
+    customer_id: int
+    full_name: str
+    phone: Phone
+    extension: str
+    dob: dt.date
+    loan_id: int
+    loan_last4: str = Field(min_length=4, max_length=4)
+    product_code: ProductCode
+    situation: str
+    expected_outcome: str
+
+
 class TaskPatch(_Contract):
     """`PATCH /tasks/{id}`: the console's follow-up queue marks tasks done or assigns them."""
 

@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import Any
 
 from pydantic import BaseModel
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -62,19 +62,7 @@ def loan_status(s: Session, loan_id: int, as_of: dt.date) -> c.LoanStatus | None
         return None
     product = s.get(models.LoanProduct, loan.product_code)
     assert product is not None  # foreign key
-    figures = ledger.summary(_installment_rows(s, loan_id), as_of)
-    return c.LoanStatus.model_validate(
-        {
-            "loan_id": loan.id,
-            "customer_id": loan.customer_id,
-            "number_last4": loan.number[-4:],
-            "product_code": loan.product_code,
-            "product_name": product.name,
-            "as_of": as_of,
-            "status": loan.status,
-            **figures,
-        }
-    )
+    return _status(loan, product.name, _installment_rows(s, loan_id), as_of)
 
 
 def transactions(s: Session, account_id: int, limit: int, loan_id: int | None = None) -> list[c.Transaction]:
@@ -473,6 +461,126 @@ def list_outbox(s: Session, *, limit: int, offset: int, status: str | None = Non
     if status is not None:
         stmt = stmt.where(o.status == status)
     return _page(s, stmt.order_by(o.created_at.desc(), o.id.desc()), c.OutboxMessage, limit, offset)
+
+
+# --------------------------------------------------------------------------- explorer (T-BANK-09)
+
+BUCKET_ORDER: dict[str, int] = {"current": 0, "1-30": 1, "31-60": 2, "61-90": 3, "90+": 4}
+
+
+def _schedules(s: Session, loan_ids: list[int] | None = None) -> dict[int, list[models.Installment]]:
+    stmt = select(models.Installment).order_by(models.Installment.loan_id, models.Installment.seq)
+    if loan_ids is not None:
+        stmt = stmt.where(models.Installment.loan_id.in_(loan_ids))
+    out: dict[int, list[models.Installment]] = {}
+    for inst in s.scalars(stmt):
+        out.setdefault(inst.loan_id, []).append(inst)
+    return out
+
+
+def _status(
+    loan: models.Loan, product_name: str, insts: list[models.Installment], as_of: dt.date
+) -> c.LoanStatus:
+    return c.LoanStatus.model_validate(
+        {
+            "loan_id": loan.id,
+            "customer_id": loan.customer_id,
+            "number_last4": loan.number[-4:],
+            "product_code": loan.product_code,
+            "product_name": product_name,
+            "as_of": as_of,
+            "status": loan.status,
+            **ledger.summary(insts, as_of),
+        }
+    )
+
+
+def search_customers(
+    s: Session,
+    as_of: dt.date,
+    *,
+    limit: int,
+    offset: int,
+    q: str | None = None,
+    segment: str | None = None,
+    bucket: str | None = None,
+) -> c.Page[c.CustomerSummary]:
+    """Customers matching `q` (name, phone, customer id or loan last 4), ordered by id.
+
+    `worst_bucket` is computed from each customer's loans at `as_of` by the ledger, so the `bucket`
+    filter is applied after that (the population is small: about 200 customers).
+    """
+    cu, lo = models.Customer, models.Loan
+    stmt = select(cu)
+    if segment is not None:
+        stmt = stmt.where(cu.segment == segment)
+    term = (q or "").strip()
+    if term:
+        conditions: list[Any] = [cu.full_name.ilike(f"%{term}%"), cu.phone.contains(term)]
+        if term.isdigit():
+            conditions.append(cu.id == int(term))
+            if len(term) == 4:
+                last4 = select(lo.customer_id).where(func.right(lo.number, 4) == term)
+                conditions.append(cu.id.in_(last4))
+        stmt = stmt.where(or_(*conditions))
+    customers = list(s.scalars(stmt.order_by(cu.id)))
+    ids = [x.id for x in customers]
+    loans_by_customer: dict[int, list[models.Loan]] = {}
+    for loan in s.scalars(select(lo).where(lo.customer_id.in_(ids)).order_by(lo.id)):
+        loans_by_customer.setdefault(loan.customer_id, []).append(loan)
+    schedules = _schedules(s, [loan.id for loans in loans_by_customer.values() for loan in loans])
+    rows: list[c.CustomerSummary] = []
+    for customer in customers:
+        loans = loans_by_customer.get(customer.id, [])
+        buckets: list[ledger.Bucket] = [
+            ledger.bucket(ledger.days_past_due(schedules.get(x.id, []), as_of)) for x in loans
+        ]
+        ranked = sorted(buckets, key=BUCKET_ORDER.__getitem__)
+        worst = ranked[-1] if ranked else None
+        if bucket is not None and worst != bucket:
+            continue
+        rows.append(
+            c.CustomerSummary(
+                customer_id=customer.id,
+                full_name=customer.full_name,
+                phone=customer.phone,
+                segment=customer.segment,
+                loan_count=len(loans),
+                worst_bucket=worst,
+            )
+        )
+    return c.Page[c.CustomerSummary](
+        items=rows[offset : offset + limit], total=len(rows), limit=limit, offset=offset
+    )
+
+
+def list_loans(
+    s: Session,
+    as_of: dt.date,
+    *,
+    limit: int,
+    offset: int,
+    bucket: str | None = None,
+    product: str | None = None,
+) -> c.Page[c.LoanStatus]:
+    """Loans with their computed status at `as_of`, ordered by loan id."""
+    stmt = select(models.Loan)
+    if product is not None:
+        stmt = stmt.where(models.Loan.product_code == product)
+    loans = list(s.scalars(stmt.order_by(models.Loan.id)))
+    names = {p.code: p.name for p in s.scalars(select(models.LoanProduct))}
+    schedules = _schedules(s, [x.id for x in loans]) if loans else {}
+    statuses = [_status(x, names[x.product_code], schedules.get(x.id, []), as_of) for x in loans]
+    if bucket is not None:
+        statuses = [x for x in statuses if x.bucket == bucket]
+    return c.Page[c.LoanStatus](
+        items=statuses[offset : offset + limit], total=len(statuses), limit=limit, offset=offset
+    )
+
+
+def contact_preferences(s: Session, customer_id: int) -> c.ContactPreferences | None:
+    row = s.get(models.ContactPreference, customer_id)
+    return c.ContactPreferences.model_validate(row) if row else None
 
 
 def patch_task(s: Session, task_id: int, patch: c.TaskPatch) -> c.Task:
