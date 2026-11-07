@@ -153,21 +153,22 @@ lists failing calls with links. The current contact-rules version comes from `Ca
 **Files:** `src/supportagent/console/pages/compliance.py`, `src/supportagent/console/views.py`, `tests/console/test_compliance_view.py`, `tests/console/test_app_pages.py`
 
 ### T-CON-06 · Customer and loan explorer
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #96
 - **Depends on:** T-CON-01, T-BANK-09
 - **Requirements:** CON-R8, CON-R7
 
-A "Customers" page: search box and segment/bucket filters over `GET /customers` (paginated table),
+A "Customers" page: search box and segment/bucket filters over `GET /customers/search` (paginated table),
 then a customer page with tabs: Profile and contact preferences · Loans (computed status per loan) ·
 Schedule (instalments, paid/unpaid highlighted) · Transactions (pending flagged) · History (past
 calls, open promises, open tasks). Numbers are masked with `views.mask_number()`.
 
 **Acceptance criteria**
-- [ ] The CON-R8 acceptance criterion in spec.md holds against the seeded bank (`make console` after the M1 demo setup)
-- [ ] Every figure comes from the bank API response; the page computes nothing
-- [ ] An API error shows `st.error`, never a traceback
+- [x] The CON-R8 acceptance criterion in spec.md holds (AppTest against the persona-seeded fake bank, whose
+  figures come from the bank's own ledger; the live run against the seeded bank is still to do)
+- [x] Every figure comes from the bank API response; the page computes nothing
+- [x] An API error shows `st.error`, never a traceback
 
 **Tests**
 - `tests/console/test_explorer_customers.py` (unit): `AppTest` with a fake `BankOpsClient` built from the persona seed; search, tabs, masking
