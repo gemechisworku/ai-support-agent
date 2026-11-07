@@ -137,7 +137,7 @@ Re-ingesting a new version keeps the old one for audit.
 | Message bus | Redis/Valkey | Docker | Required by LiveKit SIP |
 | Agent framework | LiveKit Agents (Py), Silero VAD, turn detector | native | Streaming, barge-in, hand-offs, MCP, text-mode testing. Pipecat is fallback. |
 | STT | whisper.cpp server (large-v3-turbo / small.en) | native, Metal | Docker on Mac has no GPU |
-| LLM + embeddings | llama.cpp `llama-server` (two processes): Llama 3.1 8B Instruct Q4_K_M with tool calling (`--jinja`) on :8081, nomic-embed-text v1.5 Q8_0 (`--embedding`) on :8082 | native, Metal | OpenAI-compatible API (`/v1/chat/completions`, `/v1/embeddings`), plain GGUF files reused across projects, no extra daemon, no data leaves the machine. Replaces Ollama (decided 2026-11-07, disk budget) |
+| LLM + embeddings | llama.cpp `llama-server` (two processes): Llama 3.1 8B Instruct Q4_K_M with tool calling (`--jinja`) on :8090, nomic-embed-text v1.5 Q8_0 (`--embedding`) on :8082 | native, Metal | OpenAI-compatible API (`/v1/chat/completions`, `/v1/embeddings`), plain GGUF files reused across projects, no extra daemon, no data leaves the machine. Replaces Ollama (decided 2026-11-07, disk budget) |
 | TTS | Kokoro-82M via Kokoro-FastAPI | native | Streaming, OpenAI-compatible |
 | DB + vectors | PostgreSQL 16 + pgvector | Docker | Bank, outcomes and KB in one engine |
 | Mock bank API | FastAPI, SQLAlchemy, Faker | native/Docker | Bank system of record |

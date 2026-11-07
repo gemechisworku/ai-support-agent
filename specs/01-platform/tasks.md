@@ -156,7 +156,7 @@ port, Ollama (and that `qwen3:8b` and `nomic-embed-text` are pulled), whisper.cp
 Ollama is replaced by llama.cpp's `llama-server` (architecture §6, decided 2026-11-07 for disk space:
 llama.cpp was already installed, and existing GGUF files can be reused). Move the code over:
 - **Settings:**
-  - `OLLAMA_URL` becomes `LLM_URL` (default `http://localhost:8081/v1`) and `EMBED_URL`
+  - `OLLAMA_URL` becomes `LLM_URL` (default `http://localhost:8090/v1`) and `EMBED_URL`
     (default `http://localhost:8082/v1`).
   - `LLM_PROVIDER` becomes `llamacpp|anthropic` (default `llamacpp`), and `KB_EMBEDDER` becomes
     `llamacpp|fake`.

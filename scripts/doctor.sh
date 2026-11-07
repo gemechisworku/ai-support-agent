@@ -33,7 +33,7 @@ setting() {
 }
 
 POSTGRES_PORT="$(setting POSTGRES_PORT 5432)"
-LLM_URL="$(setting LLM_URL http://localhost:8081/v1)"
+LLM_URL="$(setting LLM_URL http://localhost:8090/v1)"
 EMBED_URL="$(setting EMBED_URL http://localhost:8082/v1)"
 LLM_MODEL="$(setting LLM_MODEL llama-3.1-8b-instruct)"
 EMBED_MODEL="$(setting EMBED_MODEL nomic-embed-text-v1.5)"

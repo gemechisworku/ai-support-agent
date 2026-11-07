@@ -42,7 +42,7 @@ The ports below are the defaults in `.env.example`. Change them there, not in co
 | Component | Install and start | Port | Check |
 |---|---|---|---|
 | llama.cpp | `brew install llama.cpp` (provides `llama-server`) | — | `llama-server --version` |
-| LLM: Llama 3.1 8B Instruct (Q4_K_M, ~4.6 GB) | `llama-server -m $LLM_GGUF --alias llama-3.1-8b-instruct --jinja -c 8192 -ngl 99 --host 127.0.0.1 --port 8081` | 8081 | `curl localhost:8081/v1/models` |
+| LLM: Llama 3.1 8B Instruct (Q4_K_M, ~4.6 GB) | `llama-server -m $LLM_GGUF --alias llama-3.1-8b-instruct --jinja -c 8192 -ngl 99 --host 127.0.0.1 --port 8090` | 8090 | `curl localhost:8090/v1/models` |
 | Embeddings: nomic-embed-text v1.5 (Q8_0, ~0.15 GB, 768-d) | `llama-server -m $EMBED_GGUF --alias nomic-embed-text-v1.5 --embedding --pooling mean -c 2048 -ngl 99 --host 127.0.0.1 --port 8082` | 8082 | `curl localhost:8082/v1/models` |
 | whisper.cpp (STT) | `brew install whisper-cpp`, download a model (below), then `whisper-server --host 127.0.0.1 --port 8178 -m models/whisper/ggml-small.en.bin --inference-path /v1/audio/transcriptions` | 8178 | `curl localhost:8178/` |
 | Kokoro-82M (TTS) | `git clone https://github.com/remsky/Kokoro-FastAPI && cd Kokoro-FastAPI && ./start-gpu_mac.sh` | 8880 | `curl localhost:8880/v1/models` |

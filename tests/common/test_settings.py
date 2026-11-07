@@ -45,7 +45,7 @@ def test_defaults_without_env_file(settings: Settings) -> None:
     assert settings.postgres.bank_db == "bank"
     assert settings.data.bank_as_of is None
     assert settings.models.llm_provider == "llamacpp"
-    assert settings.models.llm_url == "http://localhost:8081/v1"
+    assert settings.models.llm_url == "http://localhost:8090/v1"
     assert settings.models.embed_url == "http://localhost:8082/v1"
     assert settings.models.llm_model == "llama-3.1-8b-instruct"
     assert settings.models.embed_model == "nomic-embed-text-v1.5"

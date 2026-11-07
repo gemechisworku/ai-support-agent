@@ -89,7 +89,7 @@ class ModelsSettings(_Group):
 
     # llama.cpp `llama-server` (OpenAI-compatible, base URLs include /v1). The model names are the
     # servers' `--alias`; the GGUF paths are what scripts/models/ starts them with.
-    llm_url: str = "http://localhost:8081/v1"
+    llm_url: str = "http://localhost:8090/v1"
     embed_url: str = "http://localhost:8082/v1"
     llm_provider: Literal["llamacpp", "anthropic"] = "llamacpp"
     llm_model: str = "llama-3.1-8b-instruct"

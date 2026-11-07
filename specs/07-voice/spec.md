@@ -18,7 +18,7 @@ playground dev mode; latency benchmark.
 LiveKit config (`08-telephony`); tracing export (`10-observability`); text-mode scenario harness (`12-evals`).
 
 ## Requirements
-- **VOICE-R1** (P0 · F1, NFR-CAP) — The project shall provide idempotent scripts that install, start and health-check the native model servers (llama.cpp `llama-server` with Llama 3.1 8B Instruct on :8081 and nomic-embed-text v1.5 on :8082, whisper.cpp server on :8178, Kokoro-FastAPI on :8880, LiveKit server in dev mode on :7880) within the 16 GB memory budget.
+- **VOICE-R1** (P0 · F1, NFR-CAP) — The project shall provide idempotent scripts that install, start and health-check the native model servers (llama.cpp `llama-server` with Llama 3.1 8B Instruct on :8090 and nomic-embed-text v1.5 on :8082, whisper.cpp server on :8178, Kokoro-FastAPI on :8880, LiveKit server in dev mode on :7880) within the 16 GB memory budget.
 - **VOICE-R2** (P0 · F1) — The voice module shall build streaming STT, LLM and TTS components from `Settings` alone, with the local providers as the default and no endpoint or model name hard-coded outside settings.
 - **VOICE-R3** (P1 · F14) — Setting `LLM_PROVIDER=anthropic` (model `claude-haiku-5-5`) shall switch the LLM to a hosted provider with no code change, and the active provider/model id shall be reported for the call's `versions.model`.
 - **VOICE-R4** (P0 · F1, NFR-LAT) — The voice session shall use Silero VAD and model-based end-of-turn detection, stream TTS sentence by sentence while the LLM is still generating, and stop TTS within 300 ms of the caller barging in.
