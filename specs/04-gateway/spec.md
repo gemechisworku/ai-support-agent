@@ -98,5 +98,6 @@ All models live in `supportagent/contracts/gateway.py` (owned by T-GW-01). `Esca
   search by `dob` + loan last 4, so today only the phone's registered customers can be verified; an
   unknown number's attempt counts as a failure. Needs a bank endpoint (e.g. `GET /customers/match?dob=&loan_last4=`)
   plus a `BankClient` method; then add those matches to the inbound candidates in `identity.verify`.
+  Planned as T-BANK-08 and T-GW-11 (M2).
 - Promise window and partial-payment rules: until COMP-01 lands, they come from gateway settings (`promise_max_days=14`, `allow_partial=true`). Switch to the versioned compliance config once it exists.
 - Human availability for `escalate`: a settings flag (`human_agent_available`) for the POC. A presence check is out of scope.

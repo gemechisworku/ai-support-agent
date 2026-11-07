@@ -29,6 +29,7 @@ the gateway's job.
 - **BANK-R7** (P0 · F7, D-OUTCOME, F9) — The bank shall accept writes only to interaction tables: interactions (full PRD §8 outcome), promises, tasks (callback/escalation), contact-preference flags, audit rows. No endpoint mutates balances, loans, installments or transactions.
 - **BANK-R8** (P1 · F13) — Writing a final interaction outcome with a summary shall enqueue an `outbox` row (channel `sms` or `email`, rendered text, status `pending`) in the same transaction.
 - **BANK-R9** (P0 · F10) — The bank shall expose list/detail read endpoints for interactions, open tasks, promises and the audit log, filterable for the operations console.
+- **BANK-R10** (P0 · F4, U3) — The bank shall find customers by date of birth and loan-number last 4 digits (`GET /customers/match?dob=&loan_last4=`), so the gateway can verify inbound callers whose phone number is not on file.
 
 ## Acceptance criteria
 - **BANK-R1:** Given an empty `bank` DB, when `alembic upgrade head` runs, then all 12 tables exist with the
@@ -49,6 +50,9 @@ the gateway's job.
   `/loans`, `/installments`, `/transactions` or `/accounts` (route-table test).
 - **BANK-R8:** `POST /interactions` with `outcome.summary` set creates exactly one `outbox` row atomically.
   If the outbox insert fails, the interaction is rolled back.
+- **BANK-R10:** `GET /customers/match?dob=1985-03-14&loan_last4=4417` returns exactly Forgetful Frank (a
+  `CustomerMatch` with only `customer_id` and `loan_id`); a wrong DOB or last 4 returns `[]`; both parameters are
+  required (422 otherwise); the route needs the service token.
 - **BANK-R9:** `GET /interactions?campaign=missed_payment&since=…` paginates (`limit`, `offset`).
   `GET /tasks?status=open` lists escalations and callbacks ordered by `due_at`.
 

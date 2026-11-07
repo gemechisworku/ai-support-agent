@@ -241,3 +241,25 @@ request is audited with `call_id` (or `service` when there is no call).
 - `tests/gateway/test_service_api_db.py` (integration): Frank appears in missed_payment and Olivia in pre_due; Sam is still listed with `cease_contact=true` (filtering is the scheduler's job)
 
 **Files:** `src/supportagent/gateway/service.py`, tests above
+
+### T-GW-11 · Verify inbound callers from unregistered numbers
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #94
+- **Depends on:** T-GW-05, T-BANK-08
+- **Requirements:** GW-R3
+
+Closes the open question in spec.md: add `BankClient.match_customers(dob, loan_last4)` and, in
+`identity.verify` for inbound sessions, add those matches to the candidates when the caller's phone
+has none. The 2-failure lock, the name check and the "never reveal why it failed" rule stay as they are.
+
+**Acceptance criteria**
+- [ ] An inbound session from an unknown number verifies Frank with his name, DOB and loan last 4
+- [ ] A wrong DOB from an unknown number still counts as a failed attempt, and two lock the session
+- [ ] A DOB + last-4 match with a different name does not verify (the name check still applies)
+
+**Tests**
+- `tests/gateway/test_identity.py` (unit, FakeBank): the three cases above
+- `tests/gateway/test_identity_db.py` (integration): unknown-number inbound verification against the seeded bank
+
+**Files:** `src/supportagent/gateway/bank_client.py`, `src/supportagent/gateway/identity.py`, `specs/04-gateway/spec.md` (remove the open question), tests above

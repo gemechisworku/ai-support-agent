@@ -174,3 +174,24 @@ Paginated list/detail endpoints the console (T-CON-01) needs: `GET /interactions
 - `tests/bank/test_api_ops.py` (integration): filters, pagination totals, ordering, call detail aggregation
 
 **Files:** `src/supportagent/bank/api/routes_ops.py`, `src/supportagent/contracts/bank.py` (`Page`, `CallDetail`), tests above
+
+### T-BANK-08 · Identity match endpoint for inbound callers
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #93
+- **Depends on:** T-BANK-04
+- **Requirements:** BANK-R10
+
+Found while building the gateway (T-GW-05): a caller ringing from a number that is not on file cannot
+be verified, because the bank has no lookup by date of birth and loan last 4. Add
+`GET /customers/match?dob=&loan_last4=` returning `list[CustomerMatch{customer_id, loan_id}]` (no
+names or other fields), with the `CustomerMatch` contract in `contracts/bank.py`.
+
+**Acceptance criteria**
+- [ ] The BANK-R10 acceptance criterion in spec.md holds
+- [ ] The query uses an index (no sequential scan over loans on the seeded data, checked with `EXPLAIN`)
+
+**Tests**
+- `tests/bank/test_api_match.py` (integration): Frank matches; wrong DOB / last 4 → `[]`; missing parameter → 422; no token → 401
+
+**Files:** `src/supportagent/bank/api/routes_read.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py`, a migration if an index is needed, tests above
