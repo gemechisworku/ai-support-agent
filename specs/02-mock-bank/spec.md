@@ -66,7 +66,7 @@ the gateway's job.
 `supportagent/contracts/bank.py`: `Customer`, `Account`, `LoanProduct`, `Loan`, `LoanStatus`,
 `Installment`, `Transaction`, `ContactPreferences`, `ContactPreferencesPatch`, `EligibleLoan`,
 `InteractionIn`, `Interaction`, `InteractionHistory`, `PromiseIn`, `Promise`, `TaskIn`, `Task`, `AuditIn`,
-`OutboxMessage`, `LateFeeRule`, `Page[T]`, `AuditRow`, `CallDetail`, `TaskPatch`, `CustomerSummary`, `PersonaCard`.
+`OutboxMessage`, `LateFeeRule`, `Page[T]`, `AuditRow`, `CallDetail`, `TaskPatch`, `CustomerSummary`, `PersonaCard`, `CustomerMatch`.
 **Consumes:** `supportagent.common.settings` (DB URL, token), `supportagent.common.db`,
 `supportagent.contracts.outcome.CallOutcome` (stored as the interaction outcome JSON).
 
@@ -93,6 +93,7 @@ the gateway's job.
 | GET | `/audit` | `call_id`, `tool`, `decision`, `limit`, `offset` | `Page[AuditRow]` (oldest first) |
 | GET | `/outbox` | `status`, `limit`, `offset` | `Page[OutboxMessage]` (newest first) |
 | GET | `/customers/search` | `q` (name, phone, id or loan last 4), `segment`, `bucket`, `limit`, `offset` | `Page[CustomerSummary{customer_id, full_name, phone, segment, loan_count, worst_bucket}]` (by id) |
+| GET | `/customers/match` | `dob` (YYYY-MM-DD), `loan_last4` (4 digits), both required | `list[CustomerMatch{customer_id, loan_id}]` (ids only; inbound identity match) |
 | GET | `/customers/{id}/contact-preferences` | — | `ContactPreferences` |
 | GET | `/loans` | `bucket`, `product`, `limit`, `offset` | `Page[LoanStatus]` (by loan id) |
 | GET | `/personas` | — | `list[PersonaCard{customer_id, full_name, phone, extension, dob, loan_id, loan_last4, product_code, situation, expected_outcome}]` — synthetic test identities |

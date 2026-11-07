@@ -5,6 +5,7 @@ This router is included before `routes_read`, so `/customers/search` is matched 
 because `GET /customers?phone=` already returns `list[Customer]` to the gateway.
 """
 
+import datetime as dt
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -37,6 +38,19 @@ def search_customers(
     return queries.search_customers(
         s, as_of, limit=min(limit, queries.MAX_PAGE), offset=offset, q=q, segment=segment, bucket=bucket
     )
+
+
+@router.get("/customers/match", response_model=list[c.CustomerMatch], tags=["identity"])
+def match_customers(
+    s: SessionDep,
+    dob: dt.date,
+    loan_last4: Annotated[str, Query(pattern=r"^\d{4}$")],
+) -> list[c.CustomerMatch]:
+    """Identity candidates for an inbound caller whose number is not on file (T-BANK-08).
+
+    Returns ids only; the gateway still checks the caller's name and applies the 2-failure lock.
+    """
+    return queries.match_customers(s, dob, loan_last4)
 
 
 @router.get("/customers/{customer_id}/contact-preferences", response_model=c.ContactPreferences)

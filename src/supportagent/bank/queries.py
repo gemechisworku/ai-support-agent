@@ -578,6 +578,23 @@ def list_loans(
     )
 
 
+def match_customers_stmt(dob: dt.date, loan_last4: str) -> Select[int, int]:
+    """Loans of customers born on `dob` whose number ends in `loan_last4` (uses ix_customers_dob)."""
+    cu, lo = models.Customer, models.Loan
+    return (
+        select(lo.customer_id, lo.id)
+        .join(cu, cu.id == lo.customer_id)
+        .where(cu.dob == dob, func.right(lo.number, 4) == loan_last4)
+        .order_by(lo.customer_id, lo.id)
+    )
+
+
+def match_customers(s: Session, dob: dt.date, loan_last4: str) -> list[c.CustomerMatch]:
+    """Identity candidates for an inbound caller whose phone number is not on file (T-BANK-08)."""
+    rows = s.execute(match_customers_stmt(dob, loan_last4))
+    return [c.CustomerMatch(customer_id=customer_id, loan_id=loan_id) for customer_id, loan_id in rows]
+
+
 def contact_preferences(s: Session, customer_id: int) -> c.ContactPreferences | None:
     row = s.get(models.ContactPreference, customer_id)
     return c.ContactPreferences.model_validate(row) if row else None

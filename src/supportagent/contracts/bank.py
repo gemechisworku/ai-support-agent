@@ -366,6 +366,14 @@ class PersonaCard(_Contract):
     expected_outcome: str
 
 
+class CustomerMatch(_Contract):
+    """`GET /customers/match`: a loan whose customer has the given DOB and whose number ends in the
+    given 4 digits (T-BANK-08). Ids only — the gateway checks the name itself."""
+
+    customer_id: int
+    loan_id: int
+
+
 class TaskPatch(_Contract):
     """`PATCH /tasks/{id}`: the console's follow-up queue marks tasks done or assigns them."""
 

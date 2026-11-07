@@ -177,7 +177,7 @@ the console's follow-up queue (T-CON-04) needs; it writes only the interaction t
 **Files:** `src/supportagent/bank/api/routes_ops.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py` (`Page`, `CallDetail`, `AuditRow`, `TaskPatch`), tests above
 
 ### T-BANK-08 · Identity match endpoint for inbound callers
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #93
 - **Depends on:** T-BANK-04
@@ -189,13 +189,14 @@ be verified, because the bank has no lookup by date of birth and loan last 4. Ad
 names or other fields), with the `CustomerMatch` contract in `contracts/bank.py`.
 
 **Acceptance criteria**
-- [ ] The BANK-R10 acceptance criterion in spec.md holds
-- [ ] The query uses an index (no sequential scan over loans on the seeded data, checked with `EXPLAIN`)
+- [x] The BANK-R10 acceptance criterion in spec.md holds
+- [x] The query can use indexes: with `enable_seqscan=off`, `EXPLAIN` shows `ix_customers_dob` and no
+  `Seq Scan on loans` (new migration `bank_0003` indexes `customers.dob`; loans are reached by `ix_loans_customer_id`)
 
 **Tests**
-- `tests/bank/test_api_match.py` (integration): Frank matches; wrong DOB / last 4 → `[]`; missing parameter → 422; no token → 401
+- `tests/bank/test_api_match.py` (integration): Frank matches; wrong DOB / last 4 → `[]`; missing or malformed parameter → 422; no token → 401; EXPLAIN plan
 
-**Files:** `src/supportagent/bank/api/routes_read.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py`, a migration if an index is needed, tests above
+**Files:** `src/supportagent/bank/api/routes_explorer.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py`, `src/supportagent/bank/models.py`, `migrations/bank/versions/bank_0003_customers_dob_index.py`, tests above
 
 ### T-BANK-09 · Explorer endpoints: customer search, loan list, preferences, personas
 - **Status:** done
