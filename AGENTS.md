@@ -104,7 +104,7 @@ These are checked by CI or by tests. Details are in the constitution.
 ## Where things run
 | Runs in Docker (`docker compose`) | Runs natively on macOS (Metal GPU) |
 |---|---|
-| Postgres + pgvector, Redis, Asterisk, LiveKit SIP, Langfuse, app services (bank API, gateway, scheduler, console) | Ollama (Qwen3 8B, nomic-embed-text), whisper.cpp, Kokoro TTS, livekit-server, the agent worker |
+| Postgres + pgvector, Redis, Asterisk, LiveKit SIP, Langfuse, app services (bank API, gateway, scheduler, console) | llama.cpp `llama-server` (Llama 3.1 8B, nomic-embed-text), whisper.cpp, Kokoro TTS, livekit-server, the agent worker |
 
 Unit and integration tests never need the native column.
 

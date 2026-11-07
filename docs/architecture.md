@@ -18,8 +18,8 @@ LiveKit Server+Redis┘          policyQ·capture·close                 policy 
                              global: escalate·dispute·cease·3rd    Mock core bank API (FastAPI)
 Outreach scheduler           MCP client → gateway tools only       PostgreSQL: db bank, db kb (pgvector)
   compliance gate            Model servers (native, Metal):        Operations console (Streamlit)
-  (window, 7-in-7, DNC,        whisper.cpp · Ollama Qwen3 8B ·     Langfuse (PII-redacted via Presidio)
-   consent) · retries          nomic-embed · Kokoro-82M · opt. hosted LLM
+  (window, 7-in-7, DNC,        whisper.cpp · llama.cpp Llama 3.1 8B  Langfuse (PII-redacted via Presidio)
+   consent) · retries          · nomic-embed · Kokoro-82M · opt. hosted LLM
 ```
 
 - **Media** (LiveKit) is separate from **reasoning** (agent worker); reasoning is separate from **data** (gateway).
@@ -120,7 +120,7 @@ and calling rules (also read by the scheduler as config); required disclosures (
 text); FAQ.
 
 **Ingestion:** split by heading into ~300–500-token chunks with section paths; embed with
-`nomic-embed-text` (768-d) via Ollama; store in Postgres/pgvector (HNSW) with a `tsvector` column.
+`nomic-embed-text` v1.5 (768-d) via llama.cpp `llama-server --embedding`; store in Postgres/pgvector (HNSW) with a `tsvector` column.
 **Retrieval:** hybrid vector + full-text merged by reciprocal rank fusion, filtered by product and
 effective date, top 4. Below a score threshold → agent offers follow-up instead of guessing.
 Re-ingesting a new version keeps the old one for audit.
@@ -137,7 +137,7 @@ Re-ingesting a new version keeps the old one for audit.
 | Message bus | Redis/Valkey | Docker | Required by LiveKit SIP |
 | Agent framework | LiveKit Agents (Py), Silero VAD, turn detector | native | Streaming, barge-in, hand-offs, MCP, text-mode testing. Pipecat is fallback. |
 | STT | whisper.cpp server (large-v3-turbo / small.en) | native, Metal | Docker on Mac has no GPU |
-| LLM + embeddings | Ollama: Qwen3 8B, nomic-embed-text | native, Metal | OpenAI-compatible API, no data leaves the machine |
+| LLM + embeddings | llama.cpp `llama-server` (two processes): Llama 3.1 8B Instruct Q4_K_M with tool calling (`--jinja`) on :8081, nomic-embed-text v1.5 Q8_0 (`--embedding`) on :8082 | native, Metal | OpenAI-compatible API (`/v1/chat/completions`, `/v1/embeddings`), plain GGUF files reused across projects, no extra daemon, no data leaves the machine. Replaces Ollama (decided 2026-11-07, disk budget) |
 | TTS | Kokoro-82M via Kokoro-FastAPI | native | Streaming, OpenAI-compatible |
 | DB + vectors | PostgreSQL 16 + pgvector | Docker | Bank, outcomes and KB in one engine |
 | Mock bank API | FastAPI, SQLAlchemy, Faker | native/Docker | Bank system of record |
@@ -149,8 +149,8 @@ Re-ingesting a new version keeps the old one for audit.
 | Test harness | pytest + LiveKit Agents test utils | native | Simulated callers, LLM judge |
 | Optional hosted LLM | Claude Haiku 5.5 | cloud | Quality/latency benchmark (synthetic data only) |
 
-**Memory budget (~13 GB total):** Qwen3 8B Q4_K_M ~5.5 GB (thinking off; 4B fallback), whisper
-large-v3-turbo ~1.6 GB (small.en ~0.5 GB), Kokoro + embeddings ~0.8 GB, Docker VM ~1.5 GB, Langfuse
+**Memory budget (~13 GB total):** Llama 3.1 8B Q4_K_M ~5.5 GB with an 8k context (Llama 3.2 3B ~2.5 GB
+fallback), whisper small.en ~0.5 GB (large-v3-turbo ~1.6 GB if accuracy needs it), Kokoro + embeddings ~0.8 GB, Docker VM ~1.5 GB, Langfuse
 ~2.5 GB (start only when needed), Python services ~1 GB.
 
 **Known risks:** SIP/RTP over Docker networking on macOS — publish a fixed RTP port range, pin the

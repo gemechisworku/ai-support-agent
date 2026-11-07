@@ -62,7 +62,7 @@ call — the context the agent works with — without querying a database.
   since 4 Nov 2026, the instalment schedule and his transactions — values equal to the bank API's.
 - **CON-R9:** The policy list shows 20 documents; opening `late-fees-penalty-interest` shows its chunks; searching
   "late fee personal loan" returns cited chunks from the fees documents with `confident=true`, and "capital of
-  France" with the Ollama embedder returns `confident=false`.
+  France" with the llama.cpp embeddings returns `confident=false`.
 - **CON-R10:** The persona sheet lists all 12 personas from `GET /personas`; entering the `call_id` printed by
   `scripts/demo_m1.py` shows its 5 audit rows in order. The persona sheet is the only place a DOB is shown
   (synthetic test identities), labelled as such.

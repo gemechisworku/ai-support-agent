@@ -85,9 +85,9 @@ tests/agent/          # mirrors the modules above
 
 ## Test strategy
 - **unit:** `detect_interrupt` phrase tables; `OutcomeBuilder` validation; `GatewayClient` against an in-memory fake MCP server; state transitions by calling the tool wrappers with `FakeGateway`; full text-mode flows with `AgentSession` + `ScriptedLLM` (tool calls scripted per turn) for Frank, Hana, Priya, Olivia, the spouse and Sam; a static test that `record_call_outcome` is in no state's tool list and that each state has ≤ 4 domain tools.
-- **eval:** the same scenarios with real Ollama (`-m eval`) via EVAL-01, run before merging prompt changes.
+- **eval:** the same scenarios with the real local LLM on llama.cpp (`-m eval`) via EVAL-01, run before merging prompt changes.
 - **live:** the playground (VOICE-05) and telephony checklist (TEL-05).
 
 ## Risks
 - The ScriptedLLM may not fit a given LiveKit Agents version's `llm.LLM` interface. If so, pin the version and adapt, or test the wrappers and transitions directly and leave full flows to `eval`.
-- Qwen3 8B may skip tool calls. Mitigations: on-enter actions in code, a small tool set, and `tool_choice` set to required in states that must act.
+- Llama 3.1 8B may skip tool calls. Mitigations: on-enter actions in code, a small tool set, and `tool_choice` set to required in states that must act.

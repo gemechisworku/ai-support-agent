@@ -25,7 +25,7 @@ make setup                 # deps, .env, Postgres (pgvector) via docker compose
 make check                 # lint, types, import boundaries, specs, unit + integration tests
 make tasks-next            # what to build next
 ```
-Native model servers (Ollama, whisper.cpp, Kokoro, LiveKit) are needed from milestone M2. Run
+Native model servers (llama.cpp, whisper.cpp, Kokoro, LiveKit) are needed from milestone M2. Run
 `make doctor` to see what is missing, and follow [docs/dev-setup.md](docs/dev-setup.md).
 
 ## Workflow in one line

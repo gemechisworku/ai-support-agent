@@ -98,7 +98,7 @@ expect:
 | CI mode | Scripted LLM + FakeGateway | Deterministic; tests code guardrails, not model quality |
 | Fake drift | Conformance suite against the real gateway | One suite, two targets |
 | Checker location | `observability/guardrails.py` | Console and report reuse them; observability is importable by all |
-| Judge | Hosted Haiku if a key is set, else local Qwen3 | Better judge quality; local fallback keeps it offline |
+| Judge | Hosted Haiku if a key is set, else local Llama 3.1 8B | Better judge quality; local fallback keeps it offline |
 | Persona data | Duplicated into scenario fixtures, cross-checked by a test | `evals` must not import `bank` in src |
 
 ## Dependencies

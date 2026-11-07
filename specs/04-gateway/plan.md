@@ -105,7 +105,7 @@ Runtime: `mcp` (Python SDK), `fastapi`, `uvicorn`, `httpx`. No extra dev depende
 tested with `httpx.MockTransport`.
 Compose service `gateway` (uses the `x-app` anchor; `alembic -n kb upgrade head` then
 `uvicorn --factory supportagent.gateway.app:create_app --host 0.0.0.0 --port 8002`; depends on `bank-api`;
-`OLLAMA_URL=http://host.docker.internal:11434` for embeddings). The app is a factory so importing it has no
+`EMBED_URL=http://host.docker.internal:8082/v1` for embeddings from the native llama.cpp server). The app is a factory so importing it has no
 side effects; `host="0.0.0.0"` disables the SDK's localhost-only Host check because the agent calls
 `gateway:8002` on the internal network. M1 exit demo: `scripts/demo_m1.py` (also run by `test_e2e_m1.py`).
 Settings: `GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`, `PROMISE_MAX_DAYS`, `HUMAN_AGENT_AVAILABLE`, `HUMAN_AGENT_EXTENSION`.

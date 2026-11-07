@@ -191,7 +191,7 @@ view shows `st.error` but keeps the search playground usable.
 
 **Acceptance criteria**
 - [x] The CON-R9 acceptance criterion in spec.md holds against the fake gateway API (the live check with 20 ingested
-  documents, and the Ollama "capital of France" part once T-VOICE-01 installs Ollama, are still to do)
+  documents, and the "capital of France" part with real embeddings once T-VOICE-01 starts llama.cpp, are still to do)
 - [x] Low-confidence results are shown with a visible "agent would offer a follow-up" note
 
 **Tests**

@@ -10,8 +10,10 @@ different plugin.
 - **STT:** whisper.cpp `whisper-server` started with `--inference-path /v1/audio/transcriptions`, used
   through `openai.STT(base_url=STT_URL/v1, model="whisper-1")`. Whisper is not truly streaming, so the
   STT is wrapped in `stt.StreamAdapter(stt, vad)` for VAD-segmented transcription (PRD §12 mitigation).
-- **LLM:** `openai.LLM.with_ollama(model=LLM_MODEL, base_url=OLLAMA_URL/v1)`. Qwen3 thinking is disabled
-  by sending `think: false` in extra body params, plus a `/no_think` system suffix as belt and braces.
+- **LLM:** llama.cpp `llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja` (Llama 3.1 8B Instruct
+  Q4_K_M), used through `openai.LLM(model=LLM_MODEL, base_url=LLM_URL, api_key="local")`. `--jinja`
+  applies the model's chat template, which gives OpenAI-style tool calls. Llama 3.1 has no thinking
+  mode, so there is nothing to disable.
   The hosted option is `anthropic.LLM(model="claude-haiku-5-5")`.
 - **TTS:** Kokoro-FastAPI through `openai.TTS(base_url=TTS_URL/v1, model="kokoro", voice=TTS_VOICE)`.
   The session's sentence tokenizer streams TTS per sentence.
@@ -49,8 +51,9 @@ tests/voice/
 
 ## Data model / contracts
 - New settings fields (added to `supportagent.common.settings` by T-VOICE-02): `STT_URL`, `TTS_URL`,
-  `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`ollama|anthropic`), `LLM_MODEL`, `ANTHROPIC_API_KEY`
-  (SecretStr), `SILENCE_REPROMPT_S`, `SILENCE_END_S`, `WHISPER_MODEL` (`large-v3-turbo|small.en`).
+  `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`llamacpp|anthropic`), `LLM_MODEL`, `ANTHROPIC_API_KEY`
+  (SecretStr), `SILENCE_REPROMPT_S`, `SILENCE_END_S`, `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
+  `LLM_GGUF` and `EMBED_GGUF` come from T-PLAT-07.
 - `LatencySummary`: `{stage: {"p50": float, "p90": float}}` for stages `eou`, `stt`, `llm_ttft`,
   `tts_ttfb`, `e2e`, in seconds. `to_outcome()` returns `latency_p50` / `latency_p90` as the e2e
   values, plus a `latency_stages` dict for traces.
@@ -60,20 +63,21 @@ tests/voice/
 |---|---|---|
 | Plugin surface | `livekit-plugins-openai` for all three local servers | One plugin, OpenAI-compatible servers, easy swap |
 | Streaming STT | VAD-segmented `StreamAdapter` over whisper.cpp | Whisper is not truly streaming (PRD §12) |
-| Thinking mode | Disabled per request | Qwen3 thinking adds seconds of latency |
+| Local model server | llama.cpp `llama-server` (one process for chat, one for embeddings) | Already installed, plain GGUF files reused across projects (disk budget), OpenAI-compatible; replaced Ollama on 2026-11-07 |
+| Local LLM | Llama 3.1 8B Instruct Q4_K_M | Reliable tool calling via its chat template, no thinking mode to disable, the GGUF was already on disk |
 | Hosted LLM | `livekit-plugins-anthropic`, `claude-haiku-5-5` | F14 benchmark; synthetic data only |
 | Model files | `./models/` (git-ignored) | Reproducible paths; not in Docker (no Metal GPU) |
 
 ## Dependencies
 Runtime: `livekit-agents`, `livekit-plugins-openai`, `livekit-plugins-silero`,
 `livekit-plugins-turn-detector`, `livekit-plugins-anthropic` (all `uv add`, pinned in `uv.lock`; verify
-API names against the installed version). Native (brew): `ollama`, `whisper-cpp`, `livekit`,
+API names against the installed version). Native (brew): `llama.cpp`, `whisper-cpp`, `livekit`,
 `livekit-cli`; Kokoro-FastAPI cloned to `vendor/kokoro-fastapi` (git-ignored) and started with its macOS
 start script. No Docker services are added; Docker on a Mac has no GPU.
 
 ## Test strategy
 - **unit:**
-  - Provider factory with settings fixtures, asserting types, base URLs and the `think` flag (no network).
+  - Provider factory with settings fixtures, asserting types, base URLs and model ids (no network).
   - `SilencePolicy` with a fake clock.
   - `LatencyTracker` fed synthetic metric objects.
   - `health.py` against a local `http.server` stub.

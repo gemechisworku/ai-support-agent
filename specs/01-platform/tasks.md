@@ -145,3 +145,46 @@ port, Ollama (and that `qwen3:8b` and `nomic-embed-text` are pulled), whisper.cp
 - `tests/tooling/test_doctor.py` (unit): runs `scripts/doctor.sh --dry-run`, which lists the checks without probing them, and asserts every check is present
 
 **Files:** `scripts/doctor.sh`, `docs/dev-setup.md`, `Makefile`, `tests/tooling/test_doctor.py`
+
+### T-PLAT-07 · Local model serving on llama.cpp instead of Ollama
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #101
+- **Depends on:** T-PLAT-06, T-KB-04
+- **Requirements:** PLAT-R7, KB-R4
+
+Ollama is replaced by llama.cpp's `llama-server` (architecture §6, decided 2026-11-07 for disk space:
+llama.cpp was already installed, and existing GGUF files can be reused). Move the code over:
+- **Settings:**
+  - `OLLAMA_URL` becomes `LLM_URL` (default `http://localhost:8081/v1`) and `EMBED_URL`
+    (default `http://localhost:8082/v1`).
+  - `LLM_PROVIDER` becomes `llamacpp|anthropic` (default `llamacpp`), and `KB_EMBEDDER` becomes
+    `llamacpp|fake`.
+  - New defaults: `LLM_MODEL=llama-3.1-8b-instruct` and `EMBED_MODEL=nomic-embed-text-v1.5`. Both are the
+    `--alias` names the servers report.
+  - New `LLM_GGUF` and `EMBED_GGUF` model-file paths, used by `scripts/models/` (T-VOICE-01).
+- **KB:**
+  - `OpenAICompatEmbedder` replaces `OllamaEmbedder`. It sends `POST {EMBED_URL}/embeddings` with
+    `{"model": EMBED_MODEL, "input": [...]}`, batches of 32, the nomic task prefixes and the same error mapping.
+  - The ingest CLI takes `--embedder llamacpp|fake`, and the golden eval uses the new embedder.
+- **Compose:** the gateway gets `EMBED_URL=http://host.docker.internal:8082/v1`.
+- **Doctor:**
+  - checks that `llama-server` is on the PATH
+  - checks that the LLM server lists `LLM_MODEL` at `GET {LLM_URL}/models`
+  - checks that the embeddings server is reachable
+  - the hints are the `llama-server` commands from `docs/dev-setup.md`
+- **Test fixtures:** model-version strings become `llamacpp/llama-3.1-8b-instruct`.
+
+**Acceptance criteria**
+- [ ] No `ollama`, `OLLAMA_URL` or `qwen` remains in `src/`, `scripts/`, `tests/`, `.env.example` or `docker-compose.yml`
+- [ ] `OpenAICompatEmbedder` returns unit-norm 768-d vectors, applies the `search_document: ` / `search_query: ` prefixes, and raises a clear error on dimension mismatch or connection failure
+- [ ] With the model servers stopped, `make doctor` prints ✗ lines naming the `llama-server` start commands; exit codes follow PLAT-R7
+- [ ] The new settings are in `.env.example`, and `docs/dev-setup.md` matches them
+
+**Tests**
+- `tests/kb/test_embed.py` (unit): `OpenAICompatEmbedder` against `httpx.MockTransport` (request path and body, batching, prefixing, error mapping)
+- `tests/kb/test_embed_llamacpp.py` (eval, replaces `test_embed_ollama.py`): the real embeddings server returns 768-d vectors
+- `tests/common/test_settings.py` (unit): new fields and defaults; an unknown `LLM_PROVIDER` is rejected
+- `tests/tooling/test_doctor.py` (unit): `--dry-run` lists the llama.cpp checks
+
+**Files:** `src/supportagent/common/settings.py`, `src/supportagent/kb/embed.py`, `src/supportagent/kb/ingest.py`, `src/supportagent/observability/versions.py`, `scripts/doctor.sh`, `.env.example`, `docker-compose.yml`, tests above

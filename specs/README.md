@@ -86,7 +86,7 @@ and fakes it in tests.
 | Python | 3.12, `uv`, `src/` layout, single distribution `supportagent` |
 | Config | `supportagent.common.settings` (pydantic-settings, `.env`); no `os.environ` elsewhere |
 | Databases | Postgres 16 + pgvector; databases `bank` and `kb`; Alembic migrations per database |
-| Ports | Postgres 5432 · Redis 6379 · bank API 8001 · gateway 8002 (`/mcp`, `/sessions`, `/service`) · scheduler API 8003 · console 8501 · LiveKit 7880 (UDP 50000–50099) · LiveKit SIP 5070 (RTP 10000–10099) · Asterisk 5060 (RTP 20000–20099) · Ollama 11434 · whisper.cpp 8178 · Kokoro 8880 · Langfuse 3000 |
+| Ports | Postgres 5432 · Redis 6379 · bank API 8001 · gateway 8002 (`/mcp`, `/sessions`, `/service`) · scheduler API 8003 · console 8501 · LiveKit 7880 (UDP 50000–50099) · LiveKit SIP 5070 (RTP 10000–10099) · Asterisk 5060 (RTP 20000–20099) · llama.cpp LLM 8081 · llama.cpp embeddings 8082 · whisper.cpp 8178 · Kokoro 8880 · Langfuse 3000 |
 | Money | `Decimal` (2 dp) in code, `NUMERIC(12,2)` in SQL; never float |
 | Time | timezone-aware UTC in storage; customer local time only for calling-window checks |
 | Ids | `call_id` UUID4 string; bank ids are integers; masked numbers show the last 4 only |
