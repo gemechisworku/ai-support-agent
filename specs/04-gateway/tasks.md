@@ -243,7 +243,7 @@ request is audited with `call_id` (or `service` when there is no call).
 **Files:** `src/supportagent/gateway/service.py`, tests above
 
 ### T-GW-11 · Verify inbound callers from unregistered numbers
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #94
 - **Depends on:** T-GW-05, T-BANK-08
@@ -254,9 +254,9 @@ Closes the open question in spec.md: add `BankClient.match_customers(dob, loan_l
 has none. The 2-failure lock, the name check and the "never reveal why it failed" rule stay as they are.
 
 **Acceptance criteria**
-- [ ] An inbound session from an unknown number verifies Frank with his name, DOB and loan last 4
-- [ ] A wrong DOB from an unknown number still counts as a failed attempt, and two lock the session
-- [ ] A DOB + last-4 match with a different name does not verify (the name check still applies)
+- [x] An inbound session from an unknown number verifies Frank with his name, DOB and loan last 4
+- [x] A wrong DOB from an unknown number still counts as a failed attempt, and two lock the session
+- [x] A DOB + last-4 match with a different name does not verify (the name check still applies)
 
 **Tests**
 - `tests/gateway/test_identity.py` (unit, FakeBank): the three cases above

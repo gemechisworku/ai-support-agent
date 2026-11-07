@@ -71,11 +71,22 @@ async def test_inbound_phone_candidate_binds(gateway: Gateway) -> None:
     assert r.data is not None and r.data.verified and s.bound_customer_id == FRANK.customer_id
 
 
-async def test_inbound_unknown_number_cannot_verify_yet(gateway: Gateway) -> None:
-    """The bank has no identity-search endpoint (spec open question): the attempt counts as a failure."""
+async def test_inbound_unknown_number_verifies_by_dob_and_last4(gateway: Gateway, bank: FakeBank) -> None:
+    """T-GW-11: a number that is not on file is matched by DOB + loan last 4, then fully verified."""
     s = await open_session(gateway, direction="inbound", campaign="inbound", caller_phone="+15559990000")
+    assert s.candidate_ids == []
     r = await run_tool(gateway, "verify_identity", s.token, frank_claim())
-    assert r.data is not None and not r.data.verified and r.data.attempts_remaining == 1
+    assert r.data is not None and r.data.verified and r.data.first_name == "Frank"
+    assert s.bound_customer_id == FRANK.customer_id
+    assert ("match_customers", (FRANK.dob, FRANK.loan_last4)) in bank.calls
+
+
+async def test_registered_number_does_not_fall_back_to_matching(gateway: Gateway, bank: FakeBank) -> None:
+    """Callers on a registered number are checked against that number's customers only."""
+    s = await open_session(gateway, direction="inbound", campaign="inbound", caller_phone=HANA.phone)
+    r = await run_tool(gateway, "verify_identity", s.token, frank_claim())
+    assert r.data is not None and not r.data.verified
+    assert not any(name == "match_customers" for name, _ in bank.calls)
 
 
 async def test_several_matches_count_as_a_failure(gateway: Gateway, bank: FakeBank) -> None:

@@ -71,8 +71,9 @@ tests/gateway/
   errors). DOB must match exactly. `loan_last4` must equal the last 4 digits of one of the
   candidate's loans.
 - **Candidates:** an outbound call checks only `expected_customer_id`. An inbound call checks the
-  phone candidates (the bank identity match for unknown numbers waits for a bank endpoint — spec open
-  question). Exactly one match is required; zero or more than one counts as a failed attempt. A session
+  phone candidates; when the caller's number is not on file, it checks the customers returned by the
+  bank's `GET /customers/match?dob=&loan_last4=` for the claim (T-GW-11; a registered number never falls
+  back to matching). The name, DOB and last 4 are still checked for every candidate. Exactly one match is required; zero or more than one counts as a failed attempt. A session
   that is already bound returns `verified=true` without re-checking, so it can never be re-bound.
 - `LoanSummary{loan_masked, product_code, product_name, outstanding_balance, overdue_amount,
   oldest_unpaid_due_date, next_due_date, next_due_amount, days_past_due, fees_accrued, status, speakable}`
