@@ -54,7 +54,7 @@ Package root: `src/supportagent/`. Tests mirror it under `tests/<module>/`.
 | 08 | TEL | [Telephony](08-telephony/spec.md) | `telephony/`, `infra/telephony/` | M3 | VOICE, AGENT | F2, F3, F9, AC-DEMO |
 | 09 | SCHED | [Outreach scheduler](09-scheduler/spec.md) | `scheduler/` | M3 | COMP lib, BANK API, LiveKit API | F3, F8, U1, U2, U5 |
 | 10 | OBS | [Observability and redaction](10-observability/spec.md) | `observability/` | M2, M4 | PLAT | F11, NFR-AUDIT, NFR-SEC |
-| 11 | CON | [Operations console and data explorer](11-console/spec.md) | `console/` | M2, M4 | BANK API, GW service API | F10 |
+| 11 | CON | [Operations console and data explorer](11-console/spec.md) | `web/console/` (Next.js), `console/` (console API) | M2, M4 | BANK API, GW service API | F10 |
 | 12 | EVAL | [Simulated-caller evals](12-evals/spec.md) | `evals/`, `tests/scenarios/` | M2, M4 | AGENT (text mode) | F12, AC-TASK, AC-GUARD, AC-GROUND, AC-EXP |
 
 ### Dependency rules (enforced by `import-linter`, see `pyproject.toml`)
@@ -86,7 +86,7 @@ and fakes it in tests.
 | Python | 3.12, `uv`, `src/` layout, single distribution `supportagent` |
 | Config | `supportagent.common.settings` (pydantic-settings, `.env`); no `os.environ` elsewhere |
 | Databases | Postgres 16 + pgvector; databases `bank` and `kb`; Alembic migrations per database |
-| Ports | Postgres 5432 · Redis 6379 · bank API 8001 · gateway 8002 (`/mcp`, `/sessions`, `/service`) · scheduler API 8003 · console 8501 · LiveKit 7880 (UDP 50000–50099) · LiveKit SIP 5070 (RTP 10000–10099) · Asterisk 5060 (RTP 20000–20099) · llama.cpp LLM 8090 · llama.cpp embeddings 8082 · whisper.cpp 8178 · Kokoro 8880 · Langfuse 3000 |
+| Ports | Postgres 5432 · Redis 6379 · bank API 8001 · gateway 8002 (`/mcp`, `/sessions`, `/service`) · scheduler API 8003 · console 8501 (Next.js) · console API 8004 · LiveKit 7880 (UDP 50000–50099) · LiveKit SIP 5070 (RTP 10000–10099) · Asterisk 5060 (RTP 20000–20099) · llama.cpp LLM 8090 · llama.cpp embeddings 8082 · whisper.cpp 8178 · Kokoro 8880 · Langfuse 3000 |
 | Money | `Decimal` (2 dp) in code, `NUMERIC(12,2)` in SQL; never float |
 | Time | timezone-aware UTC in storage; customer local time only for calling-window checks |
 | Ids | `call_id` UUID4 string; bank ids are integers; masked numbers show the last 4 only |

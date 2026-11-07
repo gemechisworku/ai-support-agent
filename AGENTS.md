@@ -100,11 +100,15 @@ These are checked by CI or by tests. Details are in the constitution.
   Unmarked tests are unit tests and must not touch the network. Use the `integration` marker for
   Postgres, `eval` for a real LLM and `live` for model servers and telephony.
 - All data is synthetic. Never add real names, numbers or credentials, even in tests.
+- Web UIs: every admin or console UI is a Next.js app under `web/` (App Router, TypeScript strict,
+  Tailwind + shadcn/ui, npm). It calls only its Python API, from the server, and its API types are
+  generated from that API's OpenAPI (`make console-types`); never hand-write them. UI tests are
+  Vitest (unit) and Playwright against a fake API (e2e). No Python UI frameworks.
 
 ## Where things run
 | Runs in Docker (`docker compose`) | Runs natively on macOS (Metal GPU) |
 |---|---|
-| Postgres + pgvector, Redis, Asterisk, LiveKit SIP, Langfuse, app services (bank API, gateway, scheduler, console) | llama.cpp `llama-server` (Llama 3.1 8B, nomic-embed-text), whisper.cpp, Kokoro TTS, livekit-server, the agent worker |
+| Postgres + pgvector, Redis, Asterisk, LiveKit SIP, Langfuse, app services (bank API, gateway, scheduler, console API, Next.js console) | llama.cpp `llama-server` (Llama 3.1 8B, nomic-embed-text), whisper.cpp, Kokoro TTS, livekit-server, the agent worker |
 
 Unit and integration tests never need the native column.
 

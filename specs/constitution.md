@@ -49,7 +49,9 @@ Prompts, disclosure texts, contact rules and policy documents carry versions. Ev
 Prefer the smallest change that satisfies the task. Open-source, local components as in
 `docs/architecture.md`. A new runtime dependency or service must be named in the module's `plan.md`.
 No speculative abstractions; one provider switch (F14) is the only planned pluggability beyond the
-contracts.
+contracts. Every admin or console UI is a Next.js app (App Router, TypeScript strict) under `web/`, and
+it reads data only through a Python API whose OpenAPI generates its types; no Python UI frameworks
+(such as Streamlit).
 
 ## IX. One task → one issue → one commit; one milestone → one branch → one PR
 Task commits go on `milestone/Mn` as `feat(<module>): … (T-XXX-NN)` and set the task's `Status: done`.

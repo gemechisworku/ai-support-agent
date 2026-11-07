@@ -17,7 +17,7 @@ Human softphone ────┤        VAD → turn detect → STT → LLM → T
 LiveKit Server+Redis┘          policyQ·capture·close                 policy search (hybrid RAG)
                              global: escalate·dispute·cease·3rd    Mock core bank API (FastAPI)
 Outreach scheduler           MCP client → gateway tools only       PostgreSQL: db bank, db kb (pgvector)
-  compliance gate            Model servers (native, Metal):        Operations console (Streamlit)
+  compliance gate            Model servers (native, Metal):        Ops console (Next.js + API)
   (window, 7-in-7, DNC,        whisper.cpp · llama.cpp Llama 3.1 8B  Langfuse (PII-redacted via Presidio)
    consent) · retries          · nomic-embed · Kokoro-82M · opt. hosted LLM
 ```
@@ -144,7 +144,7 @@ Re-ingesting a new version keeps the old one for audit.
 | Data gateway | MCP Python SDK on FastAPI | native/Docker | Scoped sessions, allow-list, masking, rate limits, audit |
 | PII redaction | Microsoft Presidio | library | Redact transcripts/traces |
 | Scheduler | Python + APScheduler | native/Docker | Campaigns, compliance gate, pacing, retries, callbacks |
-| Console | Streamlit | native/Docker | Trigger calls, outcomes, transcripts, follow-ups |
+| Console | Next.js web app (`web/console`) + Python console API (FastAPI) | Docker | Trigger calls, outcomes, transcripts, follow-ups, data explorer. Every admin UI is Next.js; the console API reuses the Python masking, guardrails and compliance code (replaced Streamlit on 2026-11-07) |
 | Observability | Langfuse self-hosted (Phoenix alt.) | Docker (opt.) | Per-turn traces, latency, eval scores |
 | Test harness | pytest + LiveKit Agents test utils | native | Simulated callers, LLM judge |
 | Optional hosted LLM | Claude Haiku 5.5 | cloud | Quality/latency benchmark (synthetic data only) |
