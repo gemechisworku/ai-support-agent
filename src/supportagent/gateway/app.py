@@ -5,6 +5,8 @@
 - `POST /sessions`, `DELETE /sessions/{call_id}` — called by the agent worker's code with
   `Authorization: Bearer $GATEWAY_WORKER_TOKEN`; the returned session token authorises MCP calls.
 - `/mcp` — MCP streamable HTTP (stateless, JSON responses), `Authorization: Bearer <session_token>`.
+- `/service/kb/*` — read-only knowledge-base browse and search for the console (T-GW-12),
+  `Authorization: Bearer $GATEWAY_SERVICE_TOKEN` (shared service dependency in `auth.py`).
 - `/healthz`.
 """
 
@@ -21,6 +23,8 @@ from supportagent.common.settings import get_settings
 from supportagent.contracts.gateway import SessionCreate, SessionCreated
 from supportagent.gateway.bank_client import BankError, HttpBankClient
 from supportagent.gateway.config import SESSION_MAX_TTL, GatewayConfig
+from supportagent.gateway.kb_browse import SqlKbBrowser
+from supportagent.gateway.kb_browse import router as kb_browse_router
 from supportagent.gateway.mcp_server import build_mcp_server
 from supportagent.gateway.retriever import KbRetriever
 from supportagent.gateway.tools import Gateway
@@ -34,7 +38,9 @@ def default_gateway() -> Gateway:
     config = GatewayConfig.from_settings(settings)
     bank = HttpBankClient(settings.services.bank_api_url, config.service_token)
     retriever = KbRetriever.from_engine(kb_engine(), get_embedder(settings))
-    return Gateway(bank=bank, config=config, retriever=retriever)
+    return Gateway(
+        bank=bank, config=config, retriever=retriever, kb_browser=SqlKbBrowser.from_engine(kb_engine())
+    )
 
 
 def _gateway(request: Request) -> Gateway:
@@ -92,5 +98,6 @@ def create_app(gateway: Gateway | None = None) -> FastAPI:
         _gateway(request).store.close(call_id)
         return Response(status_code=204)
 
+    app.include_router(kb_browse_router)
     app.mount("/", mcp_app)  # after the routes above, so /healthz and /sessions match first
     return app

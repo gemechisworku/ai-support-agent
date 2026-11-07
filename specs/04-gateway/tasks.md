@@ -265,7 +265,7 @@ has none. The 2-failure lock, the name check and the "never reveal why it failed
 **Files:** `src/supportagent/gateway/bank_client.py`, `src/supportagent/gateway/identity.py`, `specs/04-gateway/spec.md` (remove the open question), tests above
 
 ### T-GW-12 · Knowledge-base browse endpoints for the console
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #99
 - **Depends on:** T-GW-09
@@ -277,9 +277,9 @@ Add the read-only `/service/kb/*` routes listed under Interfaces, authenticated 
 exactly what the agent would get. Every request writes an audit row with `call_id="service"`.
 
 **Acceptance criteria**
-- [ ] The GW-R12 acceptance criterion in spec.md holds
-- [ ] Contracts `KbDocumentSummary` and `KbDocumentDetail` live in `contracts/kb.py`
-- [ ] The routes read only the `kb` database; no bank call is made
+- [x] The GW-R12 acceptance criterion in spec.md holds
+- [x] Contracts `KbDocumentSummary` and `KbDocumentDetail` live in `contracts/kb.py`
+- [x] The routes read only the `kb` database; no bank call is made
 
 **Tests**
 - `tests/gateway/test_kb_browse.py` (unit with a fake KB reader): routes, auth matrix, audit rows

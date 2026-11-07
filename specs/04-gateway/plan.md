@@ -53,7 +53,9 @@ src/supportagent/gateway/
     policy.py         # search_policy
   retriever.py        # Retriever protocol + KbRetriever (kb.retrieval.search in a worker thread)
   mcp_server.py       # FastMCP instance; registers TOOL_REGISTRY with typed signatures
-  service.py          # APIRouter for /service/*
+  service.py          # APIRouter for /service/* scheduler routes (T-GW-10)
+  auth.py             # shared service-token check + audit wrapper `service_call` (T-GW-12, reused by T-GW-10)
+  kb_browse.py        # /service/kb/* browse + search for the console; KbBrowser protocol, SqlKbBrowser (T-GW-12)
 tests/gateway/
   fakes.py            # FakeBank (all 12 personas from bank.seed, LoanStatus via the bank ledger), FakeRetriever
   test_*.py
