@@ -94,7 +94,7 @@ scheduler uses (T-SCHED-01, T-SCHED-04).
 **Files:** `src/supportagent/compliance/rules.py`, `tests/compliance/test_gate.py`
 
 ### T-COMP-05 · Disclosure registry and required-disclosure checker
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #36
 - **Depends on:** T-COMP-01
@@ -106,10 +106,10 @@ Create `data/config/disclosures.yaml`, a `DisclosureRegistry` (`render`, `requir
 rendered texts and records `disclosures_given` as `key@version`. Evals (T-EVAL-03) use the checker.
 
 **Acceptance criteria**
-- [ ] Spec acceptance criteria for COMP-R5 and COMP-R6 hold
-- [ ] `render` fails on unknown placeholders; `RenderedDisclosure` carries `key`, `version`, `text`
-- [ ] Disclosure texts match the KB doc `required-disclosures` (consistency test, skipped if the doc is absent)
-- [ ] Branch coverage of `supportagent.compliance.disclosures` is 100%
+- [x] Spec acceptance criteria for COMP-R5 and COMP-R6 hold
+- [x] `render` fails on unknown placeholders; `RenderedDisclosure` carries `key`, `version`, `text`
+- [x] Disclosure texts match the KB doc `required-disclosures` (consistency test, skipped if the doc is absent)
+- [x] Branch coverage of `supportagent.compliance.disclosures` is 100%
 
 **Tests**
 - `tests/compliance/test_disclosures.py` (unit): load, render, `required_for` per direction/campaign

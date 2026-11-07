@@ -8,7 +8,7 @@ of the contact gate (T-COMP-02..04), which the scheduler calls before every dial
 import datetime as dt
 import re
 from enum import StrEnum
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
@@ -140,3 +140,48 @@ class GateDecision(_Contract):
         if self.allowed == bool(self.reasons):
             raise ValueError("allowed must be true exactly when there are no deny reasons")
         return self
+
+
+# --------------------------------------------------------------------------- disclosures (T-COMP-05)
+
+
+class Disclosure(_Contract):
+    """A disclosure script as configured: `text` may contain `{placeholders}`."""
+
+    key: str
+    version: str
+    text: str
+
+
+class RenderedDisclosure(_Contract):
+    """The exact words to speak. `tag` (`key@version`) goes into `CallOutcome.disclosures_given`."""
+
+    key: str
+    version: str
+    text: str
+
+    @property
+    def tag(self) -> str:
+        return f"{self.key}@{self.version}"
+
+
+class CallEvent(_Contract):
+    """One step of a call, from the agent/gateway audit trail, for after-the-fact checks.
+
+    `kind="tool"`: a gateway tool call (`name` = tool); `kind="verified"`: identity bound;
+    `kind="disclosure"`: a disclosure was spoken (`name` = key); `kind="utterance"`: anything said.
+    """
+
+    ts: AwareDatetime
+    kind: Literal["tool", "disclosure", "verified", "utterance"]
+    name: str = ""
+
+
+class Violation(_Contract):
+    """A failed disclosure rule.
+
+    `code` is `missing_disclosure:<key>`, `data_before_verification` or `data_before_collections_disclosure`.
+    """
+
+    code: str
+    detail: str

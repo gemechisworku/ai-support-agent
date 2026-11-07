@@ -43,6 +43,16 @@ disclosures:
     text: "This is {bank_name} calling for {first_name}. Please ask them to call us back at their convenience. Thank you."
     required: {}
 ```
+`collections` also carries `after_verification: true`: on a missed-payment call it is owed only once the
+customer is verified (it is spoken after verification, before any amount). A call where verification
+failed reveals no amount, so it owes no collections disclosure.
+
+`check_disclosures` rules (T-COMP-05):
+- disclosures are owed only when someone answered (`right_party` or `third_party`); `disclosures_given`
+  is matched by key (`collections@1.0` → `collections`);
+- events are ordered by `ts` (stable); an account-data tool before the first `verified` event →
+  `data_before_verification`; on `missed_payment`, one before the first `collections` disclosure event →
+  `data_before_collections_disclosure`; each code is reported at most once, after the missing ones.
 
 ## File layout
 ```

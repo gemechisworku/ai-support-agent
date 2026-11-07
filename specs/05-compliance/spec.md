@@ -54,9 +54,11 @@ not legal advice.
   helpers that turn any config problem into a `ValueError` naming the file and field
 - `supportagent.compliance.rules`: `check_calling_window`, `check_frequency`,
   `evaluate(facts, now, rules) -> GateDecision`, `facts_from_eligible(EligibleLoan, planned_at) -> ContactFacts`
-- `supportagent.compliance.disclosures`: `load_disclosures(path=None) -> DisclosureRegistry`,
-  `registry.render(key, bank_name, agent_name) -> RenderedDisclosure`, `registry.required_for(direction, campaign)`,
-  `check_disclosures(outcome: CallOutcome, events: list[CallEvent]) -> list[Violation]`
+- `supportagent.compliance.disclosures`: `load_disclosures(path=None) -> DisclosureRegistry` (default:
+  `disclosures.yaml` next to `CONTACT_RULES_PATH`), `registry.render(key, **values) -> RenderedDisclosure`
+  (values: `bank_name`, `agent_name`, `first_name` for `third_party_neutral`), `registry.required_for(direction, campaign)`,
+  `registry.tag(key)`, `registry.after_verification(key)`, `registry.version_tag`, `ACCOUNT_DATA_TOOLS`,
+  `check_disclosures(outcome: CallOutcome, events: list[CallEvent], registry=None) -> list[Violation]`
 - Contracts in `supportagent/contracts/compliance.py`: `ContactRules`, `CallingWindow`, `FrequencyCap`,
   `RetryRules`, `ContactFacts`, `DenyReason` (StrEnum), `GateDecision`, `Disclosure`, `RenderedDisclosure`,
   `CallEvent{ts, kind: "tool"|"disclosure"|"verified"|"utterance", name}`, `Violation{code, detail}`.

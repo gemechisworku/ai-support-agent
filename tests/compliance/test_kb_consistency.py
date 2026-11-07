@@ -60,3 +60,21 @@ def test_consistency_check_catches_a_changed_window(tmp_path: Path) -> None:
     rules = load_rules(changed)
     doc = " ".join(_doc(RULES_DOC).split())
     assert f"between {rules.calling_window.start:%H:%M} and" not in doc
+
+
+DISCLOSURES_DOC = POLICIES / "required-disclosures.md"
+
+
+def test_disclosures_match_kb() -> None:
+    """Each `## <key> (version X)` section's quoted line equals the YAML text, verbatim."""
+    from supportagent.compliance.disclosures import load_disclosures
+
+    doc = _doc(DISCLOSURES_DOC)
+    in_doc = {
+        m.group(1): (m.group(2), m.group(3).strip())
+        for m in re.finditer(r"^## (\w+) \(version ([\d.]+)\)\s*\n\s*\n> (.+)$", doc, re.M)
+    }
+    registry = load_disclosures(ROOT / "data" / "config" / "disclosures.yaml")
+    in_yaml = {key: (registry.version, registry.get(key).text) for key in registry.keys}
+    assert in_doc == in_yaml, "required-disclosures.md disagrees with disclosures.yaml"
+    assert _version(doc) == registry.version
