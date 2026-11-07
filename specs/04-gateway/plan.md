@@ -53,7 +53,9 @@ src/supportagent/gateway/
     policy.py         # search_policy
   retriever.py        # Retriever protocol + KbRetriever (kb.retrieval.search in a worker thread)
   mcp_server.py       # FastMCP instance; registers TOOL_REGISTRY with typed signatures
-  service.py          # APIRouter for /service/*
+  service.py          # APIRouter for /service/* scheduler routes (T-GW-10)
+  auth.py             # shared service-token check + audit wrapper `service_call` (T-GW-12, reused by T-GW-10)
+  kb_browse.py        # /service/kb/* browse + search for the console; KbBrowser protocol, SqlKbBrowser (T-GW-12)
 tests/gateway/
   fakes.py            # FakeBank (all 12 personas from bank.seed, LoanStatus via the bank ledger), FakeRetriever
   test_*.py
@@ -69,8 +71,9 @@ tests/gateway/
   errors). DOB must match exactly. `loan_last4` must equal the last 4 digits of one of the
   candidate's loans.
 - **Candidates:** an outbound call checks only `expected_customer_id`. An inbound call checks the
-  phone candidates (the bank identity match for unknown numbers waits for a bank endpoint — spec open
-  question). Exactly one match is required; zero or more than one counts as a failed attempt. A session
+  phone candidates; when the caller's number is not on file, it checks the customers returned by the
+  bank's `GET /customers/match?dob=&loan_last4=` for the claim (T-GW-11; a registered number never falls
+  back to matching). The name, DOB and last 4 are still checked for every candidate. Exactly one match is required; zero or more than one counts as a failed attempt. A session
   that is already bound returns `verified=true` without re-checking, so it can never be re-bound.
 - `LoanSummary{loan_masked, product_code, product_name, outstanding_balance, overdue_amount,
   oldest_unpaid_due_date, next_due_date, next_due_amount, days_past_due, fees_accrued, status, speakable}`
@@ -102,7 +105,7 @@ Runtime: `mcp` (Python SDK), `fastapi`, `uvicorn`, `httpx`. No extra dev depende
 tested with `httpx.MockTransport`.
 Compose service `gateway` (uses the `x-app` anchor; `alembic -n kb upgrade head` then
 `uvicorn --factory supportagent.gateway.app:create_app --host 0.0.0.0 --port 8002`; depends on `bank-api`;
-`OLLAMA_URL=http://host.docker.internal:11434` for embeddings). The app is a factory so importing it has no
+`EMBED_URL=http://host.docker.internal:8082/v1` for embeddings from the native llama.cpp server). The app is a factory so importing it has no
 side effects; `host="0.0.0.0"` disables the SDK's localhost-only Host check because the agent calls
 `gateway:8002` on the internal network. M1 exit demo: `scripts/demo_m1.py` (also run by `test_e2e_m1.py`).
 Settings: `GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`, `PROMISE_MAX_DAYS`, `HUMAN_AGENT_AVAILABLE`, `HUMAN_AGENT_EXTENSION`.

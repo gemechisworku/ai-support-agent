@@ -1,0 +1,13 @@
+{
+  "name": "policy-broken",
+  "method": "GET",
+  "path": "/api/policies/fees-schedule",
+  "query": {
+    "version": "9.9"
+  },
+  "body": null,
+  "status": 502,
+  "response": {
+    "detail": "GET /service/kb/documents/fees-schedule failed: HTTP 500 (simulated failure)"
+  }
+}

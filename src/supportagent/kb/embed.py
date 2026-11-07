@@ -2,14 +2,15 @@
 
 Everything that needs vectors goes through the `Embedder` protocol:
 
-- `OllamaEmbedder` — the default: `nomic-embed-text` (768-d) served by the native Ollama on the Mac,
-  called with `POST {OLLAMA_URL}/api/embed` in batches. nomic expects task prefixes, so documents are
-  sent as `search_document: …` and queries as `search_query: …`.
+- `OpenAICompatEmbedder` — the default: `nomic-embed-text-v1.5` (768-d) served by the native llama.cpp
+  `llama-server --embedding` on the Mac, called with the OpenAI-style `POST {EMBED_URL}/embeddings` in
+  batches. nomic expects task prefixes, so documents are sent as `search_document: …` and queries as
+  `search_query: …`.
 - `HashEmbedder` — offline and deterministic, for unit/integration tests and CI. It hashes lower-cased
   word unigrams and bigrams into 768 buckets, so texts that share words get similar vectors.
 
 Both return unit-norm (L2) 768-d `list[float]`, so cosine similarity is a plain dot product.
-`get_embedder(settings)` picks one from `KB_EMBEDDER=ollama|fake`.
+`get_embedder(settings)` picks one from `KB_EMBEDDER=llamacpp|fake`.
 """
 
 from __future__ import annotations
@@ -41,7 +42,7 @@ class Embedder(Protocol):
     """What ingestion and retrieval need from an embedding model."""
 
     dim: int
-    name: str  # recorded with ingested chunks, e.g. "ollama/nomic-embed-text" or "hash-v1"
+    name: str  # recorded with ingested chunks, e.g. "llamacpp/nomic-embed-text-v1.5" or "hash-v1"
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]: ...
 
@@ -83,14 +84,19 @@ class HashEmbedder:
         return self._embed(text)
 
 
-class OllamaEmbedder:
-    """`nomic-embed-text` through Ollama's `/api/embed`, batched, with nomic's task prefixes."""
+class OpenAICompatEmbedder:
+    """nomic embeddings through an OpenAI-compatible `/embeddings` endpoint (llama.cpp `llama-server`).
+
+    `base_url` includes the `/v1` part, e.g. `http://localhost:8082/v1`. Inputs are batched and get
+    nomic's task prefixes. `provider` only names the backend in `name` (stored with ingested chunks).
+    """
 
     def __init__(
         self,
         base_url: str,
         model: str,
         *,
+        provider: str = "llamacpp",
         dim: int = EMBED_DIM,
         batch_size: int = 32,
         timeout_s: float = 30.0,
@@ -102,7 +108,7 @@ class OllamaEmbedder:
         self.model = model
         self.dim = dim
         self.batch_size = batch_size
-        self.name = f"ollama/{model}"
+        self.name = f"{provider}/{model}"
         self._client = httpx.Client(base_url=self.base_url, timeout=timeout_s, transport=transport)
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
@@ -120,39 +126,45 @@ class OllamaEmbedder:
 
     def _embed(self, inputs: list[str]) -> list[list[float]]:
         try:
-            resp = self._client.post("/api/embed", json={"model": self.model, "input": inputs})
+            resp = self._client.post("/embeddings", json={"model": self.model, "input": inputs})
         except httpx.TimeoutException as exc:
-            raise EmbedderError(f"Ollama at {self.base_url} timed out embedding {len(inputs)} texts") from exc
+            raise EmbedderError(
+                f"embeddings server at {self.base_url} timed out embedding {len(inputs)} texts"
+            ) from exc
         except httpx.TransportError as exc:
             raise EmbedderError(
-                f"Ollama not reachable at {self.base_url} ({exc}); start it with `brew services start ollama`"
+                f"embeddings server not reachable at {self.base_url} ({exc}); start it with "
+                "`make models-up` or the `llama-server --embedding` command in docs/dev-setup.md"
             ) from exc
-        if resp.status_code == 404 and "not found" in resp.text:
-            raise EmbedderError(f"Ollama has no model {self.model!r}; run `ollama pull {self.model}`")
         if resp.status_code != 200:
-            raise EmbedderError(f"Ollama /api/embed returned HTTP {resp.status_code}: {resp.text[:200]}")
+            raise EmbedderError(
+                f"embeddings server {self.base_url}/embeddings returned HTTP {resp.status_code}: "
+                f"{resp.text[:200]} (was llama-server started with --embedding?)"
+            )
         return self._parse(resp, len(inputs))
 
     def _parse(self, resp: httpx.Response, expected: int) -> list[list[float]]:
         try:
             payload: Any = resp.json()
-            vectors = payload["embeddings"]
-        except (ValueError, KeyError, TypeError) as exc:
-            raise EmbedderError("Ollama response has no 'embeddings' list") from exc
-        if not isinstance(vectors, list) or len(vectors) != expected:
-            got = len(vectors) if isinstance(vectors, list) else "no"
-            raise EmbedderError(f"Ollama returned {got} vectors for {expected} texts")
+            items = sorted(payload["data"], key=lambda item: item.get("index", 0))
+            vectors = [item["embedding"] for item in items]
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise EmbedderError("embeddings response has no 'data[].embedding' list") from exc
+        if len(vectors) != expected:
+            raise EmbedderError(f"embeddings server returned {len(vectors)} vectors for {expected} texts")
         for vec in vectors:
-            if len(vec) != self.dim:
+            if not isinstance(vec, list) or len(vec) != self.dim:
+                got = len(vec) if isinstance(vec, list) else "non-list"
                 raise EmbedderError(
-                    f"{self.model} returned {len(vec)}-d vectors but the KB schema expects {self.dim}-d"
+                    f"{self.model} returned {got}-d vectors but the KB schema expects {self.dim}-d"
+                    " (was llama-server started with --pooling mean?)"
                 )
         return [_normalise(v) for v in vectors]
 
 
 def get_embedder(settings: Settings | None = None) -> Embedder:
-    """The embedder selected by `KB_EMBEDDER` (`ollama` default, `fake` for tests and CI)."""
+    """The embedder selected by `KB_EMBEDDER` (`llamacpp` default, `fake` for tests and CI)."""
     s = settings or get_settings()
     if s.data.kb_embedder == "fake":
         return HashEmbedder()
-    return OllamaEmbedder(s.models.ollama_url, s.models.embed_model)
+    return OpenAICompatEmbedder(s.models.embed_url, s.models.embed_model)

@@ -45,7 +45,7 @@ class Customer(BankBase):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     full_name: Mapped[str] = mapped_column(Text)
-    dob: Mapped[dt.date] = mapped_column(Date)
+    dob: Mapped[dt.date] = mapped_column(Date, index=True)  # identity match (T-BANK-08)
     phone: Mapped[str] = mapped_column(Text, unique=True, index=True)
     email: Mapped[str] = mapped_column(Text)
     address: Mapped[str] = mapped_column(Text)

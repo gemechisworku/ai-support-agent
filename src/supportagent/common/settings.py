@@ -62,7 +62,7 @@ class DataSettings(_Group):
     """Mock bank, knowledge base and policy configuration."""
 
     bank_as_of: date | None = None
-    kb_embedder: Literal["ollama", "fake"] = "ollama"
+    kb_embedder: Literal["llamacpp", "fake"] = "llamacpp"
     kb_min_similarity: float = Field(0.55, ge=0.0, le=1.0)
     contact_rules_path: Path = Path("data/config/contact_rules.yaml")
     promise_max_days: int = Field(14, ge=1)
@@ -80,6 +80,10 @@ class ServicesSettings(_Group):
     human_agent_available: bool = True
     scheduler_url: str = "http://localhost:8003"
     scheduler_token: SecretStr
+    # Console API (T-CON-09): the Next.js console's backend. The token is required by the console API
+    # itself (it refuses to start without one), not by the other services.
+    console_api_url: str = "http://localhost:8004"
+    console_api_token: SecretStr | None = None
     sched_max_concurrent: int = Field(1, ge=1)
     max_call_s: int = Field(600, ge=1)
 
@@ -87,12 +91,17 @@ class ServicesSettings(_Group):
 class ModelsSettings(_Group):
     """Native model servers (Metal) and the hosted-LLM switch (F14)."""
 
-    ollama_url: str = "http://localhost:11434"
-    llm_provider: Literal["ollama", "anthropic"] = "ollama"
-    llm_model: str = "qwen3:8b"
-    embed_model: str = "nomic-embed-text"
+    # llama.cpp `llama-server` (OpenAI-compatible, base URLs include /v1). The model names are the
+    # servers' `--alias`; the GGUF paths are what scripts/models/ starts them with.
+    llm_url: str = "http://localhost:8090/v1"
+    embed_url: str = "http://localhost:8082/v1"
+    llm_provider: Literal["llamacpp", "anthropic"] = "llamacpp"
+    llm_model: str = "llama-3.1-8b-instruct"
+    embed_model: str = "nomic-embed-text-v1.5"
+    llm_gguf: Path = Path("models/llm/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf")
+    embed_gguf: Path = Path("models/embed/nomic-embed-text-v1.5.Q8_0.gguf")
     stt_url: str = "http://localhost:8178"
-    whisper_model: str = "large-v3-turbo"
+    whisper_model: str = "small.en"
     silence_reprompt_s: float = Field(6, gt=0)
     silence_end_s: float = Field(15, gt=0)
     tts_url: str = "http://localhost:8880"

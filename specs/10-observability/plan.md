@@ -74,12 +74,18 @@ class TranscriptTurn(BaseModel):    # what is stored
 ```
 
 **Version formula** (`sha8` = first 8 hex chars of sha256 over sorted `relpath + "\0" + bytes`):
-- `prompt` = `f"{registry_version}+{sha8(prompts_dir/**.md|*.yaml)}"`, where `registry_version` is read
-  from `prompts/VERSION` (owned by AGENT).
+- `prompt` = `f"{registry_version}+{sha8(prompts_dir/**/*.md|*.yaml|*.yml)}"`, where `registry_version` is
+  the stripped text of `prompts/VERSION` (owned by AGENT). Hidden paths and `__pycache__` are skipped;
+  each file contributes `relpath \0 bytes \0` in sorted POSIX relative-path order.
 - `policy` = `f"kb:{sha8(sorted doc_id@version lines from policy front-matter)};rules:{contact_rules.version};disc:{disclosures.version}"`.
   The rules and disclosures versions are read from the `version:` key of
-  `data/config/contact_rules.yaml` and `data/config/disclosures.yaml`.
-- `model` = `f"llm:{provider}/{model};stt:{stt_model};tts:{tts_voice};embed:{embed_model}"`, from `Settings`.
+  `data/config/contact_rules.yaml` and `data/config/disclosures.yaml`. The KB part follows front-matter
+  `doc_id@version` only (a policy change must bump its version); a doc without front matter counts as
+  `<file stem>@unversioned`.
+- `model` = `f"llm:{provider}/{model};stt:{whisper_model};tts:{tts_voice};embed:{embed_model}"`, from `Settings.models`.
+- Any missing or malformed input yields the component `none` (`none+none`, `kb:none;rules:none;disc:none`);
+  `compute_versions()` never raises. Directory arguments default to the repo's `agent/prompts`,
+  `data/policies` and `data/config`; `prompt_version`, `policy_version` and `model_version` are public too.
 
 ## Key decisions
 | Decision | Choice | Why |

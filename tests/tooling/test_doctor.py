@@ -14,8 +14,8 @@ BASH = shutil.which("bash") or "/bin/bash"
 SYSTEM_PATH = f"/usr/bin{os.pathsep}/bin"
 
 REQUIRED = ["uv", "docker", "docker-daemon", "compose", "postgres-port"]
-OPTIONAL = ["ollama", "model:qwen3:8b", "model:nomic-embed-text", "whisper", "kokoro", "livekit"]
-HINT_COMMANDS = {"brew", "open", "update", "set", "ollama", "git"}
+OPTIONAL = ["llama-server", "llm", "embed", "whisper", "kokoro", "livekit"]
+HINT_COMMANDS = {"brew", "open", "update", "set", "llama-server", "git"}
 
 
 def _free_port() -> int:
@@ -30,7 +30,8 @@ def _env(path: str, tmp_path: Path, postgres_port: int | None = None) -> dict[st
         "PATH": path,
         "HOME": str(tmp_path),
         "POSTGRES_PORT": str(postgres_port or _free_port()),
-        "OLLAMA_URL": f"http://127.0.0.1:{_free_port()}",
+        "LLM_URL": f"http://127.0.0.1:{_free_port()}/v1",
+        "EMBED_URL": f"http://127.0.0.1:{_free_port()}/v1",
         "STT_URL": f"http://127.0.0.1:{_free_port()}",
         "TTS_URL": f"http://127.0.0.1:{_free_port()}",
         "LIVEKIT_URL": f"ws://127.0.0.1:{_free_port()}",
@@ -80,7 +81,10 @@ def test_required_pass_optional_missing_exits_zero(stub_path: str, tmp_path: Pat
     assert res.returncode == 0, res.stdout
     for check in REQUIRED:
         assert f"✓ {check}:" in res.stdout
-    assert "(optional until M2) → brew install ollama && brew services start ollama" in res.stdout
+    assert "✗ llm: not reachable" in res.stdout
+    assert "(optional until M2) → llama-server -m " in res.stdout
+    assert "--alias llama-3.1-8b-instruct --jinja" in res.stdout
+    assert "--embedding --pooling mean" in res.stdout
 
 
 def test_strict_fails_on_optional(stub_path: str, tmp_path: Path) -> None:

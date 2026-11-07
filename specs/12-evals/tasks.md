@@ -109,7 +109,7 @@ Build `evals.simulator.Simulator`: an LLM persona that is given the goal, style 
 produces the next caller utterance or `<hangup>`. Build `evals.judge` with
 `judge_faithfulness(answer, chunks)` and `judge_naturalness(turns)`. Both use the VOICE-02 provider
 factory and strict JSON parsing with one retry. The judge model defaults to `claude-haiku-5-5` when
-`ANTHROPIC_API_KEY` is set, otherwise `qwen3:8b`. Prompts are versioned under `evals/prompts/`.
+`ANTHROPIC_API_KEY` is set, otherwise the local `LLM_MODEL` on llama.cpp. Prompts are versioned under `evals/prompts/`.
 `run_scenario(mode="simulated")` uses the simulator. Build a labelled set of 10 faithful/unfaithful
 answer pairs in `tests/evals/fixtures/faithfulness_labels.yaml`.
 

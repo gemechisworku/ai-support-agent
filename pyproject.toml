@@ -126,6 +126,15 @@ source_modules = ["supportagent.scheduler", "supportagent.console"]
 forbidden_modules = ["supportagent.bank", "supportagent.kb", "supportagent.agent", "sqlalchemy", "psycopg"]
 
 [[tool.importlinter.contracts]]
+name = "Console reaches data over HTTP only (CON-R1)"
+type = "forbidden"
+source_modules = ["supportagent.console"]
+forbidden_modules = [
+  "supportagent.bank", "supportagent.kb", "supportagent.gateway", "supportagent.agent",
+  "supportagent.voice", "supportagent.telephony", "supportagent.scheduler", "sqlalchemy", "psycopg",
+]
+
+[[tool.importlinter.contracts]]
 name = "Telephony helpers never touch data"
 type = "forbidden"
 source_modules = ["supportagent.telephony"]

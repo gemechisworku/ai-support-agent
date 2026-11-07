@@ -77,6 +77,15 @@ class FakeBank:
         self.calls.append(("customers_by_phone", phone))
         return [cu for cu in self.customers.values() if cu.phone == phone]
 
+    async def match_customers(self, dob: dt.date, loan_last4: str) -> list[c.CustomerMatch]:
+        self.calls.append(("match_customers", (dob, loan_last4)))
+        out = []
+        for ln in sorted(self.loans.values(), key=lambda ln: ln.id):
+            cu = self.customers.get(ln.customer_id)
+            if ln.number[-4:] == loan_last4 and cu is not None and cu.dob == dob:
+                out.append(c.CustomerMatch(customer_id=ln.customer_id, loan_id=ln.id))
+        return out
+
     async def get_customer(self, customer_id: int) -> c.Customer | None:
         self.calls.append(("get_customer", customer_id))
         return self.customers.get(customer_id)

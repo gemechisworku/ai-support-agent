@@ -91,9 +91,14 @@ All models live in `supportagent/contracts/gateway.py` (owned by T-GW-01). `Esca
 ### Provides — knowledge-base browse API (REST, service token; used by the console, T-GW-12)
 | Route | Response |
 |---|---|
-| `GET /service/kb/documents` | `list[KbDocumentSummary{doc_id, title, product, audience, versions[{version, effective_date, chunk_count}]}]` |
-| `GET /service/kb/documents/{doc_id}?version=` | `KbDocumentDetail{doc_id, version, title, chunks[{ord, section, text, token_count}]}` (latest effective version by default) |
-| `POST /service/kb/search` | `PolicyQuery` → `PolicySearchResult` (contracts/kb.py) |
+| `GET /service/kb/documents` | `list[KbDocumentSummary{doc_id, title, product, audience, versions[KbDocumentVersion{version, effective_date, chunk_count}]}]`, ordered by `doc_id`; versions newest effective date first; title/product/audience from the newest version |
+| `GET /service/kb/documents/{doc_id}?version=` | `KbDocumentDetail{doc_id, version, title, product, audience, effective_date, chunks[KbChunkView{ord, section, text, token_count}]}`; default version = the newest effective today (else the newest); unknown doc or version → 404 |
+| `POST /service/kb/search` | body `PolicyQuery{query, product?, audience="customer", as_of?, top_k=4}` → `PolicySearchResult{chunks[PolicyChunk{doc_id, version, title, section, product, text, rrf_score, similarity}], confident, best_similarity}`. The citation is `doc_id@version#section` (computed by `PolicyChunk.citation`, not serialised) |
+
+Errors: no credential 401, any other token 403, more than 120 requests/min 429, unconfigured KB 503,
+audit write failure 503 `audit_unavailable`, retrieval failure 502 `upstream_error`. Audit `tool` values:
+`kb.list_documents`, `kb.get_document`, `kb.search` (`call_id="service"`). Models live in `contracts/kb.py`;
+the shared service-credential check and audit wrapper is `gateway/auth.py` (`service_call`), for T-GW-10 too.
 
 ### Consumes
 - **Bank API** (`BANK_API_URL`, DTOs in `contracts/bank.py`; [02-mock-bank spec](../02-mock-bank/spec.md) is authoritative). Read endpoints for customers (with loans), loans, installments, transactions, interactions, promises and tasks; phone lookup and identity match; eligibility; contact preferences. Writes: `POST /interactions`, `POST /promises`, `POST /tasks`, `PATCH /contact-preferences/{id}`, `POST /audit`.
@@ -105,10 +110,5 @@ All models live in `supportagent/contracts/gateway.py` (owned by T-GW-01). `Esca
 - Secrets (`GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`) come only from settings.
 
 ## Open questions
-- **Inbound callers from an unknown number** (GW-R3, plan "Candidates"): the bank API has no identity
-  search by `dob` + loan last 4, so today only the phone's registered customers can be verified; an
-  unknown number's attempt counts as a failure. Needs a bank endpoint (e.g. `GET /customers/match?dob=&loan_last4=`)
-  plus a `BankClient` method; then add those matches to the inbound candidates in `identity.verify`.
-  Planned as T-BANK-08 and T-GW-11 (M2).
 - Promise window and partial-payment rules: until COMP-01 lands, they come from gateway settings (`promise_max_days=14`, `allow_partial=true`). Switch to the versioned compliance config once it exists.
 - Human availability for `escalate`: a settings flag (`human_agent_available`) for the POC. A presence check is out of scope.

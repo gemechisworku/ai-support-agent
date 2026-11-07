@@ -1,7 +1,7 @@
 # 01 · Platform and contracts — Spec
 
 > **Code:** `PLAT` · **Location:** `src/supportagent/common/`, `src/supportagent/contracts/`, `infra/`,
-> `docker/`, `.github/`, `scripts/` · **Milestones:** M0
+> `docker/`, `.github/`, `scripts/` · **Milestones:** M0 (M2: T-PLAT-07, llama.cpp switch)
 > **PRD:** NFR-SEC, NFR-PORT, NFR-ACC, D-OUTCOME, F7 · **Depends on:** — · **Status:** see [tasks.md](tasks.md)
 
 ## Purpose
@@ -38,7 +38,7 @@ KB owns the `kb` schema.
 - **PLAT-R4** (P0 · D-OUTCOME, F7) — The platform shall define the shared contracts `CallOutcome` (every field in PRD §8) and the enums `Direction`, `Campaign` (incl. `playground` for no-telephony dev calls), `ContactResult`, `ReasonCode`, `Sentiment`, `Intent`, with validation (e.g. a `promise_to_pay` requires date and amount > 0; money is `Decimal` with 2 dp).
 - **PLAT-R5** (P0 · NFR-PORT) — The repository shall start all Linux services with one `docker compose up`, expose all workflows as `make` targets, and run CI (specs check, lint, types, import boundaries, unit + integration tests, image build) on every PR; green pushes to `main` publish the service image to GHCR.
 - **PLAT-R6** (P0 · NFR-ACC) — The platform shall provide test infrastructure: an isolated, migrated Postgres database per test session with per-test transaction rollback, a controllable clock (`supportagent.common.clock`), and pytest markers `integration`, `eval`, `live`.
-- **PLAT-R7** (P1 · NFR-PORT) — `make doctor` shall check the native prerequisites (uv, Docker, Ollama and models, whisper.cpp server, Kokoro, livekit-server) and print a fix hint for each missing one.
+- **PLAT-R7** (P1 · NFR-PORT) — `make doctor` shall check the native prerequisites (uv, Docker, llama.cpp `llama-server` for the LLM and the embeddings, whisper.cpp server, Kokoro, livekit-server) and print a fix hint for each missing one.
 
 ## Acceptance criteria
 - **PLAT-R1:** Given `.env` with `POSTGRES_PORT=6543`, `get_settings().postgres.port == 6543`. A missing required secret raises a clear `ValidationError` at startup. `grep -r "os.environ" src/` finds only `common/settings.py`.
@@ -47,7 +47,7 @@ KB owns the `kb` schema.
 - **PLAT-R4:** `CallOutcome.model_validate(example_json)` round-trips. An unknown `contact_result` fails validation. `CallOutcome.model_json_schema()` is exported to `docs/contracts/call_outcome.schema.json`, and CI checks that the export is current.
 - **PLAT-R5:** On a clean clone, `make setup && make check` passes. A PR that breaks lint, types, boundaries, tests or specs fails CI.
 - **PLAT-R6:** Two integration tests that insert the same unique row both pass, which proves per-test rollback. `freeze_clock("2026-11-09T14:00:00Z")` controls `clock.now()`.
-- **PLAT-R7:** With Ollama stopped, `make doctor` prints `✗ ollama: not reachable on http://localhost:11434 (optional until M2) → brew install ollama && brew services start ollama`. It exits 0 while every required check (uv, Docker, Compose, Postgres port) passes, and `make doctor ARGS=--strict` (from M2 on) exits non-zero.
+- **PLAT-R7:** With the LLM server stopped, `make doctor` prints `✗ llm: not reachable on http://localhost:8090/v1 (optional until M2) → make models-up` (or the `llama-server` command from docs/dev-setup.md before T-VOICE-01). It exits 0 while every required check (uv, Docker, Compose, Postgres port) passes, and `make doctor ARGS=--strict` (from M2 on) exits non-zero.
 
 ## Interfaces
 **Provides:**

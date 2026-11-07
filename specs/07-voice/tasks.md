@@ -10,35 +10,44 @@
 - **Status:** todo
 - **Milestone:** M2
 - **Issue:** #41
-- **Depends on:** T-PLAT-06
+- **Depends on:** T-PLAT-06, T-PLAT-07
 - **Requirements:** VOICE-R1, KB-R8
 
 Write idempotent shell scripts that install and run the native (Metal) model servers described in
 [plan.md](plan.md#file-layout), plus a stdlib health probe. `make doctor` (T-PLAT-06) checks the
 prerequisites; this task installs and runs the servers.
 
-- `setup.sh`: `brew install ollama whisper-cpp livekit livekit-cli`; `ollama pull qwen3:8b nomic-embed-text`
-  (and `qwen3:4b` with `--with-fallbacks`); download `ggml-large-v3-turbo.bin` and `ggml-small.en.bin`
-  into `models/whisper/` (skip if the checksum matches); clone Kokoro-FastAPI into `vendor/`.
-- `up.sh`: start `ollama serve` (if not running), `whisper-server -m models/whisper/ggml-$WHISPER_MODEL.bin
-  --host 127.0.0.1 --port 8178 --inference-path /v1/audio/transcriptions`, Kokoro-FastAPI on :8880, and
-  `livekit-server --dev --bind 127.0.0.1` on :7880. Pids go to `var/run/`, logs to `var/log/`.
+- `setup.sh`: `brew install llama.cpp whisper-cpp livekit livekit-cli` (skips what is installed).
+  Downloads a GGUF only when the file at `LLM_GGUF` / `EMBED_GGUF` is missing, so an existing GGUF
+  is reused: Llama 3.1 8B Instruct Q4_K_M and nomic-embed-text v1.5 Q8_0 into `models/llm/` and
+  `models/embed/` (Llama 3.2 3B too with `--with-fallbacks`). Downloads `ggml-small.en.bin` into
+  `models/whisper/` (`ggml-large-v3-turbo.bin` too with `--with-large-stt`), skipping files whose
+  checksum matches. Clones Kokoro-FastAPI into `vendor/`. Prints the disk it will use before downloading.
+- `up.sh` starts:
+  - `llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja -c 8192 -ngl 99` on the port of `LLM_URL`
+  - `llama-server -m $EMBED_GGUF --alias $EMBED_MODEL --embedding --pooling mean -c 2048 -ngl 99` on the
+    port of `EMBED_URL`
+  - `whisper-server -m models/whisper/ggml-$WHISPER_MODEL.bin --port 8178 --inference-path
+    /v1/audio/transcriptions`
+  - Kokoro-FastAPI on :8880 and `livekit-server --dev` on :7880
+
+  Every server binds to 127.0.0.1. Pids go to `var/run/`, logs to `var/log/`.
 - `down.sh` stops what `up.sh` started.
 - `health.py` probes each server:
-  - Ollama: `GET /api/tags` lists both models.
+  - LLM and embeddings: `GET /v1/models` lists `LLM_MODEL` / `EMBED_MODEL`, and `GET /health` is ok.
   - whisper: `GET /`.
   - Kokoro: `GET /v1/models`.
   - LiveKit: `GET /` on :7880.
 
 **Acceptance criteria**
 - [ ] `make models-setup` is idempotent; a second run downloads nothing.
-- [ ] `make models-up` then `make models-health` reports four healthy servers; `make models-down` stops them.
-- [ ] All servers bind to 127.0.0.1; URLs and ports come from `.env` (`OLLAMA_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`).
+- [ ] `make models-up` then `make models-health` reports five healthy servers; `make models-down` stops them.
+- [ ] All servers bind to 127.0.0.1; URLs and ports come from `.env` (`LLM_URL`, `EMBED_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`).
 - [ ] The memory footprint of each server is listed in `docs/dev-setup.md` (link from AGENTS.md "native services").
 - [ ] `models/`, `vendor/` and `var/` are git-ignored.
-- [ ] With Ollama up, `uv run pytest -m eval tests/kb/test_golden.py` reports hit@4 ≥ 0.90 (KB-R8), and
-  `KB_MIN_SIMILARITY`'s default is tuned for nomic-embed-text and recorded in specs/03-knowledge-base/plan.md
-  (moved here from T-KB-06, which had no Ollama available).
+- [ ] With the embeddings server up, `uv run pytest -m eval tests/kb/test_golden.py` reports hit@4 ≥ 0.90
+  (KB-R8), and `KB_MIN_SIMILARITY`'s default is tuned for nomic-embed-text and recorded in
+  specs/03-knowledge-base/plan.md (moved here from T-KB-06, which had no embeddings server available).
 
 **Tests**
 - `tests/voice/test_health_script.py` (unit): runs `health.py` against stub `http.server` endpoints and asserts exit code 0 when all are healthy, and 1 with a named failure when one is down or a model is missing.
@@ -50,24 +59,24 @@ prerequisites; this task installs and runs the servers.
 - **Status:** todo
 - **Milestone:** M2
 - **Issue:** #42
-- **Depends on:** T-PLAT-02
+- **Depends on:** T-PLAT-02, T-PLAT-07
 - **Requirements:** VOICE-R2, VOICE-R3
 
 Add `supportagent.voice.providers` with `build_stt`, `build_llm`, `build_tts`, `build_vad`,
 `build_turn_detector` and `model_version`, all driven by `Settings` (new fields listed in
 [plan.md](plan.md#data-model--contracts)). The local defaults are whisper.cpp through
-`openai.STT` + `StreamAdapter`, Ollama `qwen3:8b` with thinking disabled, and Kokoro through
+`openai.STT` + `StreamAdapter`, Llama 3.1 8B on llama.cpp through `openai.LLM(base_url=LLM_URL)`, and Kokoro through
 `openai.TTS`. `LLM_PROVIDER=anthropic` selects `anthropic.LLM(model="claude-haiku-5-5")`.
 
 **Acceptance criteria**
 - [ ] No URL, model name or voice is hard-coded outside `Settings` defaults.
-- [ ] Every Ollama LLM request carries the thinking-off option.
+- [ ] The local LLM uses the plain OpenAI plugin pointed at `LLM_URL` with model `LLM_MODEL`; no Ollama-specific helper.
 - [ ] `LLM_PROVIDER=anthropic` without `ANTHROPIC_API_KEY` fails at settings validation with a clear message.
 - [ ] `model_version(settings)` returns `"<provider>/<model>"` and is used by OBS version stamping.
 - [ ] New settings are documented in `.env.example`.
 
 **Tests**
-- `tests/voice/test_providers.py` (unit): default settings build the OpenAI-compatible STT/LLM/TTS with the expected base URLs and model ids; the Ollama LLM has thinking disabled; the anthropic switch returns the Anthropic LLM; the missing key raises; `model_version` covers both providers. No network: construct objects only.
+- `tests/voice/test_providers.py` (unit): default settings build the OpenAI-compatible STT/LLM/TTS with the expected base URLs and model ids; the local LLM points at `LLM_URL`; the anthropic switch returns the Anthropic LLM; the missing key raises; `model_version` covers both providers. No network: construct objects only.
 
 **Files:** `src/supportagent/voice/providers.py`, `src/supportagent/common/settings.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/voice/test_providers.py`
 
@@ -156,7 +165,7 @@ Make the agent reachable with no telephony.
 - **Depends on:** T-VOICE-04, T-EVAL-01
 - **Requirements:** VOICE-R8
 
-Write `scripts/bench_latency.py`. For each LLM configuration (`ollama/qwen3:8b`, `ollama/qwen3:4b`,
+Write `scripts/bench_latency.py`. For each LLM configuration (`llamacpp/llama-3.1-8b-instruct`, `llamacpp/llama-3.2-3b-instruct`,
 `anthropic/claude-haiku-5-5`) and each whisper model, it:
 - plays N pre-recorded caller WAVs (`tests/fixtures/audio/*.wav`) through the STT endpoint
 - runs the matching text turns through the text-mode harness (T-EVAL-01) for LLM TTFT
