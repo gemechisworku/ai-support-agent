@@ -263,3 +263,26 @@ has none. The 2-failure lock, the name check and the "never reveal why it failed
 - `tests/gateway/test_identity_db.py` (integration): unknown-number inbound verification against the seeded bank
 
 **Files:** `src/supportagent/gateway/bank_client.py`, `src/supportagent/gateway/identity.py`, `specs/04-gateway/spec.md` (remove the open question), tests above
+
+### T-GW-12 · Knowledge-base browse endpoints for the console
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #99
+- **Depends on:** T-GW-09
+- **Requirements:** GW-R12
+
+Add the read-only `/service/kb/*` routes listed under Interfaces, authenticated by the service token
+(create the shared service-token dependency here; T-GW-10 reuses it). `search` calls
+`kb.retrieval.search` with the gateway's configured embedder and threshold, so the console shows
+exactly what the agent would get. Every request writes an audit row with `call_id="service"`.
+
+**Acceptance criteria**
+- [ ] The GW-R12 acceptance criterion in spec.md holds
+- [ ] Contracts `KbDocumentSummary` and `KbDocumentDetail` live in `contracts/kb.py`
+- [ ] The routes read only the `kb` database; no bank call is made
+
+**Tests**
+- `tests/gateway/test_kb_browse.py` (unit with a fake KB reader): routes, auth matrix, audit rows
+- `tests/gateway/test_kb_browse_db.py` (integration): against an ingested `kb_test` with HashEmbedder; search equals `search_policy`
+
+**Files:** `src/supportagent/gateway/kb_browse.py`, `src/supportagent/gateway/app.py`, `src/supportagent/contracts/kb.py`, tests above

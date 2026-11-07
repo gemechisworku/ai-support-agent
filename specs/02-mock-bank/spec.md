@@ -30,6 +30,7 @@ the gateway's job.
 - **BANK-R8** (P1 · F13) — Writing a final interaction outcome with a summary shall enqueue an `outbox` row (channel `sms` or `email`, rendered text, status `pending`) in the same transaction.
 - **BANK-R9** (P0 · F10) — The bank shall expose list/detail read endpoints for interactions, open tasks, promises and the audit log, filterable for the operations console.
 - **BANK-R10** (P0 · F4, U3) — The bank shall find customers by date of birth and loan-number last 4 digits (`GET /customers/match?dob=&loan_last4=`), so the gateway can verify inbound callers whose phone number is not on file.
+- **BANK-R11** (P0 · F10, F5) — The bank shall expose read-only explorer endpoints: a paginated customer search (`GET /customers?q=&segment=&bucket=&limit=&offset=` returning customer summaries with their loan count and worst bucket), a loan list (`GET /loans?bucket=&product=`), a customer's contact preferences (`GET /customers/{id}/contact-preferences`) and the scripted persona sheet (`GET /personas`).
 
 ## Acceptance criteria
 - **BANK-R1:** Given an empty `bank` DB, when `alembic upgrade head` runs, then all 12 tables exist with the
@@ -50,6 +51,9 @@ the gateway's job.
   `/loans`, `/installments`, `/transactions` or `/accounts` (route-table test).
 - **BANK-R8:** `POST /interactions` with `outcome.summary` set creates exactly one `outbox` row atomically.
   If the outbox insert fails, the interaction is rolled back.
+- **BANK-R11:** `GET /customers?q=frank` returns a `Page` containing customer 9002; `q=4417` (loan last 4) finds him too;
+  `GET /loans?bucket=1-30&product=PERSONAL` only returns such loans; `GET /personas` returns 12 entries with
+  situation, expected outcome, extension and verification details; all need the service token.
 - **BANK-R10:** `GET /customers/match?dob=1985-03-14&loan_last4=4417` returns exactly Forgetful Frank (a
   `CustomerMatch` with only `customer_id` and `loan_id`); a wrong DOB or last 4 returns `[]`; both parameters are
   required (422 otherwise); the route needs the service token.
