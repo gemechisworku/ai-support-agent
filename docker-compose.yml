@@ -75,6 +75,8 @@ services:
       postgres: { condition: service_healthy }
       bank-api: { condition: service_healthy }
     ports: ["8002:8002"]
+    # Docker Desktop doesn't always resolve host.docker.internal on project networks; map it explicitly.
+    extra_hosts: ["host.docker.internal:host-gateway"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/healthz')"]
       interval: 5s
@@ -115,6 +117,7 @@ services:
     build: { context: ., dockerfile: docker/app.Dockerfile, target: test }
     image: supportagent-test:dev
     profiles: [test]
+    extra_hosts: ["host.docker.internal:host-gateway"]  # reach the native model servers (eval tests)
 
 volumes:
   pgdata:
