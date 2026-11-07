@@ -3,18 +3,19 @@
 > Implements [spec.md](spec.md). Tasks in [tasks.md](tasks.md).
 
 ## Approach
-- One Streamlit multipage app using `st.navigation` with five pages:
-  - Campaigns
-  - Calls
-  - Call detail (reached with a `call_id` query param)
-  - Follow-ups
-  - Compliance
+- One Streamlit multipage app using `st.navigation`, in two sections:
+  - **Data explorer (M2):** Overview, Customers (a customer opens with the `customer` query param),
+    Policies, Test personas, Audit trail (also takes a `call_id` query param)
+  - **Operations (M4):** Campaigns, Calls (call detail via a `call_id` query param), Follow-ups,
+    Compliance — placeholders until T-CON-02..05
 - Pages are thin. They call `console.clients` and render with `st.dataframe` and `st.metric`. Pure
   formatting and aggregation helpers live in `console.views`, so they are unit-testable without Streamlit.
-- **Client injection:** `console.clients.get_clients()` builds `BankOpsClient(settings.bank_api_url)`
-  and `SchedulerClient(settings.scheduler_api_url)` once per session (`st.session_state`). Tests
-  monkeypatch `get_clients` to return clients backed by `httpx.MockTransport`. Streamlit `AppTest` runs
-  the script in-process, so the patch applies.
+- **Client injection:** `console.clients.get_clients()` returns a `Clients{bank, gateway, scheduler}`
+  bundle built once per process from settings (`BANK_API_URL`, `GATEWAY_URL` minus `/mcp`,
+  `SCHEDULER_URL`, the service token). Tests call `clients.set_clients(...)` with clients backed by
+  `httpx.MockTransport`; Streamlit `AppTest` runs the page scripts in-process, so the injection applies.
+- `console.ui` holds the Streamlit helpers: the banner, `ui.api(fn, ...)` (shows a `ConsoleApiError` with
+  `st.error` and stops the page, never a traceback) and the M4 placeholders.
 - **Compliance overview:** fetch the interactions in the date range, then their `CallDetail`, which
   includes audit rows. Run:
   - `observability.guardrails.check_verification_first` and `check_disclosures` (T-EVAL-03)
@@ -27,10 +28,12 @@
 ```
 src/supportagent/console/
   __init__.py
-  app.py              st.navigation, banner, settings
-  clients.py          BankOpsClient, SchedulerClient, get_clients()
-  views.py            pure helpers: filters → params, tables, masking, compliance aggregation
-  pages/campaigns.py  pages/calls.py  pages/call_detail.py  pages/followups.py  pages/compliance.py
+  app.py              st.navigation, banner (M4 pages are placeholder callables until T-CON-02..05)
+  clients.py          BankOpsClient, GatewayServiceClient, SchedulerClient (stub), get_clients()/set_clients()
+  ui.py               banner, ui.api() error display, coming_soon()
+  views.py            pure helpers: masking, money/dates, table rows (and later compliance aggregation)
+  pages/home.py  pages/customers.py  pages/policies.py  pages/personas.py  pages/audit.py   (M2)
+  pages/campaigns.py  pages/calls.py  pages/call_detail.py  pages/followups.py  pages/compliance.py (M4)
 tests/console/
   conftest.py         fake transports + fixture data (interactions, call detail, tasks, run results)
   test_clients.py  test_views.py  test_app_pages.py  test_compliance_view.py
@@ -64,7 +67,9 @@ No owned tables. It uses `contracts.bank` (`Interaction`, `CallDetail`, `Task`, 
 - Runtime: `streamlit`, `httpx`, `pandas` (pulled in by Streamlit).
 - Service: compose `console` (`x-app`, `command: streamlit run src/supportagent/console/app.py --server.address 0.0.0.0 --server.port 8501`,
   `ports: ["127.0.0.1:8501:8501"]`, read-only mount `./var:/app/var:ro` for transcripts).
-- Settings: `SCHEDULER_URL` (default `http://localhost:8003`, added to `.env.example`).
+- Settings: none new — `BANK_API_URL`, `GATEWAY_URL`, `SCHEDULER_URL` and `GATEWAY_SERVICE_TOKEN` already exist.
+- import-linter contract "Console reaches data over HTTP only (CON-R1)": no bank/kb/gateway/agent/voice/
+  telephony/scheduler or DB-driver imports.
 
 ## Test strategy
 - **unit:**

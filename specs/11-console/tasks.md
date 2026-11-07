@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-CON-01 · Console skeleton and bank API client
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #67
 - **Depends on:** T-BANK-07
@@ -15,7 +15,8 @@
 
 Create the Streamlit app shell (`app.py` with `st.navigation`, a synthetic-data banner and placeholder
 pages) and the typed clients in `clients.py`:
-- `BankOpsClient`, covering the T-BANK-07 endpoints plus `PATCH /tasks/{id}`
+- `BankOpsClient`, covering the bank read, T-BANK-07 ops (incl. `PATCH /tasks/{id}`) and T-BANK-09 explorer endpoints
+- `GatewayServiceClient` for the T-GW-12 browse API (built here so the `Clients` bundle is complete; T-CON-07 uses it)
 - `SchedulerClient`, a stub against the `contracts.scheduler` shapes that is filled in by T-CON-02
 
 Also add `get_clients()` injection ([plan.md](plan.md#approach)), `views.mask_number()`, the compose
@@ -23,10 +24,12 @@ service `console` bound to `127.0.0.1:8501`, and `make console`. Add a console c
 import-linter if the existing "scheduler and console" contract does not already cover it.
 
 **Acceptance criteria**
-- [ ] `make console` serves the app on localhost:8501, and every page shows the banner.
-- [ ] Clients return `contracts` models and map HTTP errors to a `ConsoleApiError` that is shown as `st.error`, never as a traceback.
-- [ ] `mask_number("4401228733101234") == "•••• 1234"`.
-- [ ] `lint-imports` passes. No `bank`/`kb`/`gateway`/`agent`/DB imports in `console`.
+- [ ] `make console` serves the app on localhost:8501, and every page shows the banner. *(Banner on every page: proven by
+  `test_shell_renders` in CI. The live `make console` run was not done: the runtime image can't be rebuilt on the
+  build Mac's network; verify on first use.)*
+- [x] Clients return `contracts` models and map HTTP errors to a `ConsoleApiError` that is shown as `st.error`, never as a traceback.
+- [x] `mask_number("4401228733101234") == "•••• 1234"`.
+- [x] `lint-imports` passes. No `bank`/`kb`/`gateway`/`agent`/DB imports in `console`.
 
 **Tests**
 - `tests/console/test_clients.py` (unit): paths, params, pagination and error mapping via `httpx.MockTransport`.

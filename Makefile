@@ -62,6 +62,11 @@ migrate-test: up ## Upgrade bank_test and kb_test to head
 kb-ingest: migrate ## Ingest data/policies into the kb database (ARGS="--embedder fake" or "--dry-run")
 	$(PY) python -m supportagent.kb.ingest $(ARGS)
 
+.PHONY: console
+console: ## Start the console (data explorer) with the bank API and gateway → http://localhost:8501
+	docker compose up -d --build --wait postgres bank-api gateway console
+	@echo "console: http://localhost:8501  (seed + ingest first: see docs/dev-setup.md / specs/11-console)"
+
 check: lint typecheck boundaries tasks-validate test-all ## Everything CI runs
 
 docker-build: ## Build the runtime image

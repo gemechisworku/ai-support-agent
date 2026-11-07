@@ -81,6 +81,30 @@ services:
       timeout: 3s
       retries: 20
 
+  console:
+    <<: *app
+    # Operations console and data explorer (specs/11-console): Streamlit, read-only, HTTP clients only.
+    # Bound to localhost on the host (CON-R7). Open http://localhost:8501
+    command: ["streamlit", "run", "src/supportagent/console/app.py", "--server.address", "0.0.0.0",
+              "--server.port", "8501", "--server.headless", "true", "--browser.gatherUsageStats", "false"]
+    environment:
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-change-me-local-only}
+      GATEWAY_WORKER_TOKEN: ${GATEWAY_WORKER_TOKEN:-change-me-local-only}
+      AUDIT_HASH_SALT: ${AUDIT_HASH_SALT:-change-me-local-only}
+      SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-change-me-local-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}  # settings require it; unused here
+      BANK_API_URL: http://bank-api:8001
+      GATEWAY_URL: http://gateway:8002/mcp
+    depends_on:
+      bank-api: { condition: service_healthy }
+      gateway: { condition: service_healthy }
+    ports: ["127.0.0.1:8501:8501"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   redis:
     image: redis:7-alpine
     profiles: [telephony]
