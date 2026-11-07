@@ -133,6 +133,13 @@ class FakeApi:
                     )
                 )
             return page(rows)
+        if path == "/loans":
+            statuses = [_status(b, ln.id) for ln in sorted(b.loans.values(), key=lambda x: x.id)]
+            if q.get("bucket"):
+                statuses = [s for s in statuses if s.bucket == q["bucket"]]  # type: ignore[union-attr]
+            if q.get("product"):
+                statuses = [s for s in statuses if s.product_code == q["product"]]  # type: ignore[union-attr]
+            return page(statuses)
         if path == "/personas":
             return httpx.Response(200, json=[_persona(p) for p in PERSONAS])
         if m := re.fullmatch(r"/customers/(\d+)", path):

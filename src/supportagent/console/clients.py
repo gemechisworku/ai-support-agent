@@ -28,7 +28,14 @@ TIMEOUT_S = 10.0
 
 
 class ConsoleApiError(Exception):
-    """A request the console could not complete; the message is safe to show to the operator."""
+    """A request the console could not complete; the message is safe to show to the operator.
+
+    `status` is the upstream HTTP status when there was one (the console API maps 404 to 404).
+    """
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class _Http:
@@ -47,7 +54,10 @@ class _Http:
         except httpx.HTTPError as exc:
             raise ConsoleApiError(f"{self.base_url} is not reachable ({exc.__class__.__name__})") from exc
         if response.status_code >= 400:
-            raise ConsoleApiError(f"{method} {path} failed: HTTP {response.status_code} {_detail(response)}")
+            raise ConsoleApiError(
+                f"{method} {path} failed: HTTP {response.status_code} {_detail(response)}",
+                status=response.status_code,
+            )
         try:
             return TypeAdapter(model).validate_python(response.json())
         except (ValueError, ValidationError) as exc:

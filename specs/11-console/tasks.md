@@ -122,7 +122,7 @@ customer.
 **Files:** `src/supportagent/console/pages/personas.py`, `src/supportagent/console/pages/audit.py`, tests above
 
 ### T-CON-09 · Console API (backend for the Next.js console)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #102
 - **Depends on:** T-CON-06, T-CON-07, T-CON-08
@@ -139,11 +139,14 @@ that apply the masking (keep `mask_number` / `mask_reference`), reusing `clients
 - The Streamlit app keeps working until T-CON-14.
 
 **Acceptance criteria**
-- [ ] Every route returns its view model against faked upstreams; Frank's detail has loan `•••• 4417`, 5 DPD and $200.72 overdue (the persona-seeded fake bank)
-- [ ] An upstream that returns a full 16-digit number yields only the last 4 in every response that contains it
-- [ ] Missing or wrong token → 401; upstream down → 502 with a safe message; unknown customer → 404
-- [ ] `lint-imports` passes; the console module imports no bank/kb/gateway/agent/DB code
-- [ ] `docker compose up -d --wait console-api` is healthy on `127.0.0.1:8004`; the new settings are in `.env.example`
+- [x] Every route returns its view model against faked upstreams; Frank's detail has loan `•••• 4417`, 5 DPD and $200.72 overdue (the persona-seeded fake bank)
+- [x] An upstream that returns a full 16-digit number yields only the last 4 in every response that contains it
+- [x] Missing or wrong token → 401; upstream down → 502 with a safe message; unknown customer → 404
+- [x] `lint-imports` passes; the console module imports no bank/kb/gateway/agent/DB code
+- [x] `docker compose up -d --wait console-api` is healthy on `127.0.0.1:8004`; the new settings are in `.env.example`
+  *(Verified by running the same app natively against the live bank API and gateway: overview 200 customers /
+  20 documents / 12 personas, Frank's headline, "capital of France" not confident, 401 without a token. The compose
+  run itself is the user's after rebuilding the app image.)*
 
 **Tests**
 - `tests/console/test_api.py` (unit): every route via `TestClient` with `MockTransport`-backed clients; auth, 401/404/502 mapping

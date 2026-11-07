@@ -96,3 +96,42 @@ def test_transaction_rows_mask_references() -> None:
     row = views.transaction_rows([b.Transaction(**{k: v for k, v in sample.items() if k in fields})])[0]
     assert "5520264417" not in str(row)
     assert row["Reference"] == "PMT-••••4417-001"
+
+
+# ------------------------------------------------------------------- console API view builders (T-CON-09)
+
+
+def _frank_bank() -> FakeApi:
+    return FakeApi()
+
+
+def test_view_builders_mask_and_keep_types() -> None:
+    bank = make_clients(_frank_bank()).bank
+    customer = bank.customer(9002)
+    profile = views.customer_profile(customer)
+    assert profile.phone == views.mask_number(customer.phone)
+    assert "dob" not in views.CustomerProfile.model_fields
+
+    status = bank.loan_status(9002)
+    row = views.loan_row(status)
+    assert row.number == "•••• 4417"
+    assert row.overdue_amount == Decimal("200.72")
+    assert isinstance(row.as_of, dt.date)
+
+
+def test_transaction_view_masks_long_digit_runs() -> None:
+    bank = make_clients(_frank_bank()).bank
+    loan = bank.customer_loans(9002)[0]
+    tx = bank.transactions(loan.repayment_account_id, loan.id, 1)[0]
+    view = views.transaction_view(tx.model_copy(update={"reference": "PMT-4401228733101234-001"}))
+    assert view.reference == "PMT-••••1234-001"
+
+
+def test_views_are_allow_lists() -> None:
+    """New contract fields never reach the UI by accident: no view has a DOB except the persona sheet."""
+    with_dob = [
+        name
+        for name, model in vars(views).items()
+        if isinstance(model, type) and issubclass(model, views._View) and "dob" in model.model_fields
+    ]
+    assert with_dob == ["PersonaView"]

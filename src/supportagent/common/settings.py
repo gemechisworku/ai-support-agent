@@ -80,6 +80,10 @@ class ServicesSettings(_Group):
     human_agent_available: bool = True
     scheduler_url: str = "http://localhost:8003"
     scheduler_token: SecretStr
+    # Console API (T-CON-09): the Next.js console's backend. The token is required by the console API
+    # itself (it refuses to start without one), not by the other services.
+    console_api_url: str = "http://localhost:8004"
+    console_api_token: SecretStr | None = None
     sched_max_concurrent: int = Field(1, ge=1)
     max_call_s: int = Field(600, ge=1)
 

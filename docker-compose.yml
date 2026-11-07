@@ -107,6 +107,31 @@ services:
       timeout: 3s
       retries: 20
 
+  console-api:
+    <<: *app
+    # Console API (specs/11-console, T-CON-09): the Next.js console's backend. HTTP clients only (no DB).
+    # Bound to localhost on the host (CON-R7). OpenAPI at http://localhost:8004/openapi.json
+    command: ["uvicorn", "--factory", "supportagent.console.api:create_app", "--host", "0.0.0.0", "--port", "8004"]
+    environment:
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-change-me-local-only}
+      GATEWAY_WORKER_TOKEN: ${GATEWAY_WORKER_TOKEN:-change-me-local-only}
+      AUDIT_HASH_SALT: ${AUDIT_HASH_SALT:-change-me-local-only}
+      SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-change-me-local-only}
+      CONSOLE_API_TOKEN: ${CONSOLE_API_TOKEN:-change-me-local-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}  # settings require it; unused here
+      BANK_API_URL: http://bank-api:8001
+      GATEWAY_URL: http://gateway:8002/mcp
+    depends_on:
+      bank-api: { condition: service_healthy }
+      gateway: { condition: service_healthy }
+    ports: ["127.0.0.1:8004:8004"]
+    volumes: ["./var:/app/var:ro"]  # redacted transcripts (M4)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   redis:
     image: redis:7-alpine
     profiles: [telephony]
