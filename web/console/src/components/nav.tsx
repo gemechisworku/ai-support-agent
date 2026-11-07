@@ -35,8 +35,13 @@ export function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** The current route marks its link. `usePathname()` is request data on dynamic routes, so the layout
+ * renders this inside <Suspense> with `<NavList pathname="" />` as the static fallback. */
 export function Nav() {
-  const pathname = usePathname();
+  return <NavList pathname={usePathname()} />;
+}
+
+export function NavList({ pathname }: { pathname: string }) {
   return (
     <nav aria-label="Console" className="flex flex-col gap-6">
       {SECTIONS.map((section) => (

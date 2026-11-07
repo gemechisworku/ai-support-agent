@@ -193,21 +193,26 @@ Create `web/console` (layout in [plan.md](plan.md#file-layout)):
 **Files:** `web/console/**`, `docker/console.Dockerfile`, `docker-compose.yml`, `Makefile`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `.gitignore`, `.env.example`
 
 ### T-CON-11 · Customer and loan explorer in Next.js
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #104
 - **Depends on:** T-CON-10
 - **Requirements:** CON-R8, CON-R7
 
-`/customers`: search box and segment/bucket filters as URL params over `GET /api/customers`, paginated
+`/customers`: search box and segment/bucket filters in a GET form (URL params `q`, `segment`, `bucket`,
+`page`; empty values omitted, page → offset with 25 per page) over `GET /api/customers`, paginated
 table linking to `/customers/[id]`. The customer page has tabs: Profile and contact preferences ·
 Loans (computed status) · Schedule (paid/unpaid highlighted) · Transactions (pending flagged) ·
-History (calls, open promises, open tasks). Every figure comes from the console API.
+History (calls, open promises, open tasks). The tab is URL state (`?tab=`, server-rendered links);
+schedule and transactions are shown per loan. Every figure comes from the console API. The shared
+`Nav` now renders inside `<Suspense>` (with a static `NavList` fallback), because `usePathname()` is
+request data on dynamic routes under Cache Components.
 
 **Acceptance criteria**
-- [ ] The CON-R8 acceptance criterion holds in Playwright against fixtures recorded from the persona-seeded console API
-- [ ] Filters and the selected tab survive a reload (URL state)
-- [ ] An unknown customer id shows a not-found state
+- [x] The CON-R8 acceptance criterion holds in Playwright against fixtures recorded from the persona-seeded console API
+  (fixture-verified; live check by the main thread after integration)
+- [x] Filters and the selected tab survive a reload (URL state)
+- [x] An unknown customer id shows a not-found state
 
 **Tests**
 - `web/console/tests/e2e/customers.spec.ts` (Playwright): search "Frank", open him, check the CON-R8 values in each tab

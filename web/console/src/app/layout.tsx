@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { Nav } from "@/components/nav";
+import { Nav, NavList } from "@/components/nav";
 import { BANNER } from "@/lib/constants";
 import "./globals.css";
 
@@ -24,7 +25,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="flex flex-1">
           <aside className="hidden w-60 shrink-0 border-r p-4 md:block">
             <p className="mb-6 px-2 text-sm font-semibold">Support agent console</p>
-            <Nav />
+            <Suspense fallback={<NavList pathname="" />}>
+              <Nav />
+            </Suspense>
           </aside>
           <main className="flex min-w-0 flex-1 flex-col gap-6 p-6">{children}</main>
         </div>
