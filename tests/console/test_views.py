@@ -59,3 +59,40 @@ def test_audit_rows_ordered_and_denials_marked() -> None:
     rows = views.audit_rows(list(reversed(api.audit)))
     assert [r["Tool"] for r in rows] == [a.tool for a in api.audit]
     assert rows[3]["Decision"] == "⛔ deny"
+
+
+@pytest.mark.parametrize(
+    ("raw", "masked"),
+    [
+        ("PMT-5520264417-001", "PMT-••••4417-001"),
+        ("PMT-5520264417-PENDING", "PMT-••••4417-PENDING"),
+        ("TRF 12345 / 4401228733101234", "TRF ••••2345 / ••••1234"),
+        ("REF-001", "REF-001"),
+        (None, views.DASH),
+        ("", views.DASH),
+    ],
+)
+def test_mask_reference(raw: str | None, masked: str) -> None:
+    assert views.mask_reference(raw) == masked
+
+
+def test_transaction_rows_mask_references() -> None:
+    import datetime as dt
+    from decimal import Decimal
+
+    from supportagent.contracts import bank as b
+
+    fields = b.Transaction.model_fields
+    sample = {
+        "id": 1,
+        "account_id": 1,
+        "loan_id": 9002,
+        "ts": dt.datetime(2026, 11, 1, tzinfo=dt.UTC),
+        "amount": Decimal("200.72"),
+        "channel": "mobile",
+        "status": "posted",
+        "reference": "PMT-5520264417-001",
+    }
+    row = views.transaction_rows([b.Transaction(**{k: v for k, v in sample.items() if k in fields})])[0]
+    assert "5520264417" not in str(row)
+    assert row["Reference"] == "PMT-••••4417-001"

@@ -7,6 +7,7 @@ render what these helpers return; they compute no figures of their own (CON-R8).
 from __future__ import annotations
 
 import datetime as dt
+import re
 from decimal import Decimal
 from typing import Any
 
@@ -25,6 +26,16 @@ def mask_number(value: object) -> str:
     if not digits:
         return DASH
     return f"•••• {digits[-4:]}"
+
+
+_LONG_DIGITS = re.compile(r"\d{5,}")
+
+
+def mask_reference(value: str | None) -> str:
+    """Mask every run of 5+ digits inside free text (e.g. `PMT-5520264417-001` → `PMT-••••4417-001`)."""
+    if not value:
+        return DASH
+    return _LONG_DIGITS.sub(lambda m: f"••••{m.group()[-4:]}", value)
 
 
 def money(value: Decimal | None) -> str:
@@ -119,7 +130,7 @@ def transaction_rows(rows: list[b.Transaction]) -> list[dict[str, Any]]:
             "Amount": money(t.amount),
             "Channel": t.channel,
             "Status": "⏳ pending" if t.status == "pending" else "posted",
-            "Reference": t.reference,
+            "Reference": mask_reference(t.reference),
         }
         for t in rows
     ]
