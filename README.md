@@ -28,6 +28,59 @@ make tasks-next            # what to build next
 Native model servers (llama.cpp, whisper.cpp, Kokoro, LiveKit) are needed from milestone M2. Run
 `make doctor` to see what is missing, and follow [docs/dev-setup.md](docs/dev-setup.md).
 
+## Run it locally
+Everything binds to `localhost`. Ports and model paths come from `.env` (see `.env.example`).
+
+**1. Native model servers** (macOS, Metal; one terminal tab each). Install them once with
+[docs/dev-setup.md](docs/dev-setup.md). The console and gateway need only the embeddings server, for
+policy search. To skip it, set `KB_EMBEDDER=fake` in `.env`.
+```bash
+# Embeddings (nomic-embed-text v1.5) on :8082. Used by policy search and `make kb-ingest`.
+llama-server -hf nomic-ai/nomic-embed-text-v1.5-GGUF:Q8_0 --alias nomic-embed-text-v1.5 \
+  --embedding --pooling mean -c 2048 -ngl 99 --host 127.0.0.1 --port 8082
+# LLM (Llama 3.1 8B Instruct) on :8090. Used by the agent; -m is the GGUF path (LLM_GGUF in .env).
+llama-server -m /path/to/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf --alias llama-3.1-8b-instruct --jinja -c 8192 -ngl 99 --host 127.0.0.1 --port 8090
+# Speech-to-text (whisper.cpp) on :8178. Used by the voice pipeline.
+whisper-server -m models/whisper/ggml-small.en.bin --host 127.0.0.1 --port 8178 \
+  --inference-path /v1/audio/transcriptions
+make doctor                # ✓/✗ for every prerequisite and server
+```
+
+**2. Docker services: Postgres, bank API, gateway and console.**
+```bash
+docker compose build bank-api                                   # after code changes: rebuilds the shared app image
+docker compose up -d --wait postgres bank-api gateway console   # or: make console (builds and starts the same four)
+docker compose ps                                               # all four should be "healthy"
+```
+
+**3. Load the data** (first run, or after `make reset-db`).
+```bash
+docker compose exec -T bank-api python -m supportagent.bank.seed --as-of 2026-11-09 --reset   # synthetic bank
+make kb-ingest             # policy documents with the real embeddings; ARGS="--embedder fake" without a model server
+```
+Re-running the ingest is safe: unchanged documents are skipped (`added 0 / skipped 20`).
+
+**4. Open the console** at <http://localhost:8501>. It's the read-only operations console and data
+explorer: customers, loans, the policy knowledge base, the persona test sheet and the call audit trail.
+
+To run the console natively instead, for example while editing it with hot reload:
+```bash
+docker compose stop console              # frees port 8501
+uv run streamlit run src/supportagent/console/app.py
+```
+It reaches the bank API and gateway on `localhost:8001` / `localhost:8002`.
+
+| Service | URL | Check |
+|---|---|---|
+| Console (Streamlit) | <http://localhost:8501> | open in a browser |
+| Bank API | <http://localhost:8001> | `curl localhost:8001/healthz` |
+| Gateway (MCP at `/mcp`) | <http://localhost:8002> | `curl localhost:8002/healthz` |
+| Embeddings / LLM / STT | `:8082` / `:8090` / `:8178` | `make doctor` |
+
+**Stop or reset:** `docker compose stop` (keeps the data), `make down` (stops all services), or
+`make reset-db` (deletes the local databases; then repeat step 3). Stop the model servers with
+Ctrl-C in their tabs.
+
 ## Workflow in one line
 Pick a ready task, write its tests, implement, mark it `done` in `tasks.md`, and commit it to the
 milestone branch. Each milestone is one draft PR (`make milestone-pr M=Mn`), merged once all its tasks
