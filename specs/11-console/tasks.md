@@ -201,7 +201,7 @@ view shows `st.error` but keeps the search playground usable.
 **Files:** `src/supportagent/console/pages/policies.py`, `src/supportagent/console/clients.py`, tests above
 
 ### T-CON-08 · Persona test sheet and call audit trail
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #98
 - **Depends on:** T-CON-01, T-BANK-09
@@ -214,8 +214,9 @@ explorer; and an "Audit trail" page that takes a `call_id` (or picks a recent ca
 customer.
 
 **Acceptance criteria**
-- [ ] The CON-R10 acceptance criterion in spec.md holds
-- [ ] Denied tool calls are highlighted
+- [x] The CON-R10 acceptance criterion in spec.md holds against the fake bank API (the live check with the
+  `call_id` printed by `scripts/demo_m1.py` is still to do)
+- [x] Denied tool calls are highlighted
 
 **Tests**
 - `tests/console/test_explorer_personas_audit.py` (unit): `AppTest` with fake clients; 12 personas; audit rows ordered, denials highlighted
