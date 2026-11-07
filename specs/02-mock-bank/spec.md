@@ -66,7 +66,7 @@ the gateway's job.
 `supportagent/contracts/bank.py`: `Customer`, `Account`, `LoanProduct`, `Loan`, `LoanStatus`,
 `Installment`, `Transaction`, `ContactPreferences`, `ContactPreferencesPatch`, `EligibleLoan`,
 `InteractionIn`, `Interaction`, `InteractionHistory`, `PromiseIn`, `Promise`, `TaskIn`, `Task`, `AuditIn`,
-`OutboxMessage`, `LateFeeRule`, `Page[T]`.
+`OutboxMessage`, `LateFeeRule`, `Page[T]`, `AuditRow`, `CallDetail`, `TaskPatch`.
 **Consumes:** `supportagent.common.settings` (DB URL, token), `supportagent.common.db`,
 `supportagent.contracts.outcome.CallOutcome` (stored as the interaction outcome JSON).
 
@@ -85,7 +85,13 @@ the gateway's job.
 | POST | `/tasks` | `TaskIn` | `Task` |
 | PATCH | `/contact-preferences/{customer_id}` | `ContactPreferencesPatch` | `ContactPreferences` |
 | POST | `/audit` | `AuditIn` | 204 |
-| GET | `/interactions`, `/interactions/{call_id}`, `/tasks`, `/promises`, `/audit`, `/outbox` | filters + `limit`/`offset` | `Page[...]` (M4) |
+| GET | `/interactions` | `direction`, `campaign`, `contact_result`, `escalated`, `customer_id`, `since`, `until`, `limit` (50, ≤200), `offset` | `Page[Interaction]` (newest first) |
+| GET | `/interactions/{call_id}` | — | `CallDetail{interaction, customer_timezone, promises, tasks, audit[AuditRow], outbox}` |
+| GET | `/tasks` | `status`, `type`, `customer_id`, `limit`, `offset` | `Page[Task]` (soonest `due_at` first) |
+| PATCH | `/tasks/{task_id}` | `TaskPatch{status?, owner?}` | `Task` (console follow-up queue) |
+| GET | `/promises` | `status`, `loan_id`, `limit`, `offset` | `Page[Promise]` (earliest promised date first) |
+| GET | `/audit` | `call_id`, `tool`, `decision`, `limit`, `offset` | `Page[AuditRow]` (oldest first) |
+| GET | `/outbox` | `status`, `limit`, `offset` | `Page[OutboxMessage]` (newest first) |
 | GET | `/healthz` | — | `{"status":"ok"}` (no auth) |
 
 ## Non-functional

@@ -153,7 +153,7 @@ amount) is the gateway's job. The bank only enforces types and foreign keys.
 **Files:** `src/supportagent/bank/api/routes_write.py`, `src/supportagent/bank/queries.py`, `src/supportagent/bank/models.py` (JSONB `none_as_null`), tests above
 
 ### T-BANK-07 · Operations read endpoints for the console
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #66
 - **Depends on:** T-BANK-06
@@ -163,17 +163,18 @@ Paginated list/detail endpoints the console (T-CON-01) needs: `GET /interactions
 `direction`, `campaign`, `contact_result`, `escalated`, `since`, `until`), `GET /interactions/{call_id}`
 (outcome + promises + tasks + audit rows for that call), `GET /tasks?status=&type=`,
 `GET /promises?status=`, `GET /audit?call_id=`, `GET /outbox?status=`. All return `Page[T]`
-(`items`, `total`, `limit`, `offset`).
+(`items`, `total`, `limit`, `offset`). Also `PATCH /tasks/{id}` (`TaskPatch{status?, owner?}`), which
+the console's follow-up queue (T-CON-04) needs; it writes only the interaction table `tasks`.
 
 **Acceptance criteria**
-- [ ] Filters combine with AND; `limit` defaults to 50 and is capped at 200
-- [ ] Tasks ordered by `due_at` ascending; interactions by `started_at` descending
-- [ ] Detail for an unknown `call_id` → 404
+- [x] Filters combine with AND; `limit` defaults to 50 and is capped at 200
+- [x] Tasks ordered by `due_at` ascending; interactions by `started_at` descending
+- [x] Detail for an unknown `call_id` → 404
 
 **Tests**
 - `tests/bank/test_api_ops.py` (integration): filters, pagination totals, ordering, call detail aggregation
 
-**Files:** `src/supportagent/bank/api/routes_ops.py`, `src/supportagent/contracts/bank.py` (`Page`, `CallDetail`), tests above
+**Files:** `src/supportagent/bank/api/routes_ops.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py` (`Page`, `CallDetail`, `AuditRow`, `TaskPatch`), tests above
 
 ### T-BANK-08 · Identity match endpoint for inbound callers
 - **Status:** todo

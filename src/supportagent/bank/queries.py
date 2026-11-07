@@ -8,7 +8,8 @@ import datetime as dt
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select
+from pydantic import BaseModel
+from sqlalchemy import Select, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -342,3 +343,143 @@ def patch_contact_preferences(
 def append_audit(s: Session, data: c.AuditIn) -> None:
     s.add(models.AuditLog(**data.model_dump()))
     s.flush()
+
+
+# --------------------------------------------------------------------------- operations read API (T-BANK-07)
+
+MAX_PAGE = 200
+
+
+def _page[M: BaseModel](s: Session, stmt: Select[Any], model: type[M], limit: int, offset: int) -> c.Page[M]:
+    """Run `stmt` (already filtered and ordered) as one page, with the unpaginated total."""
+    total = s.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    items = [model.model_validate(r) for r in s.scalars(stmt.limit(limit).offset(offset))]
+    return c.Page[model](items=items, total=total, limit=limit, offset=offset)  # type: ignore[valid-type]
+
+
+def list_interactions(
+    s: Session,
+    *,
+    limit: int,
+    offset: int,
+    direction: str | None = None,
+    campaign: str | None = None,
+    contact_result: str | None = None,
+    escalated: bool | None = None,
+    customer_id: int | None = None,
+    since: dt.datetime | None = None,
+    until: dt.datetime | None = None,
+) -> c.Page[c.Interaction]:
+    """Calls, newest first. Filters combine with AND; `escalated` reads the stored outcome."""
+    i = models.Interaction
+    stmt = select(i)
+    if direction is not None:
+        stmt = stmt.where(i.direction == direction)
+    if campaign is not None:
+        stmt = stmt.where(i.campaign == campaign)
+    if contact_result is not None:
+        stmt = stmt.where(i.contact_result == contact_result)
+    if customer_id is not None:
+        stmt = stmt.where(i.customer_id == customer_id)
+    if since is not None:
+        stmt = stmt.where(i.started_at >= since)
+    if until is not None:
+        stmt = stmt.where(i.started_at < until)
+    if escalated is not None:
+        is_escalated = func.coalesce(func.jsonb_typeof(i.outcome["escalated"]), "null") == "object"
+        stmt = stmt.where(is_escalated if escalated else ~is_escalated)
+    return _page(s, stmt.order_by(i.started_at.desc(), i.call_id), c.Interaction, limit, offset)
+
+
+def call_detail(s: Session, call_id: str) -> c.CallDetail | None:
+    interaction = get_interaction(s, call_id)
+    if interaction is None:
+        return None
+    customer = s.get(models.Customer, interaction.customer_id) if interaction.customer_id else None
+    p, t, a, o = models.PromiseToPay, models.Task, models.AuditLog, models.Outbox
+    promises = s.scalars(select(p).where(p.call_id == call_id).order_by(p.id))
+    tasks = s.scalars(select(t).where(t.call_id == call_id).order_by(t.id))
+    audit = s.scalars(select(a).where(a.call_id == call_id).order_by(a.ts, a.id))
+    outbox = s.scalars(select(o).where(o.call_id == call_id).order_by(o.id))
+    return c.CallDetail(
+        interaction=interaction,
+        customer_timezone=customer.timezone if customer else None,
+        promises=[c.Promise.model_validate(r) for r in promises],
+        tasks=[c.Task.model_validate(r) for r in tasks],
+        audit=[c.AuditRow.model_validate(r) for r in audit],
+        outbox=[c.OutboxMessage.model_validate(r) for r in outbox],
+    )
+
+
+def list_tasks(
+    s: Session,
+    *,
+    limit: int,
+    offset: int,
+    status: str | None = None,
+    task_type: str | None = None,
+    customer_id: int | None = None,
+) -> c.Page[c.Task]:
+    """Callbacks and escalations, soonest due first."""
+    t = models.Task
+    stmt = select(t)
+    if status is not None:
+        stmt = stmt.where(t.status == status)
+    if task_type is not None:
+        stmt = stmt.where(t.type == task_type)
+    if customer_id is not None:
+        stmt = stmt.where(t.customer_id == customer_id)
+    return _page(s, stmt.order_by(t.due_at, t.id), c.Task, limit, offset)
+
+
+def list_promises(
+    s: Session, *, limit: int, offset: int, status: str | None = None, loan_id: int | None = None
+) -> c.Page[c.Promise]:
+    """Promises to pay, earliest promised date first."""
+    p = models.PromiseToPay
+    stmt = select(p)
+    if status is not None:
+        stmt = stmt.where(p.status == status)
+    if loan_id is not None:
+        stmt = stmt.where(p.loan_id == loan_id)
+    return _page(s, stmt.order_by(p.promised_date, p.id), c.Promise, limit, offset)
+
+
+def list_audit(
+    s: Session,
+    *,
+    limit: int,
+    offset: int,
+    call_id: str | None = None,
+    tool: str | None = None,
+    decision: str | None = None,
+) -> c.Page[c.AuditRow]:
+    """Audit rows oldest first, so a call's trail reads top to bottom."""
+    a = models.AuditLog
+    stmt = select(a)
+    if call_id is not None:
+        stmt = stmt.where(a.call_id == call_id)
+    if tool is not None:
+        stmt = stmt.where(a.tool == tool)
+    if decision is not None:
+        stmt = stmt.where(a.decision == decision)
+    return _page(s, stmt.order_by(a.ts, a.id), c.AuditRow, limit, offset)
+
+
+def list_outbox(s: Session, *, limit: int, offset: int, status: str | None = None) -> c.Page[c.OutboxMessage]:
+    """Post-call summaries, newest first."""
+    o = models.Outbox
+    stmt = select(o)
+    if status is not None:
+        stmt = stmt.where(o.status == status)
+    return _page(s, stmt.order_by(o.created_at.desc(), o.id.desc()), c.OutboxMessage, limit, offset)
+
+
+def patch_task(s: Session, task_id: int, patch: c.TaskPatch) -> c.Task:
+    row = s.get(models.Task, task_id)
+    if row is None:
+        raise NotFoundError(f"task {task_id} not found")
+    for key, value in patch.model_dump(exclude_unset=True).items():
+        setattr(row, key, value)
+    s.flush()
+    return c.Task.model_validate(row)

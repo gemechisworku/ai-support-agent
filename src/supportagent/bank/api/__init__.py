@@ -8,7 +8,7 @@ unmasked (trusted-internal); only the gateway and the scheduler call this API.
 
 from fastapi import Depends, FastAPI
 
-from supportagent.bank.api import routes_collections, routes_read, routes_write
+from supportagent.bank.api import routes_collections, routes_ops, routes_read, routes_write
 from supportagent.bank.api.deps import require_service_token
 
 
@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
     app.include_router(routes_read.router, dependencies=protected)
     app.include_router(routes_collections.router, dependencies=protected)
     app.include_router(routes_write.router, dependencies=protected)
+    app.include_router(routes_ops.router, dependencies=protected, tags=["ops"])
 
     @app.get("/healthz", tags=["ops"])
     def healthz() -> dict[str, str]:

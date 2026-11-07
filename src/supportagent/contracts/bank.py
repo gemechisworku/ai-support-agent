@@ -307,3 +307,43 @@ class Page[T](BaseModel):
     total: int = Field(ge=0)
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
+
+
+# --------------------------------------------------------------------------- operations read API (T-BANK-07)
+
+
+class AuditRow(_Contract):
+    """One stored audit-log row (the `AuditIn` written by the gateway, plus its id)."""
+
+    id: int
+    ts: AwareDatetime
+    call_id: str
+    tool: str
+    args_hash: str
+    customer_id: int | None
+    decision: Literal["allow", "deny", "error"]
+    latency_ms: int
+
+
+class CallDetail(_Contract):
+    """`GET /interactions/{call_id}`: everything recorded for one call, for the console's call view."""
+
+    interaction: Interaction
+    customer_timezone: str | None  # for calling-window checks in the customer's local time
+    promises: list[Promise]
+    tasks: list[Task]
+    audit: list[AuditRow]  # time order
+    outbox: list[OutboxMessage]
+
+
+class TaskPatch(_Contract):
+    """`PATCH /tasks/{id}`: the console's follow-up queue marks tasks done or assigns them."""
+
+    status: Literal["open", "done", "cancelled"] | None = None
+    owner: str | None = None
+
+    @model_validator(mode="after")
+    def _not_empty(self) -> Self:
+        if not self.model_fields_set:
+            raise ValueError("set at least one field")
+        return self
