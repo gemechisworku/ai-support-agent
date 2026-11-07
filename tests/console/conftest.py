@@ -256,6 +256,26 @@ KB_DETAIL = {
             KbChunkView(ord=1, section="Grace Periods > Late fees", text=FEES_TEXT, token_count=20),
         ],
     ),
+    "fees-schedule": KbDocumentDetail(
+        doc_id="fees-schedule",
+        version="1.0",
+        title="Schedule of Loan Fees",
+        product="all",
+        audience="customer",
+        effective_date=dt.date(2026, 1, 1),
+        chunks=[KbChunkView(ord=0, section="Schedule of Loan Fees", text=FEES_TEXT, token_count=20)],
+    ),
+    "contact-calling-rules": KbDocumentDetail(
+        doc_id="contact-calling-rules",
+        version="1.0",
+        title="Contact and Calling Rules",
+        product="all",
+        audience="internal",
+        effective_date=dt.date(2026, 1, 1),
+        chunks=[
+            KbChunkView(ord=0, section="Calling hours", text="08:00 to 21:00 local time.", token_count=6)
+        ],
+    ),
 }
 
 

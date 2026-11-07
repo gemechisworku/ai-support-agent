@@ -25,6 +25,15 @@ def api[T](fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         raise  # unreachable: st.stop() raises; keeps type checkers happy
 
 
+def try_api[T](fn: Callable[..., T], *args: Any, **kwargs: Any) -> T | None:
+    """Like `api`, but keeps rendering the rest of the page: shows the error and returns None."""
+    try:
+        return fn(*args, **kwargs)
+    except ConsoleApiError as exc:
+        st.error(str(exc))
+        return None
+
+
 def coming_soon(title: str, task: str, what: str) -> None:
     st.title(title)
     st.info(f"Arrives with {task}: {what}")

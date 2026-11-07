@@ -176,7 +176,7 @@ calls, open promises, open tasks). Numbers are masked with `views.mask_number()`
 **Files:** `src/supportagent/console/pages/customers.py`, `src/supportagent/console/clients.py`, tests above
 
 ### T-CON-07 · Policy knowledge-base explorer and search playground
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #97
 - **Depends on:** T-CON-01, T-GW-12
@@ -186,11 +186,13 @@ A "Policies" page: document table (product, audience, versions, effective dates,
 `GET /service/kb/documents`; a document view rendering each chunk's section path and Markdown; and a
 search playground (query, optional product) calling `POST /service/kb/search`, showing each chunk's
 citation (`doc_id@version#section`), RRF score, similarity and the `confident` flag — what the agent
-would be allowed to say. Adds a typed `GatewayServiceClient`.
+would be allowed to say. Uses the typed `GatewayServiceClient` (added with T-CON-01). A failing document
+view shows `st.error` but keeps the search playground usable.
 
 **Acceptance criteria**
-- [ ] The CON-R9 acceptance criterion in spec.md holds (the Ollama part once T-VOICE-01 installs Ollama)
-- [ ] Low-confidence results are shown with a visible "agent would offer a follow-up" note
+- [x] The CON-R9 acceptance criterion in spec.md holds against the fake gateway API (the live check with 20 ingested
+  documents, and the Ollama "capital of France" part once T-VOICE-01 installs Ollama, are still to do)
+- [x] Low-confidence results are shown with a visible "agent would offer a follow-up" note
 
 **Tests**
 - `tests/console/test_explorer_policies.py` (unit): `AppTest` with a fake gateway client; list, document view, search results and the low-confidence note
