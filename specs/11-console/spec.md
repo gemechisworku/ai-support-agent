@@ -1,6 +1,6 @@
 # 11 · Operations console — Spec
 
-> **Code:** `CON` · **Location:** `src/supportagent/console/` · **Milestones:** M4
+> **Code:** `CON` · **Location:** `src/supportagent/console/` · **Milestones:** M2 (data explorer), M4 (operations)
 > **PRD:** F10, AC-GUARD, NFR-AUDIT, NFR-SEC · **Depends on:** BANK ops API (T-BANK-07), SCHED trigger API (T-SCHED-06), OBS transcripts · **Status:** see [tasks.md](tasks.md)
 
 ## Purpose
@@ -15,6 +15,10 @@ They use it to:
 It is a **thin client**: it holds no business logic and has no database access. It only calls the bank
 ops API and the scheduler API over HTTP, reads redacted transcripts through `observability.transcripts`,
 and reuses the pure checkers in `observability.guardrails` and `compliance`.
+
+It also hosts a **data explorer** (M2) for the developer and the compliance lead: browse the mock
+bank and the policy knowledge base, look up the scripted personas, and read the gateway audit trail of a
+call — the context the agent works with — without querying a database.
 
 ## Scope
 **In:**
@@ -36,6 +40,9 @@ and reuses the pure checkers in `observability.guardrails` and `compliance`.
 - **CON-R5** (P0 · F10) — The follow-up queue shall list open promises (due today, upcoming, broken), callbacks and escalations, ordered by due time, and let an officer mark a task done or assigned.
 - **CON-R6** (P0 · F10, AC-GUARD) — A compliance overview shall show, for a date range: % of calls with account data where verification came first, % of calls with all required disclosures, the count of calls outside the calling window or over the frequency cap (expected 0), and the count of dispute and cease-contact requests and whether each was honoured. Every failing call links to its detail page.
 - **CON-R7** (P0 · NFR-SEC) — The console shall display only masked or redacted data (masked numbers, redacted transcripts, no DOB), bind to localhost only, and show a visible "synthetic data" banner.
+- **CON-R8** (P0 · F10, F5) — A customer explorer shall search customers (by name, phone, customer id or loan last 4; filter by segment and delinquency bucket) and show one customer's profile, contact preferences, loans with computed status (balance, DPD, bucket, next due), instalment schedule, recent transactions (pending flagged), and interaction history with open promises and tasks.
+- **CON-R9** (P0 · F10, F6, U4) — A policy explorer shall list the knowledge-base documents (title, product, audience, versions and effective dates, chunk count), show a document version's chunks with their section paths, and offer a search playground that runs the same retrieval as the agent's `search_policy` and shows each returned chunk's citation, scores and the `confident` flag.
+- **CON-R10** (P0 · F10, F11, NFR-AUDIT) — A persona test sheet shall list the 12 scripted personas with their situation, expected outcome, softphone extension and the verification details a tester needs to role-play them (full name, DOB, loan last 4), and an audit-trail view shall show every gateway tool call of a given `call_id` (tool, decision, latency, customer) in order.
 
 ## Acceptance criteria
 - **CON-R1:** `lint-imports` passes with the console contract. With both APIs faked by
@@ -51,6 +58,14 @@ and reuses the pure checkers in `observability.guardrails` and `compliance`.
 - **CON-R6:** Given fixtures with one call that read loan data before `verify_identity`, verified-first
   shows 50.0% with that call linked. Fixtures with no violations show 100% / 100% / 0 / 0.
 - **CON-R7:** Rendering a page whose fake API returns a full 16-digit number still shows only the last 4.
+- **CON-R8:** Searching "Frank" lists Forgetful Frank; his page shows loan •••• 4417 at 5 DPD with $200.72 overdue
+  since 4 Nov 2026, the instalment schedule and his transactions — values equal to the bank API's.
+- **CON-R9:** The policy list shows 20 documents; opening `late-fees-penalty-interest` shows its chunks; searching
+  "late fee personal loan" returns cited chunks from the fees documents with `confident=true`, and "capital of
+  France" with the Ollama embedder returns `confident=false`.
+- **CON-R10:** The persona sheet lists all 12 personas from `GET /personas`; entering the `call_id` printed by
+  `scripts/demo_m1.py` shows its 5 audit rows in order. The persona sheet is the only place a DOB is shown
+  (synthetic test identities), labelled as such.
   The container's port is published as `127.0.0.1:8501:8501`.
 
 ## Interfaces

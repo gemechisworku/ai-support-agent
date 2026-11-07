@@ -54,7 +54,7 @@ Package root: `src/supportagent/`. Tests mirror it under `tests/<module>/`.
 | 08 | TEL | [Telephony](08-telephony/spec.md) | `telephony/`, `infra/telephony/` | M3 | VOICE, AGENT | F2, F3, F9, AC-DEMO |
 | 09 | SCHED | [Outreach scheduler](09-scheduler/spec.md) | `scheduler/` | M3 | COMP lib, BANK API, LiveKit API | F3, F8, U1, U2, U5 |
 | 10 | OBS | [Observability and redaction](10-observability/spec.md) | `observability/` | M2, M4 | PLAT | F11, NFR-AUDIT, NFR-SEC |
-| 11 | CON | [Operations console](11-console/spec.md) | `console/` | M4 | BANK API | F10 |
+| 11 | CON | [Operations console and data explorer](11-console/spec.md) | `console/` | M2, M4 | BANK API, GW service API | F10 |
 | 12 | EVAL | [Simulated-caller evals](12-evals/spec.md) | `evals/`, `tests/scenarios/` | M2, M4 | AGENT (text mode) | F12, AC-TASK, AC-GUARD, AC-GROUND, AC-EXP |
 
 ### Dependency rules (enforced by `import-linter`, see `pyproject.toml`)

@@ -1,0 +1,141 @@
+# Golden retrieval set (KB-R8). A question passes when any of `expected_doc_ids` is in the top 4.
+# `must_pass_ci: true` questions must pass with the offline HashEmbedder (integration, CI);
+# the full set is the quality bar with Ollama embeddings (`pytest -m eval tests/kb/test_golden.py`).
+# `product` is the product the caller has (or null when unknown); `audience` defaults to customer.
+
+- question: What happens if I pay late?
+  product: null
+  expected_doc_ids: [late-fees-penalty-interest, delinquency-stages, faq]
+  must_pass_ci: true
+- question: How much is the late fee on my auto loan?
+  product: AUTO
+  expected_doc_ids: [product-auto-loan, late-fees-penalty-interest, fees-schedule]
+  must_pass_ci: true
+- question: How long is the grace period on a personal loan?
+  product: PERSONAL
+  expected_doc_ids: [product-personal-loan, late-fees-penalty-interest]
+  must_pass_ci: true
+- question: What is the late fee for the salary advance?
+  product: SALARY_ADV
+  expected_doc_ids: [product-salary-advance, late-fees-penalty-interest, fees-schedule]
+  must_pass_ci: true
+- question: Is there a grace period on my mortgage payment?
+  product: MORTGAGE
+  expected_doc_ids: [product-mortgage, late-fees-penalty-interest]
+  must_pass_ci: true
+- question: Can I pay my car loan off early?
+  product: AUTO
+  expected_doc_ids: [early-repayment-payoff, product-auto-loan]
+  must_pass_ci: true
+- question: Is there a prepayment fee if I pay off my mortgage early?
+  product: MORTGAGE
+  expected_doc_ids: [early-repayment-payoff, product-mortgage, fees-schedule]
+  must_pass_ci: true
+- question: How do I get a payoff quote?
+  product: null
+  expected_doc_ids: [early-repayment-payoff]
+  must_pass_ci: true
+- question: When will my late payment be reported to the credit bureau?
+  product: null
+  expected_doc_ids: [credit-bureau-reporting, delinquency-stages]
+  must_pass_ci: true
+- question: What happens at 60 days past due?
+  product: null
+  expected_doc_ids: [delinquency-stages]
+  must_pass_ci: true
+- question: When is a loan declared in default?
+  product: null
+  expected_doc_ids: [delinquency-stages]
+  must_pass_ci: true
+- question: How do I pay my loan?
+  product: null
+  expected_doc_ids: [payment-channels, faq]
+  must_pass_ci: true
+- question: How long does a bank transfer take to post?
+  product: null
+  expected_doc_ids: [payment-channels]
+  must_pass_ci: true
+- question: I already paid but it still shows as pending
+  product: null
+  expected_doc_ids: [payment-channels]
+  must_pass_ci: true
+- question: How long can I take to pay if I promise to pay?
+  product: null
+  expected_doc_ids: [promise-to-pay-rules]
+  must_pass_ci: true
+- question: What happens if I break my promise to pay?
+  product: null
+  expected_doc_ids: [promise-to-pay-rules]
+  must_pass_ci: true
+- question: I lost my job and can't pay. Is there hardship assistance?
+  product: null
+  expected_doc_ids: [hardship-assistance, faq]
+  must_pass_ci: true
+- question: How does restructuring work?
+  product: null
+  expected_doc_ids: [hardship-assistance]
+  must_pass_ci: true
+- question: I think the fee on my account is wrong. How do I dispute it?
+  product: null
+  expected_doc_ids: [disputes-error-resolution, late-fees-penalty-interest, credit-bureau-reporting]
+  must_pass_ci: true
+- question: Do you stop collection while a dispute is open?
+  product: null
+  expected_doc_ids: [disputes-error-resolution]
+  must_pass_ci: true
+- question: I want to make a complaint
+  product: null
+  expected_doc_ids: [complaints-escalation]
+  must_pass_ci: true
+- question: Can I speak to a person?
+  product: null
+  expected_doc_ids: [complaints-escalation, faq]
+  must_pass_ci: true
+- question: Can I change my due date?
+  product: null
+  expected_doc_ids: [repayment-schedules]
+  must_pass_ci: true
+- question: What if my due date falls on a weekend or public holiday?
+  product: null
+  expected_doc_ids: [repayment-schedules]
+  must_pass_ci: true
+- question: Do you charge penalty interest?
+  product: null
+  expected_doc_ids: [late-fees-penalty-interest]
+  must_pass_ci: true
+- question: What fees can the bank charge me?
+  product: null
+  expected_doc_ids: [fees-schedule, late-fees-penalty-interest]
+  must_pass_ci: true
+- question: What is the interest rate on a working capital loan?
+  product: SME_WC
+  expected_doc_ids: [product-sme-working-capital]
+  must_pass_ci: true
+- question: How much can I borrow with a salary advance and for how long?
+  product: SALARY_ADV
+  expected_doc_ids: [product-salary-advance]
+  must_pass_ci: true
+- question: Does my car insurance matter for the auto loan?
+  product: AUTO
+  expected_doc_ids: [product-auto-loan]
+  must_pass_ci: true
+- question: Can I pay more than my monthly instalment?
+  product: null
+  expected_doc_ids: [repayment-schedules, early-repayment-payoff]
+  must_pass_ci: true
+- question: What do I owe and when is it due?
+  product: null
+  expected_doc_ids: [faq, repayment-schedules]
+  must_pass_ci: true
+- question: My business is struggling, what are my options on the working capital loan?
+  product: SME_WC
+  expected_doc_ids: [hardship-assistance, product-sme-working-capital]
+  must_pass_ci: false
+- question: Will missing a payment hurt my credit score?
+  product: null
+  expected_doc_ids: [credit-bureau-reporting, delinquency-stages]
+  must_pass_ci: false
+- question: Could I lose my house if I keep missing payments?
+  product: MORTGAGE
+  expected_doc_ids: [product-mortgage, delinquency-stages]
+  must_pass_ci: false

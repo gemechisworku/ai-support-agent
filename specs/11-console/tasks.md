@@ -8,7 +8,7 @@
 
 ### T-CON-01 · Console skeleton and bank API client
 - **Status:** todo
-- **Milestone:** M4
+- **Milestone:** M2
 - **Issue:** #67
 - **Depends on:** T-BANK-07
 - **Requirements:** CON-R1, CON-R7
@@ -148,3 +148,70 @@ lists failing calls with links. The current contact-rules version comes from `Ca
 - `tests/console/test_app_pages.py::test_compliance_page` (unit, AppTest).
 
 **Files:** `src/supportagent/console/pages/compliance.py`, `src/supportagent/console/views.py`, `tests/console/test_compliance_view.py`, `tests/console/test_app_pages.py`
+
+### T-CON-06 · Customer and loan explorer
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #96
+- **Depends on:** T-CON-01, T-BANK-09
+- **Requirements:** CON-R8, CON-R7
+
+A "Customers" page: search box and segment/bucket filters over `GET /customers` (paginated table),
+then a customer page with tabs: Profile and contact preferences · Loans (computed status per loan) ·
+Schedule (instalments, paid/unpaid highlighted) · Transactions (pending flagged) · History (past
+calls, open promises, open tasks). Numbers are masked with `views.mask_number()`.
+
+**Acceptance criteria**
+- [ ] The CON-R8 acceptance criterion in spec.md holds against the seeded bank (`make console` after the M1 demo setup)
+- [ ] Every figure comes from the bank API response; the page computes nothing
+- [ ] An API error shows `st.error`, never a traceback
+
+**Tests**
+- `tests/console/test_explorer_customers.py` (unit): `AppTest` with a fake `BankOpsClient` built from the persona seed; search, tabs, masking
+
+**Files:** `src/supportagent/console/pages/customers.py`, `src/supportagent/console/clients.py`, tests above
+
+### T-CON-07 · Policy knowledge-base explorer and search playground
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #97
+- **Depends on:** T-CON-01, T-GW-12
+- **Requirements:** CON-R9
+
+A "Policies" page: document table (product, audience, versions, effective dates, chunk counts) from
+`GET /service/kb/documents`; a document view rendering each chunk's section path and Markdown; and a
+search playground (query, optional product) calling `POST /service/kb/search`, showing each chunk's
+citation (`doc_id@version#section`), RRF score, similarity and the `confident` flag — what the agent
+would be allowed to say. Adds a typed `GatewayServiceClient`.
+
+**Acceptance criteria**
+- [ ] The CON-R9 acceptance criterion in spec.md holds (the Ollama part once T-VOICE-01 installs Ollama)
+- [ ] Low-confidence results are shown with a visible "agent would offer a follow-up" note
+
+**Tests**
+- `tests/console/test_explorer_policies.py` (unit): `AppTest` with a fake gateway client; list, document view, search results and the low-confidence note
+- `tests/console/test_clients.py` (unit): `GatewayServiceClient` paths and error mapping
+
+**Files:** `src/supportagent/console/pages/policies.py`, `src/supportagent/console/clients.py`, tests above
+
+### T-CON-08 · Persona test sheet and call audit trail
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #98
+- **Depends on:** T-CON-01, T-BANK-09
+- **Requirements:** CON-R10
+
+A "Test personas" page from `GET /personas` (situation, expected outcome, extension, and the
+synthetic verification details clearly labelled as test identities), each linking to the customer
+explorer; and an "Audit trail" page that takes a `call_id` (or picks a recent call from
+`GET /interactions`) and lists `GET /audit?call_id=` rows in order: time, tool, decision, latency,
+customer.
+
+**Acceptance criteria**
+- [ ] The CON-R10 acceptance criterion in spec.md holds
+- [ ] Denied tool calls are highlighted
+
+**Tests**
+- `tests/console/test_explorer_personas_audit.py` (unit): `AppTest` with fake clients; 12 personas; audit rows ordered, denials highlighted
+
+**Files:** `src/supportagent/console/pages/personas.py`, `src/supportagent/console/pages/audit.py`, tests above

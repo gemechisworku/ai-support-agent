@@ -11,7 +11,7 @@
 - **Milestone:** M2
 - **Issue:** #41
 - **Depends on:** T-PLAT-06
-- **Requirements:** VOICE-R1
+- **Requirements:** VOICE-R1, KB-R8
 
 Write idempotent shell scripts that install and run the native (Metal) model servers described in
 [plan.md](plan.md#file-layout), plus a stdlib health probe. `make doctor` (T-PLAT-06) checks the
@@ -36,6 +36,9 @@ prerequisites; this task installs and runs the servers.
 - [ ] All servers bind to 127.0.0.1; URLs and ports come from `.env` (`OLLAMA_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`).
 - [ ] The memory footprint of each server is listed in `docs/dev-setup.md` (link from AGENTS.md "native services").
 - [ ] `models/`, `vendor/` and `var/` are git-ignored.
+- [ ] With Ollama up, `uv run pytest -m eval tests/kb/test_golden.py` reports hit@4 ≥ 0.90 (KB-R8), and
+  `KB_MIN_SIMILARITY`'s default is tuned for nomic-embed-text and recorded in specs/03-knowledge-base/plan.md
+  (moved here from T-KB-06, which had no Ollama available).
 
 **Tests**
 - `tests/voice/test_health_script.py` (unit): runs `health.py` against stub `http.server` endpoints and asserts exit code 0 when all are healthy, and 1 with a named failure when one is down or a model is missing.

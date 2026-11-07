@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-BANK-01 · Bank schema, API contracts and initial migration
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #6
 - **Depends on:** T-PLAT-03, T-PLAT-04
@@ -18,19 +18,19 @@ Alembic migration for database `bank`, and the Pydantic contracts in `supportage
 The gateway (T-GW-01) codes against those contracts, so they land first.
 
 **Acceptance criteria**
-- [ ] `alembic -n bank upgrade head` (or the PLAT-03 equivalent `make migrate`) creates all 12 tables with indexes on `customers.phone`, `loans.customer_id`, `installments.due_date`, `transactions(account_id, ts)`
-- [ ] `downgrade base` drops them cleanly
-- [ ] All contract models from spec §Interfaces exist, use `Decimal` for money and `date`/`datetime` (tz-aware) for time, and round-trip to JSON
-- [ ] `interactions.outcome` is typed as `CallOutcome` in `InteractionIn`
+- [x] `alembic -n bank upgrade head` (or the PLAT-03 equivalent `make migrate`) creates all 12 tables with indexes on `customers.phone`, `loans.customer_id`, `installments.due_date`, `transactions(account_id, ts)`
+- [x] `downgrade base` drops them cleanly
+- [x] All contract models from spec §Interfaces exist, use `Decimal` for money and `date`/`datetime` (tz-aware) for time, and round-trip to JSON
+- [x] `interactions.outcome` is typed as `CallOutcome` in `InteractionIn`
 
 **Tests**
 - `tests/bank/test_models.py` (integration): upgrade → inspect tables/columns/indexes → downgrade
 - `tests/contracts/test_bank_contracts.py` (unit): JSON round-trip, Decimal serialised as string with 2 dp, naive datetimes rejected
 
-**Files:** `src/supportagent/bank/models.py`, `src/supportagent/contracts/bank.py`, `migrations/bank/versions/0001_initial.py`, tests above
+**Files:** `src/supportagent/bank/models.py`, `src/supportagent/contracts/bank.py`, `migrations/bank/versions/bank_0002_initial_bank_schema.py`, tests above
 
 ### T-BANK-02 · Deterministic synthetic population seed
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #7
 - **Depends on:** T-BANK-01
@@ -45,20 +45,20 @@ are refreshed from `ledger.py`. Product grace days and late-fee rules must equal
 `doc_id`. Export them as `PRODUCTS` so the KB cross-check test can read them.
 
 **Acceptance criteria**
-- [ ] Two runs with the same `--seed`/`--as-of` produce identical row checksums (sha256 over ordered rows)
-- [ ] Row counts within ±5% of architecture §4 targets
-- [ ] Bucket distribution includes current, 1-30, 31-60, 61-90 and 90+ loans
-- [ ] Only `+1555…` phone numbers and `example.com` emails are generated
-- [ ] Seeding a fresh DB completes in under 10 s locally
+- [x] Two runs with the same `--seed`/`--as-of` produce identical row checksums (sha256 over ordered rows)
+- [x] Row counts within ±5% of architecture §4 targets
+- [x] Bucket distribution includes current, 1-30, 31-60, 61-90 and 90+ loans
+- [x] Only `+1555…` phone numbers and `example.com` emails are generated
+- [x] Seeding a fresh DB completes in under 10 s locally
 
 **Tests**
-- `tests/bank/test_ledger.py` (unit, hypothesis): outstanding = Σ unpaid components; DPD = days since oldest unpaid due date past grace; bucket boundaries 0/1/30/31/60/61/90
+- `tests/bank/test_ledger.py` (unit, 200 seeded random schedules): outstanding = Σ unpaid components; DPD = days since the oldest unpaid instalment's due date (due date + 1 day = 1 DPD; grace only decides the late fee); bucket boundaries 0/1/30/31/60/61/90
 - `tests/bank/test_seed.py` (integration): determinism checksum, counts, phone/email ranges
 
-**Files:** `src/supportagent/bank/ledger.py`, `src/supportagent/bank/seed/{__main__,population}.py`, tests above
+**Files:** `src/supportagent/bank/ledger.py`, `src/supportagent/bank/seed/{__init__,__main__,builder,population,products,writer}.py`, tests above
 
 ### T-BANK-03 · Scripted persona seed
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #8
 - **Depends on:** T-BANK-02
@@ -70,9 +70,9 @@ situation relative to `as_of`. Export `PERSONAS` (name, customer_id, phone, exte
 loan_last4, expected outcome) for evals and telephony provisioning.
 
 **Acceptance criteria**
-- [ ] Each persona's computed `LoanStatus` matches its situation (e.g. Frank DPD == 5, Olivia next due in 2 days, Priya has a pending transaction equal to amount due, Bianca has an open promise dated `as_of − 1`)
-- [ ] Persona rows are identical across seeds (only the population varies with `--seed`)
-- [ ] `PERSONAS` is importable without a DB connection
+- [x] Each persona's computed `LoanStatus` matches its situation (e.g. Frank DPD == 5, Olivia next due in 2 days, Priya has a pending transaction equal to amount due, Bianca has an open promise dated `as_of − 1`)
+- [x] Persona rows are identical across seeds (only the population varies with `--seed`)
+- [x] `PERSONAS` is importable without a DB connection
 
 **Tests**
 - `tests/bank/test_personas.py` (integration): one parametrised assertion per persona situation
@@ -81,7 +81,7 @@ loan_last4, expected outcome) for evals and telephony provisioning.
 **Files:** `src/supportagent/bank/seed/personas.py`, tests above
 
 ### T-BANK-04 · Read API and bank-api compose service
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #9
 - **Depends on:** T-BANK-01, T-PLAT-05
@@ -92,20 +92,20 @@ and phone), customer loans, loan status, installments, account transactions and 
 history. Also add `/healthz` and the `bank-api` service on port 8001 in `docker-compose.yml`.
 
 **Acceptance criteria**
-- [ ] Missing/wrong `X-Service-Token` → 401 on every route except `/healthz`
-- [ ] Unknown ids → 404 with `{"detail": …}`; invalid phone → 422
-- [ ] `GET /loans/{id}` returns `LoanStatus` computed via `ledger.py` for the current `as_of` (settings override `BANK_AS_OF` for tests/demos)
-- [ ] Transactions are newest first, `limit` capped at 50, and pending are flagged
-- [ ] `docker compose up bank-api` serves `/healthz` and the image passes the CI docker job
+- [x] Missing/wrong `X-Service-Token` → 401 on every route except `/healthz`
+- [x] Unknown ids → 404 with `{"detail": …}`; invalid phone → 422
+- [x] `GET /loans/{id}` returns `LoanStatus` computed via `ledger.py` for the current `as_of` (settings override `BANK_AS_OF` for tests/demos)
+- [x] Transactions are newest first, `limit` capped at 50, and pending are flagged
+- [x] `docker compose up bank-api` serves `/healthz` and the image passes the CI docker job
 
 **Tests**
 - `tests/bank/test_api_read.py` (integration): each route, 401/404/422 paths, Frank's loan status values, Priya's pending transaction
 - `tests/bank/test_ledger_api_consistency.py` (integration): for all seeded loans, API outstanding == ledger outstanding
 
-**Files:** `src/supportagent/bank/api/*`, `src/supportagent/bank/queries.py`, `docker-compose.yml`, tests above
+**Files:** `src/supportagent/bank/api/{__init__,deps,routes_read}.py`, `src/supportagent/bank/queries.py`, `docker-compose.yml`, `tests/bank/conftest.py`, tests above
 
 ### T-BANK-05 · Collections and pre-due eligibility query
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #10
 - **Depends on:** T-BANK-04
@@ -116,10 +116,10 @@ with contact preferences and attempt history (`attempts_last_7d`, `last_conversa
 interactions). The bank does **not** filter on contact rules. It supplies the facts and COMP decides.
 
 **Acceptance criteria**
-- [ ] `bucket=1-30` returns only loans with 1 ≤ DPD ≤ 30, including Frank, Hana, Dawit and Sam (Sam's `cease_contact` is returned as-is)
-- [ ] `due_within=3` returns loans with an unpaid instalment due in [as_of, as_of+3], including Olivia
-- [ ] `attempts_last_7d` counts outbound interactions for that loan in the last 7×24 h; `last_conversation_at` is the latest `contact_result=right_party`
-- [ ] Exactly one of `bucket`/`due_within` is required (422 otherwise)
+- [x] `bucket=1-30` returns only loans with 1 ≤ DPD ≤ 30, including Frank, Hana, Dawit and Sam (Sam's `cease_contact` is returned as-is)
+- [x] `due_within=3` returns loans with an unpaid instalment due in [as_of, as_of+3], including Olivia
+- [x] `attempts_last_7d` counts outbound interactions for that loan in the last 7×24 h; `last_conversation_at` is the latest `contact_result=right_party`
+- [x] Exactly one of `bucket`/`due_within` is required (422 otherwise)
 
 **Tests**
 - `tests/bank/test_eligibility.py` (integration): persona inclusion/exclusion, attempt counting with inserted interactions, 422 path
@@ -127,7 +127,7 @@ interactions). The bank does **not** filter on contact rules. It supplies the fa
 **Files:** `src/supportagent/bank/api/routes_collections.py`, `src/supportagent/bank/queries.py`, tests above
 
 ### T-BANK-06 · Write API: interactions, promises, tasks, contact preferences, audit, outbox
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M1
 - **Issue:** #11
 - **Depends on:** T-BANK-04
@@ -140,21 +140,21 @@ enqueue an `outbox` row in the same transaction (F13). Business validation of pr
 amount) is the gateway's job. The bank only enforces types and foreign keys.
 
 **Acceptance criteria**
-- [ ] Re-posting the same `call_id` updates rather than duplicates
-- [ ] PATCH sets only the provided flags (`dnc`, `cease_contact`, `dispute_open`, `preferred_window`, `consent_voice_ai`) and bumps `updated_at`
-- [ ] Outbox row created atomically with the interaction; no outbox row when there is no summary
-- [ ] Route-table test proves no POST/PUT/PATCH/DELETE exists on accounts, loans, installments or transactions
-- [ ] `POST /audit` is idempotent-safe (append-only; returns 204)
+- [x] Re-posting the same `call_id` updates rather than duplicates
+- [x] PATCH sets only the provided flags (`dnc`, `cease_contact`, `dispute_open`, `preferred_window`, `consent_voice_ai`) and bumps `updated_at`
+- [x] Outbox row created atomically with the interaction; no outbox row when there is no summary
+- [x] Route-table test proves no POST/PUT/PATCH/DELETE exists on accounts, loans, installments or transactions
+- [x] `POST /audit` is idempotent-safe (append-only; returns 204)
 
 **Tests**
 - `tests/bank/test_api_write.py` (integration): each write route, upsert, partial PATCH, outbox atomicity (forced failure rolls back)
 - `tests/bank/test_routes_readonly_ledger.py` (unit): route table inspection
 
-**Files:** `src/supportagent/bank/api/routes_{interactions,promises,tasks,prefs,audit}.py`, `src/supportagent/bank/queries.py`, tests above
+**Files:** `src/supportagent/bank/api/routes_write.py`, `src/supportagent/bank/queries.py`, `src/supportagent/bank/models.py` (JSONB `none_as_null`), tests above
 
 ### T-BANK-07 · Operations read endpoints for the console
 - **Status:** todo
-- **Milestone:** M4
+- **Milestone:** M2
 - **Issue:** #66
 - **Depends on:** T-BANK-06
 - **Requirements:** BANK-R9
@@ -174,3 +174,48 @@ Paginated list/detail endpoints the console (T-CON-01) needs: `GET /interactions
 - `tests/bank/test_api_ops.py` (integration): filters, pagination totals, ordering, call detail aggregation
 
 **Files:** `src/supportagent/bank/api/routes_ops.py`, `src/supportagent/contracts/bank.py` (`Page`, `CallDetail`), tests above
+
+### T-BANK-08 · Identity match endpoint for inbound callers
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #93
+- **Depends on:** T-BANK-04
+- **Requirements:** BANK-R10
+
+Found while building the gateway (T-GW-05): a caller ringing from a number that is not on file cannot
+be verified, because the bank has no lookup by date of birth and loan last 4. Add
+`GET /customers/match?dob=&loan_last4=` returning `list[CustomerMatch{customer_id, loan_id}]` (no
+names or other fields), with the `CustomerMatch` contract in `contracts/bank.py`.
+
+**Acceptance criteria**
+- [ ] The BANK-R10 acceptance criterion in spec.md holds
+- [ ] The query uses an index (no sequential scan over loans on the seeded data, checked with `EXPLAIN`)
+
+**Tests**
+- `tests/bank/test_api_match.py` (integration): Frank matches; wrong DOB / last 4 → `[]`; missing parameter → 422; no token → 401
+
+**Files:** `src/supportagent/bank/api/routes_read.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py`, a migration if an index is needed, tests above
+
+### T-BANK-09 · Explorer endpoints: customer search, loan list, preferences, personas
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #95
+- **Depends on:** T-BANK-07
+- **Requirements:** BANK-R11
+
+Read-only endpoints the console's data explorer (T-CON-06, T-CON-08) needs, reusing `Page[T]` from
+T-BANK-07: `GET /customers?q=&segment=&bucket=&limit=&offset=` (q matches name, phone, customer id or
+loan last 4; returns `CustomerSummary{customer_id, full_name, phone, segment, loan_count, worst_bucket}`),
+`GET /loans?bucket=&product=&limit=&offset=` (`Page[LoanStatus]`), `GET /customers/{id}/contact-preferences`
+and `GET /personas` (`list[PersonaCard]` built from `bank.seed.personas`: id, name, situation, expected
+outcome, extension, phone, DOB, loan last 4 — synthetic test identities).
+
+**Acceptance criteria**
+- [ ] The BANK-R11 acceptance criterion in spec.md holds
+- [ ] `limit` defaults to 50 and is capped at 200; results are ordered by customer id
+- [ ] Unknown customer → 404 on the preferences route
+
+**Tests**
+- `tests/bank/test_api_explorer.py` (integration): search by name / phone / id / last 4, filters, pagination totals, personas, auth
+
+**Files:** `src/supportagent/bank/api/routes_explorer.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py` (`CustomerSummary`, `PersonaCard`), tests above

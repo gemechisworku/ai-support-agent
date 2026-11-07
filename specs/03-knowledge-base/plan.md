@@ -71,7 +71,7 @@ src/supportagent/kb/
   ingest.py        ingest(path, session, embedder) + __main__ CLI
   retrieval.py     search(query, session, embedder) -> PolicySearchResult; rrf()
 src/supportagent/contracts/kb.py   PolicyQuery, PolicyChunk, PolicySearchResult
-migrations/kb/versions/0001_initial.py
+migrations/kb/versions/kb_0002_documents_chunks.py   (kb_0001 is the PLAT baseline)
 tests/kb/ test_corpus.py test_chunker.py test_embed.py test_schema.py test_ingest.py
           test_rrf.py test_retrieval.py test_golden.py golden_questions.yaml
 ```
@@ -79,21 +79,38 @@ tests/kb/ test_corpus.py test_chunker.py test_embed.py test_schema.py test_inges
 ## Data model / contracts
 | Table | Columns |
 |---|---|
-| documents | id bigserial pk · doc_id text · version text · title · product text · audience text · effective_date date · content_hash text(sha256) · source_path · ingested_at · unique(doc_id, version) |
-| chunks | id bigserial pk · document_id fk · ord int · section_path text · text text · token_count int · embedding vector(768) · tsv tsvector generated always as (to_tsvector('english', section_path ‖ ' ' ‖ text)) stored |
+| documents | id bigserial pk · doc_id text · version text · title · product text · audience text · effective_date date · content_hash text(sha256) · source_path · embedder text (`Embedder.name`) · ingested_at · unique(doc_id, version) |
+| chunks | id bigserial pk · document_id fk (on delete cascade) · ord int · section_path text · text text · token_count int · embedding vector(768) · tsv tsvector generated always as (to_tsvector('english', coalesce(section_path,'') ‖ ' ' ‖ coalesce(text,''))) stored |
 
 Indexes: `chunks_embedding_hnsw` USING hnsw (embedding vector_cosine_ops) (m=16, ef_construction=64);
-`chunks_tsv_gin` USING gin(tsv); `documents(doc_id, effective_date)`.
+`chunks_tsv_gin` USING gin(tsv); `ix_documents_doc_id_effective_date`; `ix_chunks_document_id`. The
+`embedder` column records which model produced a document's vectors; ingestion and retrieval only mix
+rows from the same embedder (vectors from different models are not comparable).
 
 ## Key decisions
 | Decision | Choice | Why |
 |---|---|---|
 | Token counting | `len(text)/4` heuristic, with tiktoken optional | no heavy deps; sizes are approximate anyway |
 | Fusion | RRF k=60, 20 candidates per retriever | standard; robust to score-scale mismatch |
-| Confidence | best cosine similarity among returned vector hits ≥ `KB_MIN_SIMILARITY` (default 0.55) | RRF scores are rank-only and not comparable across queries |
+| Confidence | best cosine similarity among the vector candidates ≥ `KB_MIN_SIMILARITY` **and** ≥ 1 full-text match | RRF scores are rank-only and not comparable across queries; the lexical guard stops vector-only near misses ("weather in Paris") |
+| Full-text query | `websearch_to_tsquery('english', q)` with its `&` turned into `\|` (OR) | spoken questions are long; AND-ing every word recalls almost nothing |
+| Audience | `customer` sees customer docs only; `internal` sees both | internal procedures are never read to customers |
+| Embedder scope | retrieval only reads documents whose `embedder` equals the query embedder's `name` | vectors from different models are not comparable |
 | Fake embedder | SHA-256 of lower-cased word unigrams+bigrams hashed into 768 buckets, L2-normalised | deterministic and lexical, so tests are meaningful offline |
 | Versions | keep all; filter at query time | NFR-AUDIT replay; architecture §5 |
-| Audience | default `customer`; `internal` only on explicit request | agent should not recite internal procedures |
+| Ingestion conflicts | plan every document first; any conflict (same version with a new hash, or a different embedder) aborts before anything is written, naming each document | a half-ingested corpus is worse than none |
+| Embedded text | `section_path + "\n" + text` (the embedder adds `search_document: `) | headings carry the topic words |
+
+## Retrieval tuning (T-KB-06)
+- Golden set: `tests/kb/golden_questions.yaml`, 34 questions (31 `must_pass_ci`).
+- HashEmbedder (CI): hit@4 0.971, MRR 0.902; best similarity of relevant questions 0.137–0.460.
+  `HASH_MIN_SIMILARITY = 0.12` (in `retrieval.py`) makes every must-pass question confident while
+  "what's the weather in Paris" and "who won the football match yesterday" are not (no full-text
+  match / low similarity). Known hash false positives: "tell me a joke", "what is the capital of
+  France" (lexical overlap with "tell us", "working capital"); the real embedder is the quality bar.
+- `KB_MIN_SIMILARITY = 0.55` (nomic-embed-text) is still the untuned starting value: no Ollama was
+  available when T-KB-06 was built. Run `uv run pytest -m eval -s tests/kb/test_golden.py`; it prints
+  hit@4, MRR and the similarity range, then set the default just below the lowest relevant similarity.
 
 ## Dependencies
 `python-frontmatter` (or `pyyaml` + a split on `---`), `pgvector` (SQLAlchemy `Vector` type), `httpx`

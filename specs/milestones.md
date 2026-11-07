@@ -20,9 +20,9 @@ every call.
 
 ## M2 · Conversation
 **Due:** 2026-11-20
-**Goal:** Local voice pipeline in browser/playground mode; agent state machine with inbound flows U3 and U4 against the gateway and KB; PII redaction (PRD week 2).
+**Goal:** Data explorer console over the mock bank, the knowledge base and the gateway audit trail; local voice pipeline in browser/playground mode; agent state machine with inbound flows U3 and U4 against the gateway and KB; PII redaction (PRD week 2).
 
-Exit demo: talk to the agent in the LiveKit playground: ask a policy question (cited), then verify and
+Exit demo: open the console (`make console`) and browse Frank's loan and the late-fee policy; then talk to the agent in the LiveKit playground: ask a policy question (cited), then verify and
 ask for your balance. Text-mode tests cover verify, U3, U4 and global interrupts.
 
 ## M3 · Telephony and outbound

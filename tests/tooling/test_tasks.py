@@ -96,7 +96,8 @@ def test_milestone_pr_body_must_be_current(tmp_path: Path) -> None:
     proj = _milestone_project(tmp_path)
     errs = tasks.check_pr(proj, "Closes #7\nCloses #8", "milestone/M1")
     assert any("#8" in e and "not 'done'" in e for e in errs)
-    errs = tasks.check_pr(proj, "no closes here", "milestone/M1")
+    assert tasks.check_pr(proj, "no closes here", "milestone/M1") == []  # a draft body may lag
+    errs = tasks.check_pr(proj, "no closes here", "milestone/M1", ready=True)
     assert any("Closes #7" in e for e in errs)
 
 
