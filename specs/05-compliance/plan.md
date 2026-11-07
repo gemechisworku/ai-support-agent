@@ -73,6 +73,9 @@ tests/compliance/ test_config.py test_window.py test_frequency.py test_gate.py
 | Evaluation | collect all reasons, fail closed | audit clarity; safety |
 | Clock | injected `now`, tz-aware | determinism (constitution III) |
 | Inbound | gate not applied; disclosures are | customer-initiated |
+| Config times | quoted `"HH:MM"` strings only (a `BeforeValidator` rejects numbers) | YAML 1.1 reads unquoted `08:00` as 480; pydantic would turn that into 00:08 |
+| Config errors | `ValueError` with file path and dotted field names; models frozen, `extra="forbid"` | a typo must stop start-up, never relax a rule |
+| Config paths | settings path; relative paths fall back to the repo root | tools and tests run from any working directory |
 
 ## Dependencies
 `pyyaml`. `zoneinfo` is stdlib (`tzdata` package only if the slim image lacks zone data). Dev:

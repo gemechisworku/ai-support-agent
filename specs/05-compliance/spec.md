@@ -49,8 +49,11 @@ not legal advice.
 
 ## Interfaces
 **Provides** (pure Python, importable by any module):
-- `supportagent.compliance.rules`: `load_rules(path=None) -> ContactRules`, `check_calling_window`,
-  `check_frequency`, `evaluate(facts, now, rules) -> GateDecision`, `facts_from_eligible(EligibleLoan, planned_at) -> ContactFacts`
+- `supportagent.compliance.config`: `load_rules(path=None) -> ContactRules` (default path: settings
+  `CONTACT_RULES_PATH`; relative paths fall back to the repo root), plus the shared `read_yaml` / `validate`
+  helpers that turn any config problem into a `ValueError` naming the file and field
+- `supportagent.compliance.rules`: `check_calling_window`, `check_frequency`,
+  `evaluate(facts, now, rules) -> GateDecision`, `facts_from_eligible(EligibleLoan, planned_at) -> ContactFacts`
 - `supportagent.compliance.disclosures`: `load_disclosures(path=None) -> DisclosureRegistry`,
   `registry.render(key, bank_name, agent_name) -> RenderedDisclosure`, `registry.required_for(direction, campaign)`,
   `check_disclosures(outcome: CallOutcome, events: list[CallEvent]) -> list[Violation]`
@@ -68,3 +71,7 @@ not legal advice.
 
 ## Open questions
 - Jurisdiction remains a US placeholder (PRD §12). A real deployment swaps YAML values, not code.
+- Promise-to-pay window (14 days) and partial payments: the gateway reads them from its own settings
+  (`PROMISE_MAX_DAYS`, see the gateway spec's open questions). If they move here, add a `promises:` section
+  to `contact_rules.yaml` (or a separate versioned file) with a KB consistency check against
+  `promise-to-pay-rules`, and switch the gateway's `record_promise_to_pay` to read it.

@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-COMP-01 · Versioned contact-rules config and loader
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #35
 - **Depends on:** T-PLAT-04
@@ -19,10 +19,10 @@ Create `data/config/contact_rules.yaml` (values from [plan.md](plan.md#config-fi
 YAML values match the KB doc `contact-calling-rules`.
 
 **Acceptance criteria**
-- [ ] `load_rules()` returns a validated model; `rules.version_tag == "contact_rules@1.0"`
-- [ ] Invalid files (end ≤ start, negative counts, unknown keys) raise `ValueError` naming the field
-- [ ] Path overridable via settings `CONTACT_RULES_PATH`
-- [ ] KB consistency test passes (skipped with a reason if `data/policies/contact-calling-rules.md` is absent)
+- [x] `load_rules()` returns a validated model; `rules.version_tag == "contact_rules@1.0"`
+- [x] Invalid files (end ≤ start, negative counts, unknown keys) raise `ValueError` naming the field
+- [x] Path overridable via settings `CONTACT_RULES_PATH`
+- [x] KB consistency test passes (skipped with a reason if `data/policies/contact-calling-rules.md` is absent)
 
 **Tests**
 - `tests/compliance/test_config.py` (unit): load ok; each invalid case; version tag
