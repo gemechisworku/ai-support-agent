@@ -1,16 +1,16 @@
 """Fakes for the console: the bank API and the gateway browse API served through `httpx.MockTransport`.
 
 The bank data comes from the gateway tests' `FakeBank` (the real persona seed as of 2026-11-09 with
-the bank's own ledger), so figures equal what the real API returns. Pages run in Streamlit `AppTest`
-in-process, and `clients.set_clients()` points them at these fakes — no network.
+the bank's own ledger), so figures equal what the real API returns. The console API tests build their
+app with `make_clients(FakeApi())`; `fake_api` also points `clients.get_clients()` at the fakes — no
+network. The same fakes record the Next.js e2e fixtures (`tests/console/web_fixtures.py`).
 """
 
 import datetime as dt
 import json
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -31,8 +31,6 @@ from supportagent.contracts.kb import (
 )
 from tests.gateway.fakes import FakeBank, _status
 
-CONSOLE = Path(__file__).resolve().parents[2] / "src" / "supportagent" / "console"
-PAGES = CONSOLE / "pages"
 BANK_URL = "http://bank.test"
 GATEWAY_URL = "http://gateway.test"
 TOKEN = "test-service-token"
@@ -317,17 +315,3 @@ def fake_api() -> Iterator[FakeApi]:
     cl.set_clients(make_clients(api))
     yield api
     cl.set_clients(None)
-
-
-@pytest.fixture
-def page_test() -> Callable[..., Any]:
-    """`page_test("customers.py", query={"customer": "9002"})` → a run `AppTest` for that page."""
-    from streamlit.testing.v1 import AppTest
-
-    def run(name: str, query: dict[str, str] | None = None, timeout: float = 30) -> Any:
-        at = AppTest.from_file(str(PAGES / name), default_timeout=timeout)
-        for key, value in (query or {}).items():
-            at.query_params[key] = value
-        return at.run()
-
-    return run

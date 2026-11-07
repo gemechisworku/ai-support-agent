@@ -7,8 +7,8 @@ The console has no database access and imports no bank/kb/gateway code (import-l
   from `contracts/kb.py`;
 - the scheduler (`SchedulerClient`), a stub until T-SCHED-06 (M3) provides the trigger API.
 
-Every HTTP or validation failure becomes a `ConsoleApiError`, which pages show with `st.error`.
-Pages get clients through `get_clients()`; tests replace it to inject `httpx.MockTransport` clients.
+Every HTTP or validation failure becomes a `ConsoleApiError`, which the console API maps to 404/502.
+The console API gets clients through `get_clients()`; tests inject `httpx.MockTransport` clients.
 """
 
 from __future__ import annotations
@@ -245,7 +245,7 @@ def set_clients(clients: Clients | None) -> None:
 
 
 def get_clients() -> Clients:
-    """The clients pages use: the injected ones in tests, otherwise built from settings once per process."""
+    """The clients the console API uses: injected ones in tests, else built from settings once per process."""
     global _cached
     if _override is not None:
         return _override

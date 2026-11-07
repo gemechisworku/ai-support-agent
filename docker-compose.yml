@@ -101,31 +101,6 @@ services:
       timeout: 3s
       retries: 20
 
-  console-streamlit:
-    <<: *app
-    # The previous Streamlit console, kept until T-CON-14 removes it. Not started by default:
-    #   docker compose --profile legacy up -d console-streamlit   → http://localhost:8502
-    profiles: [legacy]
-    command: ["streamlit", "run", "src/supportagent/console/app.py", "--server.address", "0.0.0.0",
-              "--server.port", "8501", "--server.headless", "true", "--browser.gatherUsageStats", "false"]
-    environment:
-      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-change-me-local-only}
-      GATEWAY_WORKER_TOKEN: ${GATEWAY_WORKER_TOKEN:-change-me-local-only}
-      AUDIT_HASH_SALT: ${AUDIT_HASH_SALT:-change-me-local-only}
-      SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-change-me-local-only}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}  # settings require it; unused here
-      BANK_API_URL: http://bank-api:8001
-      GATEWAY_URL: http://gateway:8002/mcp
-    depends_on:
-      bank-api: { condition: service_healthy }
-      gateway: { condition: service_healthy }
-    ports: ["127.0.0.1:8502:8501"]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health')"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
   console-api:
     <<: *app
     # Console API (specs/11-console, T-CON-09): the Next.js console's backend. HTTP clients only (no DB).

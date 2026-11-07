@@ -210,7 +210,8 @@ request data on dynamic routes under Cache Components.
 
 **Acceptance criteria**
 - [x] The CON-R8 acceptance criterion holds in Playwright against fixtures recorded from the persona-seeded console API
-  (fixture-verified; live check by the main thread after integration)
+  (fixture-verified, and live on 2026-11-07: the standalone build + console API against the seeded bank and gateway: Frank's page shows •••• 4417, 5 DPD, $200.72 overdue since
+  4 November 2026; transactions masked)
 - [x] Filters and the selected tab survive a reload (URL state)
 - [x] An unknown customer id shows a not-found state
 
@@ -238,8 +239,9 @@ when not confident. The root layout wraps `<Nav>` in `<Suspense>` (Cache Compone
 
 **Acceptance criteria**
 - [x] The CON-R9 acceptance criterion holds: 20 documents, the late-fees chunks, and confident / not-confident searches (Playwright on fixtures, plus a recorded live check against the llama.cpp embeddings)
-  *(Fixture-verified: 3 documents, late-fees chunks, confident / not-confident searches. The 20-document and
-  llama.cpp part: fixture-verified; live check by the main thread after integration.)*
+  *(Fixture-verified: 3 documents, late-fees chunks, confident / not-confident searches. Checked live on
+  2026-11-07 with the llama.cpp embeddings: 20 documents listed; "late fee personal loan" Confident;
+  "capital of France" Not confident with the follow-up note.)*
 - [x] A failing document view shows an error panel while the search page keeps working
 
 **Tests**
@@ -263,7 +265,8 @@ calls list API, so it arrives with T-CON-03 (M4).
 
 **Acceptance criteria**
 - [x] The CON-R10 acceptance criterion holds (Playwright on fixtures; live check with the `scripts/demo_m1.py` call id)
-  *(fixture-verified; live check by the main thread after integration)*
+  *(fixture-verified, and live on 2026-11-07: the standalone build + console API against the seeded bank and gateway: `scripts/demo_m1.py` call `1bb5eb4d-…` shows its 5 audit rows in
+  order)*
 - [x] The persona sheet is the only page that renders a DOB, under a "synthetic test identity" label
 
 **Tests**
@@ -273,7 +276,7 @@ calls list API, so it arrives with T-CON-03 (M4).
 **Files:** `web/console/src/app/personas/`, `web/console/src/app/audit/`, `web/console/src/components/personas/`, `web/console/src/components/audit/`, tests above
 
 ### T-CON-14 · Retire the Streamlit console
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #107
 - **Depends on:** T-CON-11, T-CON-12, T-CON-13
@@ -285,9 +288,12 @@ Delete `src/supportagent/console/app.py`, `ui.py` and `pages/`, the Streamlit `A
 the console API.
 
 **Acceptance criteria**
-- [ ] `grep -ri streamlit` finds nothing outside `uv.lock` history, `docs/design/` and the task history in this file
-- [ ] `make check` passes; `uv.lock` no longer contains `streamlit`
-- [ ] The README run steps start the Next.js console and console API, verified once on the dev Mac
+- [x] `grep -ri streamlit` finds nothing outside `docs/design/`, the task history in this file and the decision
+  records (architecture §6 "replaced Streamlit", constitution VIII "no Python UI frameworks such as Streamlit")
+- [x] `make check` passes; `uv.lock` no longer contains `streamlit`
+- [x] The README run steps start the Next.js console and console API, verified once on the dev Mac
+  *(Verified with the standalone build + console API natively against the live stack; the user runs the
+  compose build/up themselves.)*
 
 **Tests**
 - Existing console API and Next.js suites stay green; `tests/console/test_no_streamlit.py` (unit) asserts `streamlit` is not importable from the console package and not a project dependency

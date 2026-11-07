@@ -83,7 +83,7 @@ traces.
 | Kokoro TTS + embeddings model | ~0.8 GB | |
 | Docker VM: Postgres, Redis, Asterisk, SIP | ~1.5 GB | |
 | Langfuse stack (optional) | ~2.5 GB | `observability` compose profile (T-OBS-04) |
-| Agent, gateway, API, console (Python) | ~1 GB | |
+| Agent, gateway, bank API, console API (Python) + console (Node) | ~1.2 GB | |
 
 If memory runs short, use the Llama 3.2 3B GGUF for the LLM, or stop Langfuse.
 

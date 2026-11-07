@@ -97,12 +97,14 @@ contract via OpenAPI. `ComplianceSummary` (M4) has `verified_first_pct`, `disclo
 | Tests | Vitest + RTL (unit), Playwright against a fake console API (e2e), pytest for the console API | No network, no Python needed for UI tests |
 
 ## Dependencies
-- Python runtime: `fastapi`, `uvicorn`, `httpx` (already used). `streamlit` is removed by T-CON-14.
-- Node (in `web/console/package.json`, exact versions pinned at scaffold time): `next`, `react`,
-  `react-dom`, `tailwindcss`, shadcn/ui deps (`class-variance-authority`, `clsx`, `tailwind-merge`,
-  `lucide-react`, Radix primitives as needed), `@tanstack/react-table`; dev: `typescript`, `eslint`,
-  `eslint-config-next`, `prettier`, `vitest`, `@testing-library/react`, `jsdom`, `@playwright/test`,
-  `openapi-typescript`.
+- Python runtime: `fastapi`, `uvicorn`, `httpx` (already used). No Python UI framework (`streamlit`
+  was removed by T-CON-14).
+- Node (in `web/console/package.json`, locked by `package-lock.json`): `next` 16, `react` 19,
+  `openapi-fetch` (typed client), `server-only`, `@tanstack/react-table` 9, shadcn/ui "base-nova"
+  (`@base-ui/react`, `shadcn` (its Tailwind CSS), `cn` (shadcn's class merger), `class-variance-authority`,
+  `lucide-react`, `tw-animate-css`), Tailwind 4; dev: `typescript`, `eslint`, `eslint-config-next`,
+  `prettier` (+ tailwind plugin), `vitest`, `@vitejs/plugin-react`, `vite-tsconfig-paths`, `jsdom`,
+  `@testing-library/*`, `@playwright/test`, `openapi-typescript`.
 - Services (compose):
   - `console-api`: `x-app` image, `uvicorn --factory supportagent.console.api:create_app --port 8004`,
     `ports: ["127.0.0.1:8004:8004"]`, read-only mount `./var:/app/var:ro` for transcripts.
@@ -116,8 +118,6 @@ contract via OpenAPI. `ComplianceSummary` (M4) has `verified_first_pct`, `disclo
 - Make: `console` (compose up `console-api console` and their dependencies), `console-setup`
   (`npm ci` + Playwright Chromium), `console-dev` (`next dev` on :8501 with the console API URL and
   token from the root `.env`), `console-types`, `console-check` (part of `make check`).
-- The Streamlit app stays available as compose service `console-streamlit` (profile `legacy`,
-  `127.0.0.1:8502`) until T-CON-14 deletes it.
 - Dev-only npm audit: 8 moderate advisories in transitive `minimatch` (tooling only, none in runtime
   dependencies, `npm audit --omit=dev` is clean).
 
