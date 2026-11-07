@@ -42,7 +42,7 @@ regex-only result with `fallback=True` and log a warning (without the text).
 **Files:** `src/supportagent/observability/redaction.py`, `src/supportagent/observability/recognizers.py`, `tests/observability/test_redaction.py`, `tests/observability/test_redaction_perf.py`, `tests/observability/fixtures/pii_samples.yaml`, `pyproject.toml`
 
 ### T-OBS-02 · Version stamping for prompts, policies and models
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #39
 - **Depends on:** T-PLAT-04
@@ -54,11 +54,11 @@ those. Missing inputs give explicit `"none"` components, never an exception, so 
 before the prompt registry or corpus exist. The agent calls it once per call at session start (T-AGENT-02).
 
 **Acceptance criteria**
-- [ ] Identical inputs give identical `Versions` across processes (no reliance on mtime or dict order).
-- [ ] Changing one prompt file changes only `prompt`.
-- [ ] Bumping one policy doc's front-matter `version` changes only `policy`.
-- [ ] Changing `LLM_PROVIDER` or `LLM_MODEL` changes only `model`.
-- [ ] Missing `prompts/VERSION` or `data/config/*.yaml` yields a `none` component.
+- [x] Identical inputs give identical `Versions` across processes (no reliance on mtime or dict order).
+- [x] Changing one prompt file changes only `prompt`.
+- [x] Bumping one policy doc's front-matter `version` changes only `policy`.
+- [x] Changing `LLM_PROVIDER` or `LLM_MODEL` changes only `model`.
+- [x] Missing `prompts/VERSION` or `data/config/*.yaml` yields a `none` component.
 
 **Tests**
 - `tests/observability/test_versions.py` (unit): tmp-dir fixtures for each change type; determinism; missing inputs.
