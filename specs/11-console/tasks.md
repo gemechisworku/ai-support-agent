@@ -238,7 +238,7 @@ similarity and the `confident` flag, with an "agent would offer a follow-up" not
 **Files:** `web/console/src/app/policies/`, `web/console/src/components/`, tests above
 
 ### T-CON-13 · Persona test sheet and audit trail in Next.js
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #106
 - **Depends on:** T-CON-10
@@ -246,17 +246,20 @@ similarity and the `confident` flag, with an "agent would offer a follow-up" not
 
 `/personas`: the 12 personas (situation, expected outcome, extension, and the synthetic verification
 details labelled as test identities), each linking to its customer page. `/audit?call_id=`: a call id
-input (or a recent-call picker) and the audit rows in order: time, tool, decision, latency, customer,
-with denied calls highlighted.
+input (a GET form, so every audit view is linkable) and the audit rows in order: time, tool, decision,
+latency, customer, with denied calls highlighted (errors as warnings). A recent-call picker needs the
+calls list API, so it arrives with T-CON-03 (M4).
 
 **Acceptance criteria**
-- [ ] The CON-R10 acceptance criterion holds (Playwright on fixtures; live check with the `scripts/demo_m1.py` call id)
-- [ ] The persona sheet is the only page that renders a DOB, under a "synthetic test identity" label
+- [x] The CON-R10 acceptance criterion holds (Playwright on fixtures; live check with the `scripts/demo_m1.py` call id)
+  *(fixture-verified; live check by the main thread after integration)*
+- [x] The persona sheet is the only page that renders a DOB, under a "synthetic test identity" label
 
 **Tests**
 - `web/console/tests/e2e/personas-audit.spec.ts` (Playwright): 12 personas, audit order, denial highlight, DOB only on `/personas`
+- `web/console/tests/unit/personas-audit.test.tsx` (Vitest): persona card identity box, audit row order and tones, empty state, GET form
 
-**Files:** `web/console/src/app/personas/`, `web/console/src/app/audit/`, tests above
+**Files:** `web/console/src/app/personas/`, `web/console/src/app/audit/`, `web/console/src/components/personas/`, `web/console/src/components/audit/`, tests above
 
 ### T-CON-14 · Retire the Streamlit console
 - **Status:** todo
