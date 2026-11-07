@@ -46,11 +46,11 @@ whisper-server -m models/whisper/ggml-small.en.bin --host 127.0.0.1 --port 8178 
 make doctor                # ✓/✗ for every prerequisite and server
 ```
 
-**2. Docker services: Postgres, bank API, gateway and console.**
+**2. Docker services: Postgres, bank API, gateway, console API and the Next.js console.**
 ```bash
-docker compose build bank-api                                   # after code changes: rebuilds the shared app image
-docker compose up -d --wait postgres bank-api gateway console   # or: make console (builds and starts the same four)
-docker compose ps                                               # all four should be "healthy"
+docker compose build bank-api console     # after code changes: the shared Python app image + the console image
+docker compose up -d --wait postgres bank-api gateway console-api console   # or: make console (builds + starts all five)
+docker compose ps                         # all five should be "healthy"
 ```
 
 **3. Load the data** (first run, or after `make reset-db`).
@@ -62,17 +62,20 @@ Re-running the ingest is safe: unchanged documents are skipped (`added 0 / skipp
 
 **4. Open the console** at <http://localhost:8501>. It's the read-only operations console and data
 explorer: customers, loans, the policy knowledge base, the persona test sheet and the call audit trail.
+It is a Next.js app (`web/console`) that reads everything through the console API, never directly.
 
-To run the console natively instead, for example while editing it with hot reload:
+To work on the console with hot reload (Node 24+; `make console-setup` installs its packages once):
 ```bash
-docker compose stop console              # frees port 8501
-uv run streamlit run src/supportagent/console/app.py
+docker compose stop console              # frees port 8501; console-api keeps running on :8004
+make console-dev                         # next dev on :8501, console API URL and token from .env
+make console-check                       # lint, types, unit tests, build, e2e (also part of make check)
 ```
-It reaches the bank API and gateway on `localhost:8001` / `localhost:8002`.
+After changing a console API view model, run `make console-types` to regenerate the TypeScript types.
 
 | Service | URL | Check |
 |---|---|---|
-| Console (Streamlit) | <http://localhost:8501> | open in a browser |
+| Console (Next.js) | <http://localhost:8501> | open in a browser |
+| Console API | <http://localhost:8004> | `curl localhost:8004/healthz` · OpenAPI at `/openapi.json` |
 | Bank API | <http://localhost:8001> | `curl localhost:8001/healthz` |
 | Gateway (MCP at `/mcp`) | <http://localhost:8002> | `curl localhost:8002/healthz` |
 | Embeddings / LLM / STT | `:8082` / `:8090` / `:8178` | `make doctor` |

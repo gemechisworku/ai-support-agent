@@ -24,9 +24,14 @@ xcode-select --install             # git, compilers
 brew install uv                    # Python 3.12 toolchain; installs Python itself
 brew install --cask docker         # Docker Desktop (or: brew install colima docker docker-compose && colima start)
 open -a Docker                     # start the daemon
+brew install node                  # Node 24+ and npm, for the Next.js console (web/console)
 make setup                         # uv sync, .env from .env.example, Postgres via compose
-make check                         # lint, types, boundaries, specs, unit + integration tests
+make console-setup                 # npm ci for web/console + Playwright's Chromium (~100 MB)
+make check                         # lint, types, boundaries, specs, unit + integration tests, console checks
 ```
+
+**Web UIs are Next.js.** Every admin or console UI lives under `web/` (constitution VIII). The console
+runs in Docker for normal use (`make console`); `make console-dev` runs it natively with hot reload.
 
 **Postgres port clash.** Compose publishes Postgres on 5432. If another Postgres already uses that
 port, `make doctor` reports `✗ postgres-port … used by another process`. Set a free port in `.env`,

@@ -156,7 +156,7 @@ that apply the masking (keep `mask_number` / `mask_reference`), reusing `clients
 **Files:** `src/supportagent/console/api.py`, `src/supportagent/console/views.py`, `src/supportagent/common/settings.py`, `scripts/export_console_openapi.py`, `web/console/openapi.json`, `docker-compose.yml`, `.env.example`, `tests/console/`
 
 ### T-CON-10 · Next.js console scaffold, typed client, CI and Docker
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #103
 - **Depends on:** T-CON-09
@@ -179,10 +179,12 @@ Create `web/console` (layout in [plan.md](plan.md#file-layout)):
   - CI job "Console (Next.js)"; the docker job and the release workflow build and publish the image
 
 **Acceptance criteria**
-- [ ] `make console` serves the overview on `localhost:8501` with the banner and live counts from the console API
-- [ ] With the console API stopped, the page shows an error panel naming the console API, not a stack trace
-- [ ] `make console-check` (lint, typecheck, OpenAPI drift, Vitest, build, Playwright) passes locally and in CI
-- [ ] No token or upstream URL appears in the client bundle (`.next/static` is grepped in the CI job)
+- [x] `make console` serves the overview on `localhost:8501` with the banner and live counts from the console API
+  *(Verified with the same standalone build natively against the live console API and seeded bank: 200 customers,
+  320 loans, 20 documents, 12 personas. The compose run is the user's after building the images.)*
+- [x] With the console API stopped, the page shows an error panel naming the console API, not a stack trace
+- [x] `make console-check` (lint, typecheck, OpenAPI drift, Vitest, build, Playwright) passes locally and in CI
+- [x] No token or upstream URL appears in the client bundle (`.next/static` is grepped in the CI job)
 
 **Tests**
 - `web/console/tests/unit/format.test.ts`, `error-panel.test.tsx`, `client.test.ts` (Vitest)

@@ -1,0 +1,11 @@
+{
+  "name": "policy-missing",
+  "method": "GET",
+  "path": "/api/policies/no-such-doc",
+  "query": {},
+  "body": null,
+  "status": 404,
+  "response": {
+    "detail": "GET /service/kb/documents/no-such-doc failed: HTTP 404 (x)"
+  }
+}

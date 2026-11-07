@@ -1,0 +1,111 @@
+{
+  "name": "customers-default",
+  "method": "GET",
+  "path": "/api/customers",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": {
+    "items": [
+      {
+        "customer_id": 9001,
+        "full_name": "Olivia Bennett",
+        "phone": "•••• 0301",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "current"
+      },
+      {
+        "customer_id": 9002,
+        "full_name": "Frank Fischer",
+        "phone": "•••• 0302",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9003,
+        "full_name": "Hana Tesfaye",
+        "phone": "•••• 0303",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9004,
+        "full_name": "Dawit Bekele",
+        "phone": "•••• 0304",
+        "segment": "sme",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9005,
+        "full_name": "Priya Raman",
+        "phone": "•••• 0305",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9006,
+        "full_name": "Marcus Bell",
+        "phone": "•••• 0306",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9007,
+        "full_name": "Sam Carter",
+        "phone": "•••• 0307",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9008,
+        "full_name": "Cleo Park",
+        "phone": "•••• 0308",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "current"
+      },
+      {
+        "customer_id": 9009,
+        "full_name": "Leo Moreau",
+        "phone": "•••• 0309",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9010,
+        "full_name": "Anton Petrov",
+        "phone": "•••• 0310",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9011,
+        "full_name": "Wendy Shaw",
+        "phone": "•••• 0311",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      },
+      {
+        "customer_id": 9012,
+        "full_name": "Bianca Russo",
+        "phone": "•••• 0312",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      }
+    ],
+    "total": 12,
+    "limit": 25,
+    "offset": 0
+  }
+}

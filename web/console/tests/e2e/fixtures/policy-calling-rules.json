@@ -1,0 +1,24 @@
+{
+  "name": "policy-calling-rules",
+  "method": "GET",
+  "path": "/api/policies/contact-calling-rules",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": {
+    "doc_id": "contact-calling-rules",
+    "version": "1.0",
+    "title": "Contact and Calling Rules",
+    "product": "all",
+    "audience": "internal",
+    "effective_date": "2026-01-01",
+    "chunks": [
+      {
+        "ord": 0,
+        "section": "Calling hours",
+        "text": "08:00 to 21:00 local time.",
+        "token_count": 6
+      }
+    ]
+  }
+}

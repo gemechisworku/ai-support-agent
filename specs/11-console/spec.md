@@ -117,8 +117,9 @@ It has two parts, both thin:
   and `compliance` window/cap functions (T-COMP-02/03).
 
 ## Non-functional
-- Each page renders in < 1 s against a seeded bank (the console API fetches with `limit ≤ 200`; Next.js
-  caches GET responses for 5 s, and live views opt out of caching).
+- Each page renders in < 1 s against a seeded bank (the console API fetches with `limit ≤ 200`). Pages
+  are partially prerendered: a static shell, with data streamed per request (no response cache), so
+  operators always see current data and builds never need a running API.
 - No writes besides the trigger, single-call and task-status actions; writes are Next.js server actions.
 - The web app passes ESLint, `tsc --noEmit`, Vitest and the Playwright smoke suite in CI.
 

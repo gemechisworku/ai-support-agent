@@ -1,0 +1,9 @@
+{
+  "name": "audit-unknown",
+  "method": "GET",
+  "path": "/api/audit/no-such-call",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": []
+}

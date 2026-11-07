@@ -68,9 +68,14 @@ make docker-test   # tests inside Docker
 make fmt           # ruff format + autofix
 make tasks-validate | tasks-status (print only) | tasks-next
 make issues-sync   # mirror tasks → GitHub issues/milestones (writes issue numbers back)
+make console       # Next.js console + console API in Docker → http://localhost:8501
+make console-dev   # Next.js console with hot reload (console API must be running)
+make console-types # regenerate OpenAPI + TS types after changing a console API view model
+make console-check # Next.js lint, types, Vitest, build, Playwright (part of make check)
 make help          # everything else
 ```
-`scripts/tasks.py` needs only the system `python3`. Everything else runs through `uv`.
+`scripts/tasks.py` needs only the system `python3`. Python runs through `uv`; the Next.js console
+(`web/console`) through `npm` (Node 24+, `make console-setup` once).
 
 ## Architecture rules you must not break
 These are checked by CI or by tests. Details are in the constitution.

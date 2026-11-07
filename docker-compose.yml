@@ -2,8 +2,8 @@
 #   make up                                    -> postgres (bank + kb databases, pgvector)
 #   docker compose --profile telephony up -d   -> + redis (Asterisk / LiveKit SIP are added by T-TEL tasks)
 #   make docker-test                           -> unit + integration tests inside a container
-# Application services (bank-api, gateway, scheduler, console) are added by their module tasks and
-# reuse the `x-app` anchor below.
+# Application services (bank-api, gateway, scheduler, console-api) are added by their module tasks and
+# reuse the `x-app` anchor below; the Next.js `console` has its own image (docker/console.Dockerfile).
 name: supportagent
 
 x-app: &app
@@ -84,9 +84,28 @@ services:
       retries: 20
 
   console:
+    # Operations console and data explorer (specs/11-console, T-CON-10): the Next.js app in web/console.
+    # It talks only to console-api, server-side. Bound to localhost on the host (CON-R7).
+    # Open http://localhost:8501
+    build: { context: ., dockerfile: docker/console.Dockerfile }
+    image: supportagent-console:dev
+    environment:
+      CONSOLE_API_URL: http://console-api:8004
+      CONSOLE_API_TOKEN: ${CONSOLE_API_TOKEN:-change-me-local-only}
+    depends_on:
+      console-api: { condition: service_healthy }
+    ports: ["127.0.0.1:8501:8501"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8501/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  console-streamlit:
     <<: *app
-    # Operations console and data explorer (specs/11-console): Streamlit, read-only, HTTP clients only.
-    # Bound to localhost on the host (CON-R7). Open http://localhost:8501
+    # The previous Streamlit console, kept until T-CON-14 removes it. Not started by default:
+    #   docker compose --profile legacy up -d console-streamlit   → http://localhost:8502
+    profiles: [legacy]
     command: ["streamlit", "run", "src/supportagent/console/app.py", "--server.address", "0.0.0.0",
               "--server.port", "8501", "--server.headless", "true", "--browser.gatherUsageStats", "false"]
     environment:
@@ -100,7 +119,7 @@ services:
     depends_on:
       bank-api: { condition: service_healthy }
       gateway: { condition: service_healthy }
-    ports: ["127.0.0.1:8501:8501"]
+    ports: ["127.0.0.1:8502:8501"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health')"]
       interval: 5s

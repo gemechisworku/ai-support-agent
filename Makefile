@@ -62,12 +62,29 @@ migrate-test: up ## Upgrade bank_test and kb_test to head
 kb-ingest: migrate ## Ingest data/policies into the kb database (ARGS="--embedder fake" or "--dry-run")
 	$(PY) python -m supportagent.kb.ingest $(ARGS)
 
-.PHONY: console
-console: ## Start the console (data explorer) with the bank API and gateway → http://localhost:8501
-	docker compose up -d --build --wait postgres bank-api gateway console
-	@echo "console: http://localhost:8501  (seed + ingest first: see docs/dev-setup.md / specs/11-console)"
+.PHONY: console console-setup console-dev console-types console-check
+CONSOLE_DIR := web/console
+# Value of KEY from .env without its inline comment (for the Next.js dev server).
+env_value = $$(sed -n 's/^$(1)=\([^ \#]*\).*/\1/p' .env 2>/dev/null)
 
-check: lint typecheck boundaries tasks-validate test-all ## Everything CI runs
+console: ## Start the Next.js console + console API (and what they read) → http://localhost:8501
+	docker compose up -d --build --wait postgres bank-api gateway console-api console
+	@echo "console: http://localhost:8501  (seed + ingest first: see README 'Run it locally')"
+
+console-setup: ## Install the console's npm packages and Playwright's Chromium (once per machine)
+	cd $(CONSOLE_DIR) && npm ci && npx playwright install chromium
+
+console-dev: ## Next.js console with hot reload on :8501 (needs the console API running on :8004)
+	CONSOLE_API_URL="$(call env_value,CONSOLE_API_URL)" CONSOLE_API_TOKEN="$(call env_value,CONSOLE_API_TOKEN)" \
+		sh -c 'cd $(CONSOLE_DIR) && npx next dev -p 8501'
+
+console-types: ## Regenerate the console API's OpenAPI document and the web app's TypeScript types
+	$(PY) python scripts/export_console_openapi.py && cd $(CONSOLE_DIR) && npm run types
+
+console-check: ## Next.js console: lint, typecheck, types drift, unit tests, build, bundle check, e2e
+	cd $(CONSOLE_DIR) && npm run check
+
+check: lint typecheck boundaries tasks-validate test-all console-check ## Everything CI runs
 
 docker-build: ## Build the runtime image
 	docker build -f docker/app.Dockerfile --target runtime -t supportagent-app:dev .

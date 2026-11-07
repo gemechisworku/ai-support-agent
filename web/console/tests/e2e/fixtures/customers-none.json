@@ -1,0 +1,16 @@
+{
+  "name": "customers-none",
+  "method": "GET",
+  "path": "/api/customers",
+  "query": {
+    "q": "zz-nobody"
+  },
+  "body": null,
+  "status": 200,
+  "response": {
+    "items": [],
+    "total": 0,
+    "limit": 25,
+    "offset": 0
+  }
+}

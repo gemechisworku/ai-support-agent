@@ -29,9 +29,14 @@ Browser ──> Next.js console (web/console, 127.0.0.1:8501)
   regenerates them and fails on a diff.
 
 **Next.js web app (TypeScript).**
-- App Router, React server components by default. Each page `await`s the typed client
-  (`src/lib/api/client.ts`, `import "server-only"`), which reads `CONSOLE_API_URL` and
-  `CONSOLE_API_TOKEN` from the server environment and calls `fetch` with `next: { revalidate: 5 }`.
+- App Router with Cache Components (the `create-next-app` default): each page is a static shell
+  (title, description) plus data components inside `<Suspense>`. Data components call the typed
+  client (`src/lib/api/client.ts`, `import "server-only"`, built on `openapi-fetch`), which reads
+  `CONSOLE_API_URL` and `CONSOLE_API_TOKEN` from the server environment, awaits `connection()` (so data
+  is never prerendered at build time) and fetches with `cache: "no-store"`.
+- Expected errors: `load(promise)` turns an `ApiError` into a value and the page renders
+  `<ErrorPanel>` (production builds hide server error messages from `error.tsx`, which only handles
+  unexpected failures). An upstream 404 → `notFound()`.
 - Interactivity (filters, search box, tabs) uses URL search params, so every view is linkable
   (`/customers?q=frank`, `/customers/17`, `/audit?call_id=…`). Client components only where needed:
   the search playground form, the live-calls poller (M4), confirm dialogs (M4).
@@ -64,8 +69,9 @@ web/console/
   src/components/     ui/ (shadcn), data-table.tsx, banner.tsx, nav.tsx, error-panel.tsx, …
   src/lib/api/        schema.ts (generated), client.ts (server-only typed fetch)
   src/lib/format.ts   money, dates, flags (pure, unit-tested)
+  scripts/            check-types.mjs, check-bundle.mjs, start-standalone.mjs
   tests/unit/         Vitest + React Testing Library
-  tests/e2e/          Playwright specs; fake-console-api.ts serves fixture JSON on a free port
+  tests/e2e/          Playwright specs; fake-console-api.mjs replays fixtures/*.json (recorded)
 docker/console.Dockerfile   deps → build → runner (Node 24 LTS, output: standalone, non-root)
 tests/console/              pytest: clients, views, api routes (MockTransport), openapi export
 ```
@@ -107,9 +113,13 @@ contract via OpenAPI. `ComplianceSummary` (M4) has `verified_first_pct`, `disclo
 - import-linter contract "Console reaches data over HTTP only (CON-R1)" applies to the console API.
 - CI: job "Console (Next.js)" — `npm ci`, lint, typecheck, OpenAPI drift check, Vitest, `next build`,
   Playwright (Chromium). The docker job also builds `docker/console.Dockerfile`; release publishes it.
-- Make: `console` (compose up `console-api console` and their dependencies), `console-dev`
-  (`npm run dev` on :8501 with the root `.env` loaded), `console-types`, `console-check`
-  (part of `make check`).
+- Make: `console` (compose up `console-api console` and their dependencies), `console-setup`
+  (`npm ci` + Playwright Chromium), `console-dev` (`next dev` on :8501 with the console API URL and
+  token from the root `.env`), `console-types`, `console-check` (part of `make check`).
+- The Streamlit app stays available as compose service `console-streamlit` (profile `legacy`,
+  `127.0.0.1:8502`) until T-CON-14 deletes it.
+- Dev-only npm audit: 8 moderate advisories in transitive `minimatch` (tooling only, none in runtime
+  dependencies, `npm audit --omit=dev` is clean).
 
 ## Test strategy
 - **unit (pytest):** clients over `MockTransport`; view builders (masking, the 16-digit case); every
@@ -117,9 +127,12 @@ contract via OpenAPI. `ComplianceSummary` (M4) has `verified_first_pct`, `disclo
   the OpenAPI export matches the committed file.
 - **unit (Vitest):** `format.ts`; components (data table, error panel, banner); the API client's error
   handling with a mocked `fetch`.
-- **e2e (Playwright, CI):** `next build && next start` against `fake-console-api.ts` fixtures: each page
-  renders with the banner; Frank's page values; the policy search shows `confident`; the audit trail
-  order; the console API down → the error panel.
+- **e2e (Playwright, CI):** the standalone production server (`scripts/start-standalone.mjs`, as in
+  Docker) against `tests/e2e/fake-console-api.mjs`, which replays `tests/e2e/fixtures/*.json`. The
+  fixtures are recorded from the real console API over the persona-seeded fakes by
+  `tests/console/web_fixtures.py` (`uv run python -m tests.console.web_fixtures`), and a pytest test
+  fails when they drift. Checks: each page renders with the banner; Frank's page values; the policy
+  search shows `confident`; the audit trail order; the console API down (`POST /__down`) → the error panel.
 - **live:** a manual smoke in the demo runbook against the real stack.
 
 ## Risks
