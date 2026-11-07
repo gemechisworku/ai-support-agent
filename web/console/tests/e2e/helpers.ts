@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
-export const FAKE_API = "http://127.0.0.1:8599";
+export const FAKE_API = `http://127.0.0.1:${process.env.E2E_API_PORT ?? 8599}`;
 export const BANNER = "Synthetic data · local POC — every customer, loan and policy here is fake.";
 
 /** Make the fake console API unreachable (socket closed) for the duration of `fn`. */

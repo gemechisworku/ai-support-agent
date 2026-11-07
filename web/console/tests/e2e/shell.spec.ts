@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { expectBanner, withApiDown } from "./helpers";
+import { expectBanner, FAKE_API, withApiDown } from "./helpers";
 
 // T-CON-10 · CON-R7/R11: the shell (banner, navigation), the overview counts, and the error state.
 
@@ -28,7 +28,7 @@ test("an unreachable console API shows an error panel, not a stack trace", async
     await page.goto("/");
     const panel = page.getByTestId("error-panel");
     await expect(panel).toContainText("Could not load data from the console API");
-    await expect(panel).toContainText("The console API is not reachable at http://127.0.0.1:8599.");
+    await expect(panel).toContainText(`The console API is not reachable at ${FAKE_API}.`);
     await expectBanner(page);
   });
   await expect(page.getByText(/at .*\.js:\d+/)).toHaveCount(0);
