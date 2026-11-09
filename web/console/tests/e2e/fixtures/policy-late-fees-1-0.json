@@ -1,0 +1,32 @@
+{
+  "name": "policy-late-fees-1-0",
+  "method": "GET",
+  "path": "/api/policies/late-fees-penalty-interest",
+  "query": {
+    "version": "1.0"
+  },
+  "body": null,
+  "status": 200,
+  "response": {
+    "doc_id": "late-fees-penalty-interest",
+    "version": "1.0",
+    "title": "Grace Periods, Late Fees and Penalty Interest",
+    "product": "all",
+    "audience": "customer",
+    "effective_date": "2026-01-01",
+    "chunks": [
+      {
+        "ord": 0,
+        "section": "Grace Periods > Grace periods by product",
+        "text": "Personal: 10 days.",
+        "token_count": 5
+      },
+      {
+        "ord": 1,
+        "section": "Grace Periods > Late fees",
+        "text": "## Late fees\n\n| Product | Late fee |\n|---|---|\n| Personal Loan | $25 flat |",
+        "token_count": 20
+      }
+    ]
+  }
+}

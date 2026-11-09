@@ -90,4 +90,4 @@ Proves the agent against the PRD §10 acceptance criteria, repeatably, before ev
 
 ## Open questions
 - None blocking. Judge model default: the hosted Claude Haiku 5.5 (`claude-haiku-5-5`) when
-  `ANTHROPIC_API_KEY` is set, otherwise local `qwen3:8b`. The report states which judge was used.
+  `ANTHROPIC_API_KEY` is set, otherwise the local Llama 3.1 8B on llama.cpp. The report states which judge was used.

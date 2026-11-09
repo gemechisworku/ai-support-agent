@@ -1,0 +1,30 @@
+# Contact rules, versioned with the code (constitution VII). Loaded by supportagent.compliance.config.
+# The same values are stated for people in data/policies/contact-calling-rules.md; a test keeps the
+# two in agreement (COMP-R8). Change both together and bump the version.
+#
+# Jurisdiction: US placeholder modelled on Regulation F (12 CFR 1006.6(b), 1006.14(b)) and the TCPA
+# consent rule for AI voices (PRD §12). Not legal advice.
+version: "1.0"
+jurisdiction: US-placeholder
+
+calling_window:                      # customer's local time zone; start inclusive, end exclusive
+  start: "08:00"                     # quoted: YAML would read 08:00 as a base-60 number
+  end: "21:00"
+
+frequency:                           # per loan
+  max_attempts: 7                    # call attempts in any window_days
+  window_days: 7
+  cool_off_days_after_conversation: 7
+
+retries:                             # applied by the scheduler (T-SCHED-03), validated here
+  no_answer_retry_minutes: 120
+  busy_retry_minutes: 30
+  voicemail_retry_minutes: 240
+  max_attempts_per_day: 2
+
+campaigns:                           # candidate selection (T-SCHED-01)
+  pre_due_reminder:
+    due_within_days: 3
+  missed_payment:
+    dpd_min: 1
+    dpd_max: 30

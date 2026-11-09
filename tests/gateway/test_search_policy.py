@@ -79,7 +79,7 @@ async def test_long_text_is_truncated(gateway: Gateway) -> None:
 async def test_retriever_failure_is_upstream_error(gateway: Gateway) -> None:
     class Broken:
         async def search(self, query: object) -> object:
-            raise RuntimeError("ollama down")
+            raise RuntimeError("embeddings server down")
 
     gateway.retriever = Broken()  # type: ignore[assignment]
     s = await open_session(gateway, loan_id=FRANK.loan_id)

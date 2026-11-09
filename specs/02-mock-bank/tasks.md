@@ -153,7 +153,7 @@ amount) is the gateway's job. The bank only enforces types and foreign keys.
 **Files:** `src/supportagent/bank/api/routes_write.py`, `src/supportagent/bank/queries.py`, `src/supportagent/bank/models.py` (JSONB `none_as_null`), tests above
 
 ### T-BANK-07 · Operations read endpoints for the console
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #66
 - **Depends on:** T-BANK-06
@@ -163,20 +163,21 @@ Paginated list/detail endpoints the console (T-CON-01) needs: `GET /interactions
 `direction`, `campaign`, `contact_result`, `escalated`, `since`, `until`), `GET /interactions/{call_id}`
 (outcome + promises + tasks + audit rows for that call), `GET /tasks?status=&type=`,
 `GET /promises?status=`, `GET /audit?call_id=`, `GET /outbox?status=`. All return `Page[T]`
-(`items`, `total`, `limit`, `offset`).
+(`items`, `total`, `limit`, `offset`). Also `PATCH /tasks/{id}` (`TaskPatch{status?, owner?}`), which
+the console's follow-up queue (T-CON-04) needs; it writes only the interaction table `tasks`.
 
 **Acceptance criteria**
-- [ ] Filters combine with AND; `limit` defaults to 50 and is capped at 200
-- [ ] Tasks ordered by `due_at` ascending; interactions by `started_at` descending
-- [ ] Detail for an unknown `call_id` → 404
+- [x] Filters combine with AND; `limit` defaults to 50 and is capped at 200
+- [x] Tasks ordered by `due_at` ascending; interactions by `started_at` descending
+- [x] Detail for an unknown `call_id` → 404
 
 **Tests**
 - `tests/bank/test_api_ops.py` (integration): filters, pagination totals, ordering, call detail aggregation
 
-**Files:** `src/supportagent/bank/api/routes_ops.py`, `src/supportagent/contracts/bank.py` (`Page`, `CallDetail`), tests above
+**Files:** `src/supportagent/bank/api/routes_ops.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py` (`Page`, `CallDetail`, `AuditRow`, `TaskPatch`), tests above
 
 ### T-BANK-08 · Identity match endpoint for inbound callers
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #93
 - **Depends on:** T-BANK-04
@@ -188,34 +189,37 @@ be verified, because the bank has no lookup by date of birth and loan last 4. Ad
 names or other fields), with the `CustomerMatch` contract in `contracts/bank.py`.
 
 **Acceptance criteria**
-- [ ] The BANK-R10 acceptance criterion in spec.md holds
-- [ ] The query uses an index (no sequential scan over loans on the seeded data, checked with `EXPLAIN`)
+- [x] The BANK-R10 acceptance criterion in spec.md holds
+- [x] The query can use indexes: with `enable_seqscan=off`, `EXPLAIN` shows `ix_customers_dob` and no
+  `Seq Scan on loans` (new migration `bank_0003` indexes `customers.dob`; loans are reached by `ix_loans_customer_id`)
 
 **Tests**
-- `tests/bank/test_api_match.py` (integration): Frank matches; wrong DOB / last 4 → `[]`; missing parameter → 422; no token → 401
+- `tests/bank/test_api_match.py` (integration): Frank matches; wrong DOB / last 4 → `[]`; missing or malformed parameter → 422; no token → 401; EXPLAIN plan
 
-**Files:** `src/supportagent/bank/api/routes_read.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py`, a migration if an index is needed, tests above
+**Files:** `src/supportagent/bank/api/routes_explorer.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py`, `src/supportagent/bank/models.py`, `migrations/bank/versions/bank_0003_customers_dob_index.py`, tests above
 
 ### T-BANK-09 · Explorer endpoints: customer search, loan list, preferences, personas
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #95
 - **Depends on:** T-BANK-07
 - **Requirements:** BANK-R11
 
 Read-only endpoints the console's data explorer (T-CON-06, T-CON-08) needs, reusing `Page[T]` from
-T-BANK-07: `GET /customers?q=&segment=&bucket=&limit=&offset=` (q matches name, phone, customer id or
+T-BANK-07: `GET /customers/search?q=&segment=&bucket=&limit=&offset=` (q matches name, phone, customer id or
 loan last 4; returns `CustomerSummary{customer_id, full_name, phone, segment, loan_count, worst_bucket}`),
 `GET /loans?bucket=&product=&limit=&offset=` (`Page[LoanStatus]`), `GET /customers/{id}/contact-preferences`
 and `GET /personas` (`list[PersonaCard]` built from `bank.seed.personas`: id, name, situation, expected
 outcome, extension, phone, DOB, loan last 4 — synthetic test identities).
 
 **Acceptance criteria**
-- [ ] The BANK-R11 acceptance criterion in spec.md holds
-- [ ] `limit` defaults to 50 and is capped at 200; results are ordered by customer id
-- [ ] Unknown customer → 404 on the preferences route
+- [x] The BANK-R11 acceptance criterion in spec.md holds
+- [x] `limit` defaults to 50 and is capped at 200; results are ordered by customer id
+- [x] Unknown customer → 404 on the preferences route
 
 **Tests**
 - `tests/bank/test_api_explorer.py` (integration): search by name / phone / id / last 4, filters, pagination totals, personas, auth
+
+Search is at `/customers/search` because `GET /customers?phone=` is taken (see spec Interfaces).
 
 **Files:** `src/supportagent/bank/api/routes_explorer.py`, `src/supportagent/bank/queries.py`, `src/supportagent/contracts/bank.py` (`CustomerSummary`, `PersonaCard`), tests above

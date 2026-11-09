@@ -10,3 +10,7 @@ docs/design/fonts
 models
 recordings
 var
+web/**/node_modules
+web/**/.next
+web/**/playwright-report
+web/**/test-results

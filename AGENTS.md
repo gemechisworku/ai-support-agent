@@ -68,9 +68,14 @@ make docker-test   # tests inside Docker
 make fmt           # ruff format + autofix
 make tasks-validate | tasks-status (print only) | tasks-next
 make issues-sync   # mirror tasks → GitHub issues/milestones (writes issue numbers back)
+make console       # Next.js console + console API in Docker → http://localhost:8501
+make console-dev   # Next.js console with hot reload (console API must be running)
+make console-types # regenerate OpenAPI + TS types after changing a console API view model
+make console-check # Next.js lint, types, Vitest, build, Playwright (part of make check)
 make help          # everything else
 ```
-`scripts/tasks.py` needs only the system `python3`. Everything else runs through `uv`.
+`scripts/tasks.py` needs only the system `python3`. Python runs through `uv`; the Next.js console
+(`web/console`) through `npm` (Node 24+, `make console-setup` once).
 
 ## Architecture rules you must not break
 These are checked by CI or by tests. Details are in the constitution.
@@ -100,11 +105,15 @@ These are checked by CI or by tests. Details are in the constitution.
   Unmarked tests are unit tests and must not touch the network. Use the `integration` marker for
   Postgres, `eval` for a real LLM and `live` for model servers and telephony.
 - All data is synthetic. Never add real names, numbers or credentials, even in tests.
+- Web UIs: every admin or console UI is a Next.js app under `web/` (App Router, TypeScript strict,
+  Tailwind + shadcn/ui, npm). It calls only its Python API, from the server, and its API types are
+  generated from that API's OpenAPI (`make console-types`); never hand-write them. UI tests are
+  Vitest (unit) and Playwright against a fake API (e2e). No Python UI frameworks.
 
 ## Where things run
 | Runs in Docker (`docker compose`) | Runs natively on macOS (Metal GPU) |
 |---|---|
-| Postgres + pgvector, Redis, Asterisk, LiveKit SIP, Langfuse, app services (bank API, gateway, scheduler, console) | Ollama (Qwen3 8B, nomic-embed-text), whisper.cpp, Kokoro TTS, livekit-server, the agent worker |
+| Postgres + pgvector, Redis, Asterisk, LiveKit SIP, Langfuse, app services (bank API, gateway, scheduler, console API, Next.js console) | llama.cpp `llama-server` (Llama 3.1 8B, nomic-embed-text), whisper.cpp, Kokoro TTS, livekit-server, the agent worker |
 
 Unit and integration tests never need the native column.
 

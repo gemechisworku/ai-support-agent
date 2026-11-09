@@ -1,0 +1,1861 @@
+{
+  "components": {
+    "schemas": {
+      "AuditView": {
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ts",
+          "tool",
+          "decision",
+          "latency_ms",
+          "customer_id"
+        ],
+        "title": "AuditView",
+        "type": "object"
+      },
+      "ContactPreferencesView": {
+        "properties": {
+          "cease_contact": {
+            "title": "Cease Contact",
+            "type": "boolean"
+          },
+          "consent_voice_ai": {
+            "title": "Consent Voice Ai",
+            "type": "boolean"
+          },
+          "dispute_open": {
+            "title": "Dispute Open",
+            "type": "boolean"
+          },
+          "dnc": {
+            "title": "Dnc",
+            "type": "boolean"
+          },
+          "preferred_window": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Window"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "consent_voice_ai",
+          "dnc",
+          "cease_contact",
+          "dispute_open",
+          "preferred_window",
+          "updated_at"
+        ],
+        "title": "ContactPreferencesView",
+        "type": "object"
+      },
+      "CustomerDetail": {
+        "properties": {
+          "interactions": {
+            "items": {
+              "$ref": "#/components/schemas/InteractionView"
+            },
+            "title": "Interactions",
+            "type": "array"
+          },
+          "loans": {
+            "items": {
+              "$ref": "#/components/schemas/LoanDetail"
+            },
+            "title": "Loans",
+            "type": "array"
+          },
+          "open_promises": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseView"
+            },
+            "title": "Open Promises",
+            "type": "array"
+          },
+          "open_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskView"
+            },
+            "title": "Open Tasks",
+            "type": "array"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/ContactPreferencesView"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/CustomerProfile"
+          }
+        },
+        "required": [
+          "profile",
+          "preferences",
+          "loans",
+          "interactions",
+          "open_promises",
+          "open_tasks"
+        ],
+        "title": "CustomerDetail",
+        "type": "object"
+      },
+      "CustomerProfile": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "integer"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "kyc_status": {
+            "title": "Kyc Status",
+            "type": "string"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "preferred_language": {
+            "title": "Preferred Language",
+            "type": "string"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "full_name",
+          "phone",
+          "email",
+          "address",
+          "timezone",
+          "segment",
+          "kyc_status",
+          "preferred_language"
+        ],
+        "title": "CustomerProfile",
+        "type": "object"
+      },
+      "CustomerRow": {
+        "properties": {
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "integer"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "loan_count": {
+            "title": "Loan Count",
+            "type": "integer"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "string"
+          },
+          "worst_bucket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst Bucket"
+          }
+        },
+        "required": [
+          "customer_id",
+          "full_name",
+          "phone",
+          "segment",
+          "loan_count",
+          "worst_bucket"
+        ],
+        "title": "CustomerRow",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InstallmentView": {
+        "properties": {
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "fee_due": {
+            "title": "Fee Due",
+            "type": "string"
+          },
+          "interest_due": {
+            "title": "Interest Due",
+            "type": "string"
+          },
+          "paid_amount": {
+            "title": "Paid Amount",
+            "type": "string"
+          },
+          "paid_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Date"
+          },
+          "principal_due": {
+            "title": "Principal Due",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "due_date",
+          "principal_due",
+          "interest_due",
+          "fee_due",
+          "paid_amount",
+          "paid_date",
+          "status"
+        ],
+        "title": "InstallmentView",
+        "type": "object"
+      },
+      "InteractionView": {
+        "properties": {
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "campaign": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign"
+          },
+          "contact_result": {
+            "title": "Contact Result",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
+          }
+        },
+        "required": [
+          "call_id",
+          "direction",
+          "campaign",
+          "started_at",
+          "ended_at",
+          "contact_result",
+          "verified",
+          "reason_code",
+          "summary"
+        ],
+        "title": "InteractionView",
+        "type": "object"
+      },
+      "KbChunkView": {
+        "additionalProperties": false,
+        "properties": {
+          "ord": {
+            "minimum": 0.0,
+            "title": "Ord",
+            "type": "integer"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "token_count": {
+            "minimum": 0.0,
+            "title": "Token Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ord",
+          "section",
+          "text",
+          "token_count"
+        ],
+        "title": "KbChunkView",
+        "type": "object"
+      },
+      "KbDocumentDetail": {
+        "additionalProperties": false,
+        "description": "One document version and its chunks in reading order.",
+        "properties": {
+          "audience": {
+            "enum": [
+              "customer",
+              "internal"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/KbChunkView"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PERSONAL",
+                  "AUTO",
+                  "MORTGAGE",
+                  "SME_WC",
+                  "SALARY_ADV"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "all",
+                "type": "string"
+              }
+            ],
+            "title": "Product"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "version",
+          "title",
+          "product",
+          "audience",
+          "effective_date",
+          "chunks"
+        ],
+        "title": "KbDocumentDetail",
+        "type": "object"
+      },
+      "KbDocumentSummary": {
+        "additionalProperties": false,
+        "description": "One policy document with every ingested version (newest effective date first).",
+        "properties": {
+          "audience": {
+            "enum": [
+              "customer",
+              "internal"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PERSONAL",
+                  "AUTO",
+                  "MORTGAGE",
+                  "SME_WC",
+                  "SALARY_ADV"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "all",
+                "type": "string"
+              }
+            ],
+            "title": "Product"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/KbDocumentVersion"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "doc_id",
+          "title",
+          "product",
+          "audience",
+          "versions"
+        ],
+        "title": "KbDocumentSummary",
+        "type": "object"
+      },
+      "KbDocumentVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_count": {
+            "minimum": 0.0,
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "effective_date",
+          "chunk_count"
+        ],
+        "title": "KbDocumentVersion",
+        "type": "object"
+      },
+      "LoanDetail": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bucket": {
+            "title": "Bucket",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "integer"
+          },
+          "days_past_due": {
+            "title": "Days Past Due",
+            "type": "integer"
+          },
+          "fees_accrued": {
+            "title": "Fees Accrued",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "installments": {
+            "items": {
+              "$ref": "#/components/schemas/InstallmentView"
+            },
+            "title": "Installments",
+            "type": "array"
+          },
+          "loan_id": {
+            "title": "Loan Id",
+            "type": "integer"
+          },
+          "next_due_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due Amount"
+          },
+          "next_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due Date"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "oldest_unpaid_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Unpaid Due Date"
+          },
+          "outstanding_balance": {
+            "title": "Outstanding Balance",
+            "type": "string"
+          },
+          "overdue_amount": {
+            "title": "Overdue Amount",
+            "type": "string"
+          },
+          "product_code": {
+            "title": "Product Code",
+            "type": "string"
+          },
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionView"
+            },
+            "title": "Transactions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "loan_id",
+          "customer_id",
+          "number",
+          "product_code",
+          "product_name",
+          "status",
+          "as_of",
+          "outstanding_balance",
+          "overdue_amount",
+          "oldest_unpaid_due_date",
+          "next_due_date",
+          "next_due_amount",
+          "days_past_due",
+          "bucket",
+          "fees_accrued",
+          "headline",
+          "installments",
+          "transactions"
+        ],
+        "title": "LoanDetail",
+        "type": "object"
+      },
+      "LoanRow": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bucket": {
+            "title": "Bucket",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "integer"
+          },
+          "days_past_due": {
+            "title": "Days Past Due",
+            "type": "integer"
+          },
+          "fees_accrued": {
+            "title": "Fees Accrued",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "loan_id": {
+            "title": "Loan Id",
+            "type": "integer"
+          },
+          "next_due_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due Amount"
+          },
+          "next_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due Date"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "oldest_unpaid_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Unpaid Due Date"
+          },
+          "outstanding_balance": {
+            "title": "Outstanding Balance",
+            "type": "string"
+          },
+          "overdue_amount": {
+            "title": "Overdue Amount",
+            "type": "string"
+          },
+          "product_code": {
+            "title": "Product Code",
+            "type": "string"
+          },
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loan_id",
+          "customer_id",
+          "number",
+          "product_code",
+          "product_name",
+          "status",
+          "as_of",
+          "outstanding_balance",
+          "overdue_amount",
+          "oldest_unpaid_due_date",
+          "next_due_date",
+          "next_due_amount",
+          "days_past_due",
+          "bucket",
+          "fees_accrued",
+          "headline"
+        ],
+        "title": "LoanRow",
+        "type": "object"
+      },
+      "Overview": {
+        "properties": {
+          "customers": {
+            "title": "Customers",
+            "type": "integer"
+          },
+          "kb_documents": {
+            "title": "Kb Documents",
+            "type": "integer"
+          },
+          "loans": {
+            "title": "Loans",
+            "type": "integer"
+          },
+          "loans_by_bucket": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Loans By Bucket",
+            "type": "object"
+          },
+          "personas": {
+            "title": "Personas",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customers",
+          "loans",
+          "loans_by_bucket",
+          "kb_documents",
+          "personas"
+        ],
+        "title": "Overview",
+        "type": "object"
+      },
+      "Paged_CustomerRow_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Paged[CustomerRow]",
+        "type": "object"
+      },
+      "Paged_LoanRow_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LoanRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Paged[LoanRow]",
+        "type": "object"
+      },
+      "PersonaView": {
+        "description": "The persona test sheet: the only view with a DOB and a full phone (synthetic test identities).",
+        "properties": {
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "integer"
+          },
+          "dob": {
+            "format": "date",
+            "title": "Dob",
+            "type": "string"
+          },
+          "expected_outcome": {
+            "title": "Expected Outcome",
+            "type": "string"
+          },
+          "extension": {
+            "title": "Extension",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "loan_id": {
+            "title": "Loan Id",
+            "type": "integer"
+          },
+          "loan_last4": {
+            "title": "Loan Last4",
+            "type": "string"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "product_code": {
+            "title": "Product Code",
+            "type": "string"
+          },
+          "situation": {
+            "title": "Situation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "full_name",
+          "phone",
+          "extension",
+          "dob",
+          "loan_id",
+          "loan_last4",
+          "product_code",
+          "situation",
+          "expected_outcome"
+        ],
+        "title": "PersonaView",
+        "type": "object"
+      },
+      "PolicyChunk": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PERSONAL",
+                  "AUTO",
+                  "MORTGAGE",
+                  "SME_WC",
+                  "SALARY_ADV"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "all",
+                "type": "string"
+              }
+            ],
+            "title": "Product"
+          },
+          "rrf_score": {
+            "minimum": 0.0,
+            "title": "Rrf Score",
+            "type": "number"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "version",
+          "title",
+          "section",
+          "product",
+          "text",
+          "rrf_score"
+        ],
+        "title": "PolicyChunk",
+        "type": "object"
+      },
+      "PolicyQuery": {
+        "additionalProperties": false,
+        "description": "A policy question. `product=None` searches every product; `as_of=None` means today.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "audience": {
+            "default": "customer",
+            "enum": [
+              "customer",
+              "internal"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PERSONAL",
+                  "AUTO",
+                  "MORTGAGE",
+                  "SME_WC",
+                  "SALARY_ADV"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 4,
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "PolicyQuery",
+        "type": "object"
+      },
+      "PolicySearchResult": {
+        "additionalProperties": false,
+        "properties": {
+          "best_similarity": {
+            "title": "Best Similarity",
+            "type": "number"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyChunk"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "confident": {
+            "title": "Confident",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chunks",
+          "confident",
+          "best_similarity"
+        ],
+        "title": "PolicySearchResult",
+        "type": "object"
+      },
+      "PromiseView": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "loan_id": {
+            "title": "Loan Id",
+            "type": "integer"
+          },
+          "promised_date": {
+            "format": "date",
+            "title": "Promised Date",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "call_id",
+          "loan_id",
+          "promised_date",
+          "amount",
+          "status"
+        ],
+        "title": "PromiseView",
+        "type": "object"
+      },
+      "TaskView": {
+        "properties": {
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
+          },
+          "due_at": {
+            "format": "date-time",
+            "title": "Due At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "call_id",
+          "type",
+          "reason",
+          "summary",
+          "due_at",
+          "owner",
+          "status"
+        ],
+        "title": "TaskView",
+        "type": "object"
+      },
+      "TransactionView": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ts",
+          "amount",
+          "channel",
+          "status",
+          "reference"
+        ],
+        "title": "TransactionView",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Backend for the Next.js operations console (specs/11-console). Local POC only.",
+    "title": "Support agent console API",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/audit/{call_id}": {
+      "get": {
+        "operationId": "get_audit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditView"
+                  },
+                  "title": "Response Get Audit",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Audit",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/customers": {
+      "get": {
+        "operationId": "search_customers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "segment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Segment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bucket",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bucket"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Paged_CustomerRow_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Customers",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/customers/{customer_id}": {
+      "get": {
+        "operationId": "get_customer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Customer",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/loans": {
+      "get": {
+        "operationId": "list_loans",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "bucket",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bucket"
+            }
+          },
+          {
+            "in": "query",
+            "name": "product",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Paged_LoanRow_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Loans",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "operationId": "get_overview",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Overview",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/personas": {
+      "get": {
+        "operationId": "list_personas",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonaView"
+                  },
+                  "title": "Response List Personas",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Personas",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/policies": {
+      "get": {
+        "operationId": "list_policies",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KbDocumentSummary"
+                  },
+                  "title": "Response List Policies",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Policies",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/policies/search": {
+      "post": {
+        "operationId": "search_policies",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicySearchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Policies",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/api/policies/{doc_id}": {
+      "get": {
+        "operationId": "get_policy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "doc_id",
+            "required": true,
+            "schema": {
+              "title": "Doc Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KbDocumentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Policy",
+        "tags": [
+          "explorer"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthz",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Healthz",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "meta"
+        ]
+      }
+    }
+  }
+}

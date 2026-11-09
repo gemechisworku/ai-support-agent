@@ -5,11 +5,14 @@ description = "AI voice support agent for loan servicing (POC)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "alembic>=1.13",
+  "en-core-web-sm",
   "faker>=30",
   "fastapi>=0.115",
   "httpx>=0.27",
   "mcp>=1.2",
   "pgvector>=0.3",
+  "presidio-analyzer>=2.2",
+  "presidio-anonymizer>=2.2",
   "psycopg[binary]>=3.2",
   "pydantic>=2.9",
   "pydantic-settings>=2.6",
@@ -126,6 +129,15 @@ source_modules = ["supportagent.scheduler", "supportagent.console"]
 forbidden_modules = ["supportagent.bank", "supportagent.kb", "supportagent.agent", "sqlalchemy", "psycopg"]
 
 [[tool.importlinter.contracts]]
+name = "Console reaches data over HTTP only (CON-R1)"
+type = "forbidden"
+source_modules = ["supportagent.console"]
+forbidden_modules = [
+  "supportagent.bank", "supportagent.kb", "supportagent.gateway", "supportagent.agent",
+  "supportagent.voice", "supportagent.telephony", "supportagent.scheduler", "sqlalchemy", "psycopg",
+]
+
+[[tool.importlinter.contracts]]
 name = "Telephony helpers never touch data"
 type = "forbidden"
 source_modules = ["supportagent.telephony"]
@@ -133,3 +145,6 @@ forbidden_modules = [
   "supportagent.bank", "supportagent.kb", "supportagent.gateway", "supportagent.agent",
   "supportagent.scheduler", "sqlalchemy", "psycopg",
 ]
+
+[tool.uv.sources]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }

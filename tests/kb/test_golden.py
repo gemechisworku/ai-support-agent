@@ -2,7 +2,7 @@
 
 - integration (CI): every `must_pass_ci` question hits with the offline HashEmbedder and is confident
   at `HASH_MIN_SIMILARITY`.
-- eval (manual, needs `ollama pull nomic-embed-text`): the full set with OllamaEmbedder reaches
+- eval (manual, needs the llama.cpp embeddings server): the full set with OpenAICompatEmbedder reaches
   hit@4 ≥ 0.90; hit@4, MRR and the similarity range are printed to help tune `KB_MIN_SIMILARITY`.
 """
 
@@ -14,7 +14,7 @@ import yaml
 from sqlalchemy.orm import Session
 
 from supportagent.contracts.kb import PolicyQuery
-from supportagent.kb.embed import Embedder, EmbedderError, HashEmbedder, OllamaEmbedder
+from supportagent.kb.embed import Embedder, EmbedderError, HashEmbedder, OpenAICompatEmbedder
 from supportagent.kb.ingest import ingest
 from supportagent.kb.retrieval import HASH_MIN_SIMILARITY, search
 
@@ -75,12 +75,12 @@ def test_must_pass_questions_with_hash_embedder(kb_db: Session) -> None:
 
 
 @pytest.mark.eval
-def test_full_golden_set_with_ollama(kb_db: Session, settings: Any) -> None:
-    embedder = OllamaEmbedder(settings.models.ollama_url, settings.models.embed_model)
+def test_full_golden_set_with_llamacpp(kb_db: Session, settings: Any) -> None:
+    embedder = OpenAICompatEmbedder(settings.models.embed_url, settings.models.embed_model)
     try:
         embedder.embed_query("ping")
     except EmbedderError as exc:
-        pytest.skip(f"Ollama not available: {exc}")
+        pytest.skip(f"embeddings server not available: {exc}")
     ingest(CORPUS, kb_db, embedder)
     rows = _evaluate(kb_db, embedder, None)
     hit, _ = _report(rows)

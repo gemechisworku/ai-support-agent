@@ -8,6 +8,7 @@ Lookups that the bank answers with 404 return `None` (or an empty list); every o
 `BankError`, which the tool pipeline turns into `upstream_error`.
 """
 
+import datetime as dt
 from typing import Any, Protocol
 
 import httpx
@@ -28,6 +29,7 @@ class BankError(RuntimeError):
 
 class BankClient(Protocol):
     async def customers_by_phone(self, phone: str) -> list[c.Customer]: ...
+    async def match_customers(self, dob: dt.date, loan_last4: str) -> list[c.CustomerMatch]: ...
     async def get_customer(self, customer_id: int) -> c.Customer | None: ...
     async def customer_loans(self, customer_id: int) -> list[c.Loan]: ...
     async def loan_status(self, loan_id: int) -> c.LoanStatus | None: ...
@@ -45,6 +47,7 @@ class BankClient(Protocol):
 
 
 _customers = TypeAdapter(list[c.Customer])
+_matches = TypeAdapter(list[c.CustomerMatch])
 _loans = TypeAdapter(list[c.Loan])
 _transactions = TypeAdapter(list[c.Transaction])
 
@@ -114,6 +117,11 @@ class HttpBankClient:
     async def customers_by_phone(self, phone: str) -> list[c.Customer]:
         resp = await self._get("/customers", {"phone": phone})
         return [] if resp is None else _customers.validate_json(resp.content)
+
+    async def match_customers(self, dob: dt.date, loan_last4: str) -> list[c.CustomerMatch]:
+        """Loans whose customer has this DOB and whose number ends in `loan_last4` (ids only, T-BANK-08)."""
+        resp = await self._get("/customers/match", {"dob": dob.isoformat(), "loan_last4": loan_last4})
+        return [] if resp is None else _matches.validate_json(resp.content)
 
     async def get_customer(self, customer_id: int) -> c.Customer | None:
         resp = await self._get(f"/customers/{customer_id}")

@@ -1,0 +1,7 @@
+.next
+node_modules
+src/lib/api/schema.ts
+openapi.json
+playwright-report
+test-results
+tests/e2e/fixtures

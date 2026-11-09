@@ -43,6 +43,16 @@ disclosures:
     text: "This is {bank_name} calling for {first_name}. Please ask them to call us back at their convenience. Thank you."
     required: {}
 ```
+`collections` also carries `after_verification: true`: on a missed-payment call it is owed only once the
+customer is verified (it is spoken after verification, before any amount). A call where verification
+failed reveals no amount, so it owes no collections disclosure.
+
+`check_disclosures` rules (T-COMP-05):
+- disclosures are owed only when someone answered (`right_party` or `third_party`); `disclosures_given`
+  is matched by key (`collections@1.0` → `collections`);
+- events are ordered by `ts` (stable); an account-data tool before the first `verified` event →
+  `data_before_verification`; on `missed_payment`, one before the first `collections` disclosure event →
+  `data_before_collections_disclosure`; each code is reported at most once, after the missing ones.
 
 ## File layout
 ```
@@ -73,6 +83,9 @@ tests/compliance/ test_config.py test_window.py test_frequency.py test_gate.py
 | Evaluation | collect all reasons, fail closed | audit clarity; safety |
 | Clock | injected `now`, tz-aware | determinism (constitution III) |
 | Inbound | gate not applied; disclosures are | customer-initiated |
+| Config times | quoted `"HH:MM"` strings only (a `BeforeValidator` rejects numbers) | YAML 1.1 reads unquoted `08:00` as 480; pydantic would turn that into 00:08 |
+| Config errors | `ValueError` with file path and dotted field names; models frozen, `extra="forbid"` | a typo must stop start-up, never relax a rule |
+| Config paths | settings path; relative paths fall back to the repo root | tools and tests run from any working directory |
 
 ## Dependencies
 `pyyaml`. `zoneinfo` is stdlib (`tzdata` package only if the slim image lacks zone data). Dev:
