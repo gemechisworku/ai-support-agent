@@ -40,9 +40,9 @@ state. The handlers are:
 | `GreetingAgent` | `say(AI+recording disclosure)`; outbound: `lookup_by_phone`, ask for first name | `confirm_right_party`, `third_party_answered`, `wrong_number` | Verify / ThirdParty / Closing |
 | `VerifyAgent` | ask for full name, DOB, last 4 | `verify_identity` | campaign state / Router / Escalation (locked) |
 | `ThirdPartyAgent` | neutral message, no details | `record_callback_time`, `end_call` | end |
-| `RouterAgent` (inbound) | "How can I help?" | `route_account_question`, `route_policy_question`, `request_human` | Verify→Account / Policy / Escalation |
+| `RouterAgent` (inbound) | "How can I help?" | `route_account_question`, `route_policy_question`, `request_human`, `finish_call` | Verify→Account / Policy / Escalation / Closing |
 | `AccountAgent` (U3) | answers the question already in the chat history | `get_loan_status`, `get_recent_transactions`, `finish` | Router / Closing |
-| `PolicyAgent` (U4) | — | `search_policy`, `offer_follow_up`, `finish` | Router / Closing |
+| `PolicyAgent` (U4) | — | `search_policy`, `offer_follow_up`, `route_to_account`, `finish` | Verify→Account / Router / Closing |
 | `ReminderAgent` (U1) | `get_loan_status` → speak amount and date | `search_policy`, `record_intent_to_pay`, `finish` | Closing |
 | `CollectionsPurposeAgent` (U2 §7 steps 3–5) | `say(collections disclosure)`; `get_loan_status` → purpose line | `get_recent_transactions`, `set_reason_code`, `mark_payment_in_transit` | Resolve / Closing |
 | `CollectionsResolveAgent` (U2 §7 steps 6–7) | — | `search_policy`, `record_promise_to_pay`, `request_callback`, `refer_to_human` | Closing / Escalation |
@@ -211,10 +211,11 @@ tests/agent/          # mirrors the modules above
 
 ## Inbound routing (T-AGENT-05)
 - **`RouterAgent`** (`router`): on entry, in code, `"How can I help?"` the first time and `"Is there anything else I can
-  help you with?"` when the caller comes back from the account or policy state. Three tools, no data tools:
+  help you with?"` when the caller comes back from the account or policy state. Four tools, no data tools:
   `route_policy_question` → `PolicyAgent` (`flow.POLICY`, no verification), `route_account_question` →
-  `AccountAgent` (`flow.ACCOUNT`) when `CallState.verified`, else `VerifyAgent` first, and `request_human` →
-  `EscalationAgent(reason="human_requested")`. Each route records its `Intent` (`policy_question`, `account_question`,
+  `AccountAgent` (`flow.ACCOUNT`) when `CallState.verified`, else `VerifyAgent` first (`flow.account_route`, shared
+  with the policy state), `request_human` → `EscalationAgent(reason="human_requested")` and `finish_call` →
+  `ClosingAgent(farewell=True)`. Each route records its `Intent` (`policy_question`, `account_question`,
   `human_request`) through `CallState.record_intent`, once each in order; `CallState.intents` is in `outcome_so_far()`
   for T-AGENT-08.
 - **Verification then account:** the router sets `CallState.after_verification = "account"` before handing to
@@ -225,8 +226,19 @@ tests/agent/          # mirrors the modules above
   when they finish (T-AGENT-06/07), so one call can go policy → account → policy.
 - **Hand-offs are silent**, so a successor state must answer the question already in the chat history: call
   `self.session.generate_reply()` from `on_state_enter` (the router never answers it).
-- **Missing successors:** a route whose state is not registered yet keeps the call alive (the model is told to
-  apologise and say a colleague will follow up); the intent is still recorded.
+- **Missing successors (honest, in code).** A route whose state is not registered yet (escalation is T-AGENT-11) keeps
+  the call alive and the intent recorded, but never promises a follow-up that is not arranged. `flow.unavailable_line`
+  asks the gateway for a callback (`request_callback`, allowed for any session) for the next day: on success the
+  agent says, itself and not the model, that a colleague will call back at the time the gateway returned
+  (`CALLBACK_BOOKED_LINE`, and the callback is recorded in the outcome); on a refusal or failure it says plainly that
+  it cannot do that on this call and promises nothing (`CALLBACK_DECLINED_LINE`). `VerifyAgent` uses the same line for
+  its two missing-successor cases (a verified caller whose flow is not built, a locked caller with no escalation).
+  *(Found on the first real call, where the model said "A colleague will be in touch" with no ticket behind it.)*
+- **Ending the call (code).** A short caller turn with a farewell word and no question ("Okay, bye", "That's all,
+  thanks"; after "Is there anything else I can help you with?" also a bare "no" or "thanks") is detected by
+  `phrases.is_farewell` in the router's `_screen`, after the interrupt check and before the model replies, and moves
+  the call to `ClosingAgent(farewell=True)` (`flow.route_on_phrases`). The model has the same exit as `finish_call`.
+  The policy state has the same farewell exit.
 - **Tests** (`tests/agent/test_router.py`): stand-ins for `policy`, `account` and `escalation`, each with a `finish`
   tool that returns to the router. The three routes, policy → account switch with one `verify_identity`, a second
   account question without re-verifying, the full greeting → router → policy chain, and the missing-successor paths.
@@ -269,8 +281,18 @@ tests/agent/          # mirrors the modules above
   `kb_sources` and their text reaches the model inside `<policy>` as data), then one generated line asking whether
   there is anything else. Tools: `offer_callback(when: ISO 8601 with offset, reason)` books through the gateway's
   `request_callback` and records the `due_at` the gateway scheduled (a time without an offset is refused in code, a
-  gateway failure records nothing), and `end_call`. `goodbye_line(bank_name)` is the closing wording for the VOICE silence
-  policy to speak (wired with the session in the VOICE tasks).
+  gateway failure records nothing, and the text the model gets then forbids promising that anyone will contact the
+  caller), and `end_call`. `goodbye_line(bank_name)` is the closing wording for the VOICE silence policy to speak
+  (wired with the session in the VOICE tasks).
+- **Farewell mode.** `ClosingAgent(farewell=True)` is entered when the caller already said goodbye (the router's and the
+  policy state's farewell check, or the router's `finish_call`). It reads back any commitments, says `goodbye_line`
+  itself, sets `CallState.end_reason` and ends the session (`shutdown(drain=True)`: the read-back and the goodbye are
+  spoken first). It never asks "anything else?" and never searches policy; an unverified caller gets the plain goodbye
+  (the builder holds no figures for them).
+- **`CallState.end_reason`** (the one field the silence policy, the transcript's call-ended marker and
+  `finalize` read): `"silence"` (the silence policy ended the call), `"caller_goodbye"` (`flow.END_BY_CALLER`: the
+  farewell mode, set on entry before the session shuts down) and `"completed"` (`flow.END_BY_AGENT`: the model ended the
+  call through `end_call`, set only if no reason was recorded earlier).
 - **Not yet wired:** the worker builds no `AgentSession` yet (T-VOICE-03 session options and the remaining states), so
   `attach_recorder` and the classifier are connected there; until then a real call finalizes with no turns.
 - **Tests:** `test_outcome.py` (builder, templates, grounding), `test_finalize.py` (the four call types, once-only,
@@ -280,8 +302,14 @@ tests/agent/          # mirrors the modules above
 ## Policy answers (T-AGENT-07)
 - **`PolicyAgent`** (`policy`, `flow.POLICY`): general "how does this work" questions; no verification needed. The router
   hands off silently, so `on_state_enter` calls `session.generate_reply()` and the model answers the question already
-  in the chat history. Tools: `search_policy(query, product?)`, `offer_follow_up(topic)`, `finish()` (three domain tools,
-  plus the shared `report_concern`); no account tools exist in this state.
+  in the chat history. Tools: `search_policy(query, product?)`, `offer_follow_up(topic)`, `route_to_account()`,
+  `finish()` (four domain tools, plus the shared `report_concern`); no account tools exist in this state.
+- **An account question is never answered or deflected from policy (code).** `PolicyAgent._screen` runs after the
+  interrupt check and before the model: `phrases.is_account_question` (balance, what I owe, amount or date due, did my
+  payment arrive; "what is the late fee on my personal loan" is not one) moves the call to `flow.account_route`: the
+  account state if the caller is verified, otherwise `VerifyAgent` with `after_verification = "account"`. The model has
+  the same exit as the `route_to_account` tool. A farewell moves to `ClosingAgent(farewell=True)` the same way.
+  *(Found on the first real call: "how much do I owe the bank" got the "I can't look that up" fallback, twice.)*
 - **No answer without a search in the same turn (code).** `llm_node` sets `tool_choice="required"` on the first model
   step after a caller turn (the newest chat item is not a tool result), so the model must call a tool before it can
   speak; after any tool result the choice is `"none"`, so it speaks and cannot search elsewhere. `tool_choice_for(items)`
@@ -302,8 +330,8 @@ tests/agent/          # mirrors the modules above
 - **Product.** The state does not pick one: the gateway defaults to the verified caller's loan product when there is a
   single loan and searches all products otherwise (GW policy tool). A product the model passes is forwarded only when it
   is a known `ProductCode` (`valid_product`), else dropped.
-- **Back to the router.** `finish` hands off with `self.hand_off(self.next_state(router))`; the router asks "Is there
-  anything else I can help you with?".
+- **Back to the router.** `finish` (no more policy questions, or the caller wants a person) hands off with
+  `self.hand_off(self.next_state(router))`; the router asks "Is there anything else I can help you with?".
 - **Tests** (`tests/agent/test_policy.py`): the caller reaches the state through the real router. A `RecordingLLM`
   records each request's `tool_choice` (the scripted LLM ignores it): `[None, "required", "none"]` for a question
   answered from retrieved text.

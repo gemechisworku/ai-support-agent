@@ -16,6 +16,7 @@ from livekit.agents.llm import ChatContext, ChatMessage, FunctionCallOutput
 import supportagent.agent.states  # noqa: F401  (importing it registers every state)
 from supportagent.agent.base import class_tool_names
 from supportagent.agent.states import flow
+from supportagent.agent.states.closing import goodbye_line
 from supportagent.agent.states.policy import (
     FOLLOW_UP_DELAY,
     LOW_CONFIDENCE_OFFER,
@@ -26,6 +27,7 @@ from supportagent.agent.states.policy import (
     valid_product,
 )
 from supportagent.agent.states.router import ANYTHING_ELSE, HOW_CAN_I_HELP, RouterAgent
+from supportagent.agent.states.verify import ASK_FOR_DETAILS
 from supportagent.agent.testing import (
     FakeGateway,
     ScenarioResult,
@@ -113,11 +115,13 @@ async def _run(
     turns: list[str],
     *,
     results: dict[str, Any] | None = None,
+    verified: bool = False,
 ) -> tuple[ScenarioResult, RecordingLLM]:
     llm = RecordingLLM(steps)
 
     async def on_start(state: Any) -> None:
         state.disclosures = REGISTRY
+        state.verified = verified
 
     result = await run_text_scenario(
         FRANK,
@@ -365,14 +369,90 @@ async def test_finishing_returns_to_the_router_which_asks_if_there_is_anything_e
             say("Yes, you can pay early."),
             call("finish"),
         ],
-        [QUESTION, "No, that's all."],
+        [QUESTION, "Okay, that makes sense."],
         results={"search_policy": confident(EARLY)},
     )
     assert result.states == ["router", "policy", "router"]
     assert _agent_lines(result)[-1] == ANYTHING_ELSE
 
 
-def test_the_policy_state_has_three_domain_tools_and_no_data_tools() -> None:
+def test_the_policy_state_has_four_domain_tools_and_no_data_tools() -> None:
     names = set(class_tool_names(PolicyAgent))
-    assert names == {"search_policy", "offer_follow_up", "finish", "report_concern"}
+    assert names == {"search_policy", "offer_follow_up", "route_to_account", "finish", "report_concern"}
     assert flow.resolve(flow.POLICY) is PolicyAgent
+
+
+# ------------------------------------------------------------ account questions and goodbyes (in code)
+
+LATE_FEE_ANSWER = "The late fee on a personal loan is a flat twenty-five dollars."
+
+
+async def test_an_account_question_in_the_policy_state_goes_to_verification_not_the_policy_fallback() -> None:
+    """The first real call: "how much do I owe the bank" got "I can't look that up right now", twice."""
+    result, llm = await _run(
+        [call("route_policy_question"), call("search_policy", query="late fee"), say(LATE_FEE_ANSWER)],
+        ["What is the late fee on a personal loan?", "And how much do I owe the bank?"],
+        results={"search_policy": confident(FEES)},
+    )
+    assert result.states == ["router", "policy", "verify"]
+    assert _tools_called(result).count("search_policy") == 1  # the second turn never reached policy search
+    assert result.state.after_verification == "account"
+    assert "account_question" in [str(i) for i in result.state.intents]
+    lines = _agent_lines(result)
+    assert lines[-1] == ASK_FOR_DETAILS
+    assert UNAVAILABLE_OFFER not in lines and LOW_CONFIDENCE_OFFER not in lines
+    assert llm.remaining == 0  # no model step was spent on the account question
+
+
+async def test_a_verified_caller_asking_about_their_account_in_policy_goes_to_the_account_state() -> None:
+    result, _ = await _run(
+        [
+            call("route_policy_question"),
+            call("search_policy", query="late fee"),
+            say(LATE_FEE_ANSWER),
+            say("Your balance is on screen."),  # the account state's first reply
+        ],
+        ["What is the late fee on a personal loan?", "What's my balance?"],
+        results={"search_policy": confident(FEES)},
+        verified=True,
+    )
+    assert result.states == ["router", "policy", "account"]
+    assert result.state.after_verification is None
+
+
+async def test_the_model_can_route_an_account_question_with_the_tool_too() -> None:
+    result, _ = await _run(
+        [call("route_policy_question"), call("route_to_account")],
+        ["Tell me about my payments, I am confused"],  # not caught by the phrase check
+    )
+    assert result.states == ["router", "policy", "verify"]
+    assert result.state.after_verification == "account"
+
+
+async def test_a_genuine_policy_question_still_goes_through_search_policy() -> None:
+    result, llm = await _run(
+        [
+            call("route_policy_question"),
+            call("search_policy", query="late fee"),
+            say(LATE_FEE_ANSWER),
+            call("search_policy", query="grace period"),
+            say("The grace period is fifteen days."),
+        ],
+        ["What is the late fee on a personal loan?", "What is the grace period on a personal loan?"],
+        results={"search_policy": confident(FEES)},
+    )
+    assert result.states == ["router", "policy"]
+    assert _tools_called(result).count("search_policy") == 2
+    assert llm.remaining == 0
+
+
+async def test_a_goodbye_in_the_policy_state_closes_the_call_without_a_model_reply() -> None:
+    result, llm = await _run(
+        [call("route_policy_question"), call("search_policy", query="late fee"), say(LATE_FEE_ANSWER)],
+        ["What is the late fee on a personal loan?", "Okay, bye."],
+        results={"search_policy": confident(FEES)},
+    )
+    assert result.states == ["router", "policy", "closing"]
+    assert result.state.end_reason == flow.END_BY_CALLER
+    assert _agent_lines(result)[-1] == goodbye_line("Meridian Bank")
+    assert llm.remaining == 0

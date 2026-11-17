@@ -20,6 +20,11 @@ The grounding rule is code, not prompt text:
 
 The product is not chosen here: the gateway defaults it to the verified caller's loan product and searches all
 products otherwise. A product the model supplies is passed on only if it is a known `ProductCode`.
+
+Two exits are code too (found on the first real call, where "how much do I owe the bank" was deflected with
+the policy fallback): a caller turn that is an account question (`phrases.is_account_question`) moves to
+the account route before the model sees it (verification first, then the account state), and so does a
+farewell (`ClosingAgent(farewell=True)`). The model has the same exits as tools: `route_to_account`, `finish`.
 """
 
 from __future__ import annotations
@@ -29,7 +34,7 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import Any, Literal, get_args
 
 from livekit.agents import Agent, ModelSettings, RunContext, function_tool
-from livekit.agents.llm import ChatContext, FunctionCallOutput, StopResponse, Tool
+from livekit.agents.llm import ChatContext, ChatMessage, FunctionCallOutput, StopResponse, Tool
 from livekit.agents.llm.chat_context import ChatItem
 
 from supportagent.agent.base import BaseStateAgent, register_state
@@ -104,6 +109,12 @@ class PolicyAgent(BaseStateAgent):
         # The router's hand-off is silent and the caller's question is already in the chat history.
         self.session.generate_reply()
 
+    async def _screen(self, message: ChatMessage) -> bool:
+        """Interrupts first (AGENT-R3), then an account question or a farewell in code (before the model)."""
+        if await super()._screen(message):
+            return True
+        return await flow.route_on_phrases(self, message, farewell=True, account=True)
+
     async def llm_node(
         self, chat_ctx: ChatContext, tools: list[Tool], model_settings: ModelSettings
     ) -> AsyncGenerator[Any, None]:
@@ -164,10 +175,21 @@ class PolicyAgent(BaseStateAgent):
         return CALLBACK_BOOKED
 
     @function_tool
+    async def route_to_account(self, context: RunContext[CallState]) -> str | Agent:
+        """The caller asks about their own loan: what they owe, a balance, an amount or date due, a payment.
+
+        Never answer that from policy; this moves the call to identity verification, then their account.
+        """
+        next_agent = flow.account_route(self)
+        if next_agent is None:  # the account state is always registered; keep the call alive regardless
+            return "Say you cannot look at their account on this call, and ask if there is anything else."
+        return self.hand_off(next_agent)  # type: ignore[return-value]
+
+    @function_tool
     async def finish(self, context: RunContext[CallState]) -> str | Agent:
         """The caller has no more questions about how things work, or wants something else.
 
-        Use it when they say they are done, or ask about their own account or for a person.
+        Use it when they say they are done, or ask for a person. Account questions use `route_to_account`.
         """
         router = flow.resolve(flow.ROUTER)
         if router is None:  # the router always exists on an inbound call; keep the call alive regardless

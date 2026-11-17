@@ -136,11 +136,18 @@ escalation. Record `intent[]`. Support switching between policy and account ques
 - [x] "Can I pay early?" reaches Policy with no `verify_identity` call
 - [x] "What do I owe?" forces verification before any account tool
 - [x] After verification in the same call, later account questions do not re-verify
+- [x] *(Added after the first real call, 2026-11-17.)* A route whose state is not built yet never promises a follow-up
+  that is not arranged: the callback is booked through the gateway first and the agent speaks the time it returned, or
+  it says plainly that it cannot do that on this call
+- [x] *(Same.)* A caller who says goodbye (or "no thanks" after "anything else?") ends the call in code, with a plain
+  goodbye and no account figures for an unverified caller; the model has the same exit as `finish_call`
 
 **Tests**
 - `tests/agent/test_router.py` (unit, text mode): the three routes; policy → account switch; `intent[]` contents
+- *(Added.)* `tests/agent/test_router.py` (booked and refused callbacks, farewells), `tests/agent/test_phrases.py` (the
+  detectors), `tests/agent/test_real_call_shape.py` (the first real call replayed with the real states)
 
-**Files:** `src/supportagent/agent/states/router.py`, `prompts/router.md`, tests above
+**Files:** `src/supportagent/agent/states/router.py`, `states/flow.py`, `phrases.py`, `prompts/router.md`, tests above
 
 ### T-AGENT-06 · Account questions (U3)
 - **Status:** done
@@ -176,9 +183,13 @@ Implement `PolicyAgent`, which answers only from the `search_policy` chunks of t
 **Acceptance criteria**
 - [x] A policy answer without a preceding `search_policy` call in the same turn is impossible (the reply is generated only after the tool result; enforced by `tool_choice=required` on the first step)
 - [x] Low confidence → no policy claim, plus a follow-up offer
+- [x] *(Added after the first real call, 2026-11-17.)* An account question asked in the policy state ("how much do I owe
+  the bank") is never answered or deflected with the policy fallback: it goes to verification, then the account state
 
 **Tests**
 - `tests/agent/test_policy.py` (unit, text mode): "can I pay early?" cites the early-repayment doc; low-confidence path; sources recorded once per doc
+- *(Added.)* `tests/agent/test_policy.py`: an account question goes to verification (and to the account state when the
+  caller is verified), the `route_to_account` tool, a policy question still searches, a goodbye closes the call
 
 **Files:** `src/supportagent/agent/states/policy.py`, `prompts/policy.md`, tests above
 
