@@ -38,8 +38,7 @@ from typing import TYPE_CHECKING, Final, Literal, get_args
 from supportagent.common import clock
 from supportagent.common.logging import get_logger
 from supportagent.contracts.gateway import EscalationReason
-from supportagent.contracts.outcome import ContactResult
-from supportagent.contracts.outcome import Intent
+from supportagent.contracts.outcome import ContactResult, Intent
 
 if TYPE_CHECKING:
     from supportagent.agent.base import BaseStateAgent, ConcernKind
