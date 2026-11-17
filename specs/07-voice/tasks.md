@@ -56,7 +56,7 @@ prerequisites; this task installs and runs the servers.
 **Files:** `scripts/models/setup.sh`, `scripts/models/up.sh`, `scripts/models/down.sh`, `scripts/models/health.py`, `Makefile`, `docs/dev-setup.md`, `.gitignore`, `tests/voice/test_health_script.py`
 
 ### T-VOICE-02 · Provider factory with local default and hosted switch
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #42
 - **Depends on:** T-PLAT-02, T-PLAT-07
@@ -69,11 +69,11 @@ Add `supportagent.voice.providers` with `build_stt`, `build_llm`, `build_tts`, `
 `openai.TTS`. `LLM_PROVIDER=anthropic` selects `anthropic.LLM(model="claude-haiku-5-5")`.
 
 **Acceptance criteria**
-- [ ] No URL, model name or voice is hard-coded outside `Settings` defaults.
-- [ ] The local LLM uses the plain OpenAI plugin pointed at `LLM_URL` with model `LLM_MODEL`; no Ollama-specific helper.
-- [ ] `LLM_PROVIDER=anthropic` without `ANTHROPIC_API_KEY` fails at settings validation with a clear message.
-- [ ] `model_version(settings)` returns `"<provider>/<model>"` and is used by OBS version stamping.
-- [ ] New settings are documented in `.env.example`.
+- [x] No URL, model name or voice is hard-coded outside `Settings` defaults.
+- [x] The local LLM uses the plain OpenAI plugin pointed at `LLM_URL` with model `LLM_MODEL`; no Ollama-specific helper.
+- [x] `LLM_PROVIDER=anthropic` without `ANTHROPIC_API_KEY` fails at settings validation with a clear message.
+- [x] `model_version(settings)` returns `"<provider>/<model>"` and is used by OBS version stamping.
+- [x] New settings are documented in `.env.example`.
 
 **Tests**
 - `tests/voice/test_providers.py` (unit): default settings build the OpenAI-compatible STT/LLM/TTS with the expected base URLs and model ids; the local LLM points at `LLM_URL`; the anthropic switch returns the Anthropic LLM; the missing key raises; `model_version` covers both providers. No network: construct objects only.

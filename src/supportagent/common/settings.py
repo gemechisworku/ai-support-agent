@@ -101,12 +101,23 @@ class ModelsSettings(_Group):
     llm_gguf: Path = Path("models/llm/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf")
     embed_gguf: Path = Path("models/embed/nomic-embed-text-v1.5.Q8_0.gguf")
     stt_url: str = "http://localhost:8178"
+    # whisper-server ignores the request's model name (it serves WHISPER_MODEL); the OpenAI API needs one.
+    stt_model: str = "whisper-1"
+    stt_language: str = "en"
     whisper_model: str = "small.en"
     silence_reprompt_s: float = Field(6, gt=0)
     silence_end_s: float = Field(15, gt=0)
     tts_url: str = "http://localhost:8880"
     tts_voice: str = "af_heart"
+    tts_model: str = "kokoro"
+    anthropic_model: str = "claude-haiku-5-5"
     anthropic_api_key: SecretStr | None = None
+
+    @property
+    def llm_id(self) -> str:
+        """The active LLM as `provider/model`, e.g. `llamacpp/llama-3.1-8b-instruct` (VOICE-R3)."""
+        model = self.anthropic_model if self.llm_provider == "anthropic" else self.llm_model
+        return f"{self.llm_provider}/{model}"
 
     @model_validator(mode="after")
     def _hosted_llm_needs_key(self) -> Self:

@@ -141,10 +141,7 @@ def policy_version(policies_dir: Path, config_dir: Path) -> str:
 
 def model_version(models: ModelsSettings) -> str:
     """`llm:{provider}/{model};stt:…;tts:…;embed:…` — the llm part is VOICE's `provider/model` form."""
-    return (
-        f"llm:{models.llm_provider}/{models.llm_model};stt:{models.whisper_model};"
-        f"tts:{models.tts_voice};embed:{models.embed_model}"
-    )
+    return f"llm:{models.llm_id};stt:{models.whisper_model};tts:{models.tts_voice};embed:{models.embed_model}"
 
 
 def compute_versions(

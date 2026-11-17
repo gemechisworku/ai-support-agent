@@ -51,8 +51,9 @@ tests/voice/
 
 ## Data model / contracts
 - New settings fields (added to `supportagent.common.settings` by T-VOICE-02): `STT_URL`, `TTS_URL`,
-  `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`llamacpp|anthropic`), `LLM_MODEL`, `ANTHROPIC_API_KEY`
-  (SecretStr), `SILENCE_REPROMPT_S`, `SILENCE_END_S`, `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
+  `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`llamacpp|anthropic`), `LLM_MODEL`, `ANTHROPIC_MODEL` (default `claude-haiku-5-5`),
+  `ANTHROPIC_API_KEY` (SecretStr), `STT_MODEL` (default `whisper-1`, the name the OpenAI client sends; whisper-server
+  serves `WHISPER_MODEL` regardless), `STT_LANGUAGE` (`en`), `TTS_MODEL` (`kokoro`), `SILENCE_REPROMPT_S`, `SILENCE_END_S`, `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
   `LLM_GGUF` and `EMBED_GGUF` come from T-PLAT-07.
 - `LatencySummary`: `{stage: {"p50": float, "p90": float}}` for stages `eou`, `stt`, `llm_ttft`,
   `tts_ttfb`, `e2e`, in seconds. `to_outcome()` returns `latency_p50` / `latency_p90` as the e2e
@@ -70,8 +71,10 @@ tests/voice/
 
 ## Dependencies
 Runtime: `livekit-agents`, `livekit-plugins-openai`, `livekit-plugins-silero`,
-`livekit-plugins-turn-detector`, `livekit-plugins-anthropic` (all `uv add`, pinned in `uv.lock`; verify
-API names against the installed version). Native (brew): `llama.cpp`, `whisper-cpp`, `livekit`,
+`livekit-plugins-turn-detector`, `livekit-plugins-anthropic`, installed as one dependency
+`livekit-agents[anthropic,openai,silero,turn-detector]~=1.2` and pinned in `uv.lock` (T-VOICE-02 checked the API names
+against the installed version). `Settings.models.llm_id` is the single `provider/model` id: `providers.model_version`
+and `observability.versions.model_version` both use it, and for `anthropic` it is `anthropic/<ANTHROPIC_MODEL>`. Native (brew): `llama.cpp`, `whisper-cpp`, `livekit`,
 `livekit-cli`; Kokoro-FastAPI cloned to `vendor/kokoro-fastapi` (git-ignored) and started with its macOS
 start script. No Docker services are added; Docker on a Mac has no GPU.
 

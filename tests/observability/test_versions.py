@@ -148,7 +148,7 @@ def test_rules_and_disclosure_versions_change_only_policy(settings: Settings, di
 @pytest.mark.parametrize(
     ("field", "value", "expected"),
     [
-        ("llm_provider", "anthropic", "llm:anthropic/llama-3.1-8b-instruct"),
+        ("llm_provider", "anthropic", "llm:anthropic/claude-haiku-5-5"),
         ("llm_model", "llama-3.2-3b-instruct", "llm:llamacpp/llama-3.2-3b-instruct"),
         ("whisper_model", "large-v3-turbo", "stt:large-v3-turbo"),
         ("tts_voice", "am_adam", "tts:am_adam"),
