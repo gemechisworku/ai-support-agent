@@ -33,17 +33,17 @@ setting() {
 }
 
 POSTGRES_PORT="$(setting POSTGRES_PORT 5432)"
-LLM_URL="$(setting LLM_URL http://localhost:8090/v1)"
-EMBED_URL="$(setting EMBED_URL http://localhost:8082/v1)"
+LLM_URL="$(setting LLM_URL http://127.0.0.1:8090/v1)"
+EMBED_URL="$(setting EMBED_URL http://127.0.0.1:8082/v1)"
 LLM_MODEL="$(setting LLM_MODEL llama-3.1-8b-instruct)"
 EMBED_MODEL="$(setting EMBED_MODEL nomic-embed-text-v1.5)"
 LLM_GGUF="$(setting LLM_GGUF models/llm/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)"
 EMBED_GGUF="$(setting EMBED_GGUF models/embed/nomic-embed-text-v1.5.Q8_0.gguf)"
 WHISPER_MODEL="$(setting WHISPER_MODEL small.en)"
 port_of() { printf '%s' "$1" | sed -E 's#^[a-z]+://[^:/]+:([0-9]+).*#\1#'; }
-STT_URL="$(setting STT_URL http://localhost:8178)"
-TTS_URL="$(setting TTS_URL http://localhost:8880)"
-LIVEKIT_HTTP="$(setting LIVEKIT_URL ws://localhost:7880 | sed -e 's#^ws://#http://#' -e 's#^wss://#https://#')"
+STT_URL="$(setting STT_URL http://127.0.0.1:8178)"
+TTS_URL="$(setting TTS_URL http://127.0.0.1:8880)"
+LIVEKIT_HTTP="$(setting LIVEKIT_URL ws://127.0.0.1:7880 | sed -e 's#^ws://#http://#' -e 's#^wss://#https://#')"
 
 # id | required|optional | what is checked | fix hint
 CHECKS=(
@@ -53,11 +53,11 @@ CHECKS=(
   "compose|required|docker compose v2|update Docker Desktop   (or: brew install docker-compose)"
   "postgres-port|required|port $POSTGRES_PORT free or used by this project's Postgres|set POSTGRES_PORT=5433 in .env (port taken by another process), then make up"
   "llama-server|optional|llama.cpp llama-server on PATH|brew install llama.cpp"
-  "llm|optional|LLM server on $LLM_URL serving $LLM_MODEL|llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja -c 8192 -ngl 99 --host 127.0.0.1 --port $(port_of "$LLM_URL")"
-  "embed|optional|embeddings server on $EMBED_URL|llama-server -m $EMBED_GGUF --alias $EMBED_MODEL --embedding --pooling mean -c 2048 -ngl 99 --host 127.0.0.1 --port $(port_of "$EMBED_URL")"
-  "whisper|optional|whisper.cpp server on $STT_URL|brew install whisper-cpp && whisper-server --host 127.0.0.1 --port 8178 -m models/whisper/ggml-$WHISPER_MODEL.bin --inference-path /v1/audio/transcriptions"
-  "kokoro|optional|Kokoro-FastAPI on $TTS_URL|git clone https://github.com/remsky/Kokoro-FastAPI && cd Kokoro-FastAPI && ./start-gpu_mac.sh"
-  "livekit|optional|livekit-server on $LIVEKIT_HTTP|brew install livekit && livekit-server --dev"
+  "llm|optional|LLM server on $LLM_URL serving $LLM_MODEL|make models-up ARGS=llm   (llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja --port $(port_of "$LLM_URL"))"
+  "embed|optional|embeddings server on $EMBED_URL|make models-up ARGS=embed"
+  "whisper|optional|whisper.cpp server on $STT_URL|make models-setup && make models-up ARGS=whisper"
+  "kokoro|optional|Kokoro-FastAPI on $TTS_URL|make models-setup && make models-up ARGS=kokoro"
+  "livekit|optional|livekit-server on $LIVEKIT_HTTP|make models-up ARGS=livekit"
 )
 
 have() { command -v "$1" >/dev/null 2>&1; }

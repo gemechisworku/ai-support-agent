@@ -87,7 +87,7 @@ class HashEmbedder:
 class OpenAICompatEmbedder:
     """nomic embeddings through an OpenAI-compatible `/embeddings` endpoint (llama.cpp `llama-server`).
 
-    `base_url` includes the `/v1` part, e.g. `http://localhost:8082/v1`. Inputs are batched and get
+    `base_url` includes the `/v1` part, e.g. `http://127.0.0.1:8082/v1`. Inputs are batched and get
     nomic's task prefixes. `provider` only names the backend in `name` (stored with ingested chunks).
     """
 

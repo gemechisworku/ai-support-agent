@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-VOICE-01 · Native model servers: setup scripts and health check
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #41
 - **Depends on:** T-PLAT-06, T-PLAT-07
@@ -40,12 +40,12 @@ prerequisites; this task installs and runs the servers.
   - LiveKit: `GET /` on :7880.
 
 **Acceptance criteria**
-- [ ] `make models-setup` is idempotent; a second run downloads nothing.
-- [ ] `make models-up` then `make models-health` reports five healthy servers; `make models-down` stops them.
-- [ ] All servers bind to 127.0.0.1; URLs and ports come from `.env` (`LLM_URL`, `EMBED_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`).
-- [ ] The memory footprint of each server is listed in `docs/dev-setup.md` (link from AGENTS.md "native services").
-- [ ] `models/`, `vendor/` and `var/` are git-ignored.
-- [ ] With the embeddings server up, `uv run pytest -m eval tests/kb/test_golden.py` reports hit@4 ≥ 0.90
+- [x] `make models-setup` is idempotent; a second run downloads nothing.
+- [x] `make models-up` then `make models-health` reports five healthy servers; `make models-down` stops them.
+- [x] All servers bind to 127.0.0.1; URLs and ports come from `.env` (`LLM_URL`, `EMBED_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`).
+- [x] The memory footprint of each server is listed in `docs/dev-setup.md` (link from AGENTS.md "native services").
+- [x] `models/`, `vendor/` and `var/` are git-ignored.
+- [x] With the embeddings server up, `uv run pytest -m eval tests/kb/test_golden.py` reports hit@4 ≥ 0.90
   (KB-R8), and `KB_MIN_SIMILARITY`'s default is tuned for nomic-embed-text and recorded in
   specs/03-knowledge-base/plan.md (moved here from T-KB-06, which had no embeddings server available).
 
@@ -54,6 +54,13 @@ prerequisites; this task installs and runs the servers.
 - `tests/voice/test_live_pipeline.py::test_servers_healthy` (live): real `health.py` returns 0.
 
 **Files:** `scripts/models/setup.sh`, `scripts/models/up.sh`, `scripts/models/down.sh`, `scripts/models/health.py`, `Makefile`, `docs/dev-setup.md`, `.gitignore`, `tests/voice/test_health_script.py`
+
+*(Verified on the dev Mac on 2026-11-17: the second `make models-setup` ran in 1.4 s and downloaded nothing;
+`make models-up` then `make models-health` reported 5/5 healthy; `tests/voice/test_live_pipeline.py::test_servers_healthy`
+passed; `make models-down` closed all five ports. The golden eval (hit@4 1.000, MRR 0.971) ran on 2026-11-09 with the
+embeddings server up and is recorded in specs/03-knowledge-base/plan.md. Kokoro runs in its own Python 3.12 environment
+in `vendor/kokoro-fastapi/.venv`: setup and up clear `VIRTUAL_ENV` so an activated project venv never receives
+Kokoro's torch and spaCy.)*
 
 ### T-VOICE-02 · Provider factory with local default and hosted switch
 - **Status:** done

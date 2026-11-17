@@ -45,8 +45,8 @@ def test_defaults_without_env_file(settings: Settings) -> None:
     assert settings.postgres.bank_db == "bank"
     assert settings.data.bank_as_of is None
     assert settings.models.llm_provider == "llamacpp"
-    assert settings.models.llm_url == "http://localhost:8090/v1"
-    assert settings.models.embed_url == "http://localhost:8082/v1"
+    assert settings.models.llm_url == "http://127.0.0.1:8090/v1"
+    assert settings.models.embed_url == "http://127.0.0.1:8082/v1"
     assert settings.models.llm_model == "llama-3.1-8b-instruct"
     assert settings.models.embed_model == "nomic-embed-text-v1.5"
     assert settings.data.kb_embedder == "llamacpp"
@@ -65,7 +65,7 @@ def test_env_example_loads(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(key, raising=False)
     s = load_settings(ENV_EXAMPLE)
     assert s.postgres.host == "localhost"
-    assert s.data.kb_min_similarity == 0.55
+    assert s.data.kb_min_similarity == 0.58
     assert s.data.bank_as_of is None  # empty value
     assert s.models.anthropic_api_key is None
     assert s.services.human_agent_available is True

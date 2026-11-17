@@ -20,6 +20,20 @@ setup: ## Install deps, create .env, start Postgres
 doctor: ## Check local prerequisites; model servers optional until M2 (ARGS=--strict to require them)
 	@bash scripts/doctor.sh $(ARGS)
 
+# Native Metal model servers (T-VOICE-01). They run on the Mac, never in Docker.
+.PHONY: models-setup models-up models-down models-health
+models-setup: ## Install model servers + download missing models (ARGS="--with-fallbacks --with-large-stt --dry-run")
+	@bash scripts/models/setup.sh $(ARGS)
+
+models-up: ## Start llama.cpp (LLM, embeddings), whisper.cpp, Kokoro, LiveKit on 127.0.0.1 (ARGS="llm embed" for a subset)
+	@bash scripts/models/up.sh $(ARGS)
+
+models-down: ## Stop the model servers models-up started
+	@bash scripts/models/down.sh
+
+models-health: ## Probe each model server; exit 1 naming any that is unhealthy
+	@python3 scripts/models/health.py $(ARGS)
+
 up: ## Start Linux services (Postgres) and wait until healthy
 	docker compose up -d --wait postgres
 

@@ -115,7 +115,9 @@ These are checked by CI or by tests. Details are in the constitution.
 |---|---|
 | Postgres + pgvector, Redis, Asterisk, LiveKit SIP, Langfuse, app services (bank API, gateway, scheduler, console API, Next.js console) | llama.cpp `llama-server` (Llama 3.1 8B, nomic-embed-text), whisper.cpp, Kokoro TTS, livekit-server, the agent worker |
 
-Unit and integration tests never need the native column.
+Unit and integration tests never need the native column. The native services are installed, started
+and checked with `make models-setup | models-up | models-health | models-down`; their ports and memory
+footprints are in [docs/dev-setup.md §2](docs/dev-setup.md#2-native-model-servers-needed-from-m2).
 
 ## Gotchas
 - Port 5432 may already be used by a local Postgres. Set `POSTGRES_PORT` in `.env`.

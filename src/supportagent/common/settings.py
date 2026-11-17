@@ -63,7 +63,7 @@ class DataSettings(_Group):
 
     bank_as_of: date | None = None
     kb_embedder: Literal["llamacpp", "fake"] = "llamacpp"
-    kb_min_similarity: float = Field(0.55, ge=0.0, le=1.0)
+    kb_min_similarity: float = Field(0.58, ge=0.0, le=1.0)
     contact_rules_path: Path = Path("data/config/contact_rules.yaml")
     promise_max_days: int = Field(14, ge=1)
     transcripts_dir: Path = Path("var/transcripts")
@@ -93,14 +93,14 @@ class ModelsSettings(_Group):
 
     # llama.cpp `llama-server` (OpenAI-compatible, base URLs include /v1). The model names are the
     # servers' `--alias`; the GGUF paths are what scripts/models/ starts them with.
-    llm_url: str = "http://localhost:8090/v1"
-    embed_url: str = "http://localhost:8082/v1"
+    llm_url: str = "http://127.0.0.1:8090/v1"
+    embed_url: str = "http://127.0.0.1:8082/v1"
     llm_provider: Literal["llamacpp", "anthropic"] = "llamacpp"
     llm_model: str = "llama-3.1-8b-instruct"
     embed_model: str = "nomic-embed-text-v1.5"
     llm_gguf: Path = Path("models/llm/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf")
     embed_gguf: Path = Path("models/embed/nomic-embed-text-v1.5.Q8_0.gguf")
-    stt_url: str = "http://localhost:8178"
+    stt_url: str = "http://127.0.0.1:8178"
     # whisper-server ignores the request's model name (it serves WHISPER_MODEL); the OpenAI API needs one.
     stt_model: str = "whisper-1"
     stt_language: str = "en"
@@ -112,7 +112,7 @@ class ModelsSettings(_Group):
     endpointing_min_delay_s: float = Field(0.4, gt=0)
     endpointing_max_delay_s: float = Field(3.0, gt=0)
     interruption_min_s: float = Field(0.4, gt=0)
-    tts_url: str = "http://localhost:8880"
+    tts_url: str = "http://127.0.0.1:8880"
     tts_voice: str = "af_heart"
     tts_model: str = "kokoro"
     anthropic_model: str = "claude-haiku-5-5"
@@ -145,7 +145,7 @@ class LiveKitSettings(_Group):
     The key/secret defaults are the ones `livekit-server --dev` uses.
     """
 
-    livekit_url: str = "ws://localhost:7880"
+    livekit_url: str = "ws://127.0.0.1:7880"
     livekit_api_key: str = "devkey"
     livekit_api_secret: SecretStr = SecretStr("secret")
     sip_outbound_trunk_id: str | None = None

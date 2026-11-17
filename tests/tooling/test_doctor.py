@@ -15,7 +15,7 @@ SYSTEM_PATH = f"/usr/bin{os.pathsep}/bin"
 
 REQUIRED = ["uv", "docker", "docker-daemon", "compose", "postgres-port"]
 OPTIONAL = ["llama-server", "llm", "embed", "whisper", "kokoro", "livekit"]
-HINT_COMMANDS = {"brew", "open", "update", "set", "llama-server", "git"}
+HINT_COMMANDS = {"brew", "open", "update", "set", "make"}
 
 
 def _free_port() -> int:
@@ -82,9 +82,9 @@ def test_required_pass_optional_missing_exits_zero(stub_path: str, tmp_path: Pat
     for check in REQUIRED:
         assert f"✓ {check}:" in res.stdout
     assert "✗ llm: not reachable" in res.stdout
-    assert "(optional until M2) → llama-server -m " in res.stdout
+    assert "(optional until M2) → make models-up ARGS=llm" in res.stdout
     assert "--alias llama-3.1-8b-instruct --jinja" in res.stdout
-    assert "--embedding --pooling mean" in res.stdout
+    assert "✗ embed: not reachable" in res.stdout and "→ make models-up ARGS=embed" in res.stdout
 
 
 def test_strict_fails_on_optional(stub_path: str, tmp_path: Path) -> None:

@@ -49,9 +49,10 @@ src/supportagent/voice/
   silence.py        # SilencePolicy + attach_silence_policy
   latency.py        # LatencyTracker, LatencySummary
 scripts/models/
-  setup.sh          # brew deps, model pulls/downloads into ./models (idempotent)
-  up.sh / down.sh   # start/stop native servers, logs + pids in var/run, var/log
-  health.py         # probe each endpoint, exit 1 if any unhealthy (stdlib only)
+  _env.sh           # sourced: settings from env / .env / defaults, port_of, abs_path
+  setup.sh          # brew deps, missing GGUF/GGML downloads (sha256-checked) into ./models, Kokoro (idempotent)
+  up.sh / down.sh   # start/stop native servers, pids in var/run, logs in var/log; ports already in use are left alone
+  health.py         # probe each endpoint, exit 1 naming any unhealthy one (stdlib only)
 scripts/dev_token.py      # mint a LiveKit token for the playground
 scripts/bench_latency.py  # local vs hosted benchmark -> docs/reports/
 tests/voice/
@@ -78,7 +79,10 @@ tests/voice/
 | Local model server | llama.cpp `llama-server` (one process for chat, one for embeddings) | Already installed, plain GGUF files reused across projects (disk budget), OpenAI-compatible; replaced Ollama on 2026-11-07 |
 | Local LLM | Llama 3.1 8B Instruct Q4_K_M | Reliable tool calling via its chat template, no thinking mode to disable, the GGUF was already on disk |
 | Hosted LLM | `livekit-plugins-anthropic`, `claude-haiku-5-5` | F14 benchmark; synthetic data only |
-| Model files | `./models/` (git-ignored) | Reproducible paths; not in Docker (no Metal GPU) |
+| Model files | `./models/` (git-ignored); an existing GGUF (`LLM_GGUF`/`EMBED_GGUF`) or Hugging Face cache copy is reused | Reproducible paths; not in Docker (no Metal GPU); disk budget |
+| Model URLs | `127.0.0.1`, never `localhost` | macOS resolves `localhost` to `::1` first; a tunnel on `[::1]:8090` hijacked the LLM URL on the dev Mac (2026-11-09) |
+| Kokoro-FastAPI | clone pinned to `KOKORO_REF` (default `v0.9.2`), started with its `start-gpu_mac.sh` and `HOST=127.0.0.1` | Upstream script handles MPS env; pinned ref keeps setup reproducible |
+| Servers already running | `up.sh` leaves a port that already answers alone; `down.sh` stops only pids it wrote | Hand-started servers keep running |
 
 ## Dependencies
 Runtime: `livekit-agents`, `livekit-plugins-openai`, `livekit-plugins-silero`,

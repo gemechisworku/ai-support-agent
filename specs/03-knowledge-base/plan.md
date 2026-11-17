@@ -108,9 +108,11 @@ rows from the same embedder (vectors from different models are not comparable).
   "what's the weather in Paris" and "who won the football match yesterday" are not (no full-text
   match / low similarity). Known hash false positives: "tell me a joke", "what is the capital of
   France" (lexical overlap with "tell us", "working capital"); the real embedder is the quality bar.
-- `KB_MIN_SIMILARITY = 0.55` (nomic-embed-text) is still the untuned starting value: no embeddings server was
-  available when T-KB-06 was built. Run `uv run pytest -m eval -s tests/kb/test_golden.py`; it prints
-  hit@4, MRR and the similarity range, then set the default just below the lowest relevant similarity.
+- `KB_MIN_SIMILARITY = 0.58`, tuned for nomic-embed-text v1.5 (Q8_0 on llama.cpp) by T-VOICE-01 on
+  2026-11-09: `uv run pytest -m eval -s tests/kb/test_golden.py` gives hit@4 1.000, MRR 0.971, relevant
+  best similarity 0.636–0.877; off-topic questions ("capital of France", "weather in Paris", "tell me a
+  joke") peak at 0.530. 0.58 sits in that gap, with ~0.05 margin each side. Re-run the eval and
+  re-tune if the embedder, its quantisation or the corpus changes.
 
 ## Dependencies
 `python-frontmatter` (or `pyyaml` + a split on `---`), `pgvector` (SQLAlchemy `Vector` type), `httpx`

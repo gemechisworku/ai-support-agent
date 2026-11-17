@@ -244,7 +244,7 @@ def test_get_embedder_selects_fake(settings: Settings, monkeypatch: pytest.Monke
 def test_get_embedder_defaults_to_llamacpp(settings: Settings) -> None:
     emb = get_embedder(settings)
     assert isinstance(emb, OpenAICompatEmbedder)
-    assert emb.base_url == "http://localhost:8082/v1"
+    assert emb.base_url == "http://127.0.0.1:8082/v1"
     assert emb.name == "llamacpp/nomic-embed-text-v1.5"
 
 

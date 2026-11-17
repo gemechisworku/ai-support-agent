@@ -29,20 +29,16 @@ Native model servers (llama.cpp, whisper.cpp, Kokoro, LiveKit) are needed from m
 `make doctor` to see what is missing, and follow [docs/dev-setup.md](docs/dev-setup.md).
 
 ## Run it locally
-Everything binds to `localhost`. Ports and model paths come from `.env` (see `.env.example`).
+Everything binds to the loopback address (127.0.0.1). Ports and model paths come from `.env` (see `.env.example`).
 
-**1. Native model servers** (macOS, Metal; one terminal tab each). Install them once with
-[docs/dev-setup.md](docs/dev-setup.md). The console and gateway need only the embeddings server, for
-policy search. To skip it, set `KB_EMBEDDER=fake` in `.env`.
+**1. Native model servers** (macOS, Metal). The console and gateway need only the embeddings server, for
+policy search. To skip it, set `KB_EMBEDDER=fake` in `.env`. Details, ports and memory are in
+[docs/dev-setup.md §2](docs/dev-setup.md#2-native-model-servers-needed-from-m2).
 ```bash
-# Embeddings (nomic-embed-text v1.5) on :8082. Used by policy search and `make kb-ingest`.
-llama-server -hf nomic-ai/nomic-embed-text-v1.5-GGUF:Q8_0 --alias nomic-embed-text-v1.5 \
-  --embedding --pooling mean -c 2048 -ngl 99 --host 127.0.0.1 --port 8082
-# LLM (Llama 3.1 8B Instruct) on :8090. Used by the agent; -m is the GGUF path (LLM_GGUF in .env).
-llama-server -m /path/to/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf --alias llama-3.1-8b-instruct --jinja -c 8192 -ngl 99 --host 127.0.0.1 --port 8090
-# Speech-to-text (whisper.cpp) on :8178. Used by the voice pipeline.
-whisper-server -m models/whisper/ggml-small.en.bin --host 127.0.0.1 --port 8178 \
-  --inference-path /v1/audio/transcriptions
+make models-setup          # once: brew deps + missing model files (reuses existing GGUFs; ARGS=--dry-run to preview)
+make models-up             # LLM :8090, embeddings :8082, whisper :8178, Kokoro :8880, LiveKit :7880 (ARGS="embed" for one)
+make models-health         # ✓/✗ per server
+make models-down           # stop them
 make doctor                # ✓/✗ for every prerequisite and server
 ```
 

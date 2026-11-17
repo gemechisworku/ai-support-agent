@@ -15,5 +15,6 @@ build/
 /models/
 /recordings/
 /var/
+/vendor/
 .claude/settings.local.json
 .claude/worktrees/
