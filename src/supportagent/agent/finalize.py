@@ -162,7 +162,10 @@ def _write_transcript(state: CallState, store: TranscriptStore) -> str | None:
     try:
         for turn in builder.turns:
             store.append(state.call_id, turn.model_copy(update={"known_pii": known}))
-        builder.add_turn("system", f"call ended after: {visited}", state=None)
+        marker = f"call ended after: {visited}"
+        if state.end_reason:
+            marker += f"; reason: {state.end_reason}"
+        builder.add_turn("system", marker, state=None)
         store.append(state.call_id, builder.turns[-1])
         return store.uri(state.call_id)
     except Exception as exc:  # disk full, bad directory, ...: the outcome must still be written

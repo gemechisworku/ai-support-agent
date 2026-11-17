@@ -7,9 +7,8 @@
 1. parses `CallMetadata` (room metadata, or SIP attributes for inbound calls);
 2. calls `POST /sessions` with the worker token, in code; the token is kept in `CallState` and never put in a prompt;
 3. builds a `GatewayClient` (MCP `ClientSession` over streamable HTTP with the bearer header);
-4. builds the `AgentSession` via `voice.build_session()`, with `userdata=CallState`;
-5. starts at `GreetingAgent`;
-6. registers a shutdown callback that always writes the outcome (`finalize()`).
+4. builds the `AgentSession` with `session_factory.build_agent_session()` (providers and turn-taking from the voice module), with `userdata=CallState`;
+5. registers a shutdown callback that always writes the outcome (`finalize()`), then starts at `GreetingAgent` (`worker.run_call`, T-AGENT-13).
 
 **Tools are wrapped, not auto-exposed.** LiveKit's automatic MCP tool exposure is **not** used. Each
 state declares explicit `@function_tool` wrappers that call `GatewayClient`. This keeps a per-state
@@ -58,7 +57,8 @@ in U2 leads to `refer_to_human` with reason `hardship`.
 ## File layout
 ```
 src/supportagent/agent/
-  worker.py           # AgentServer entrypoint `support-agent`; setup_call/finish_call/teardown_call (testable seams)
+  worker.py           # AgentServer entrypoint `support-agent`; prewarm, setup_call/run_call/finish_call/teardown_call (testable seams)
+  session_factory.py  # build_agent_session(), entry_agent(), wire_call(): recorder + silence policy + sentiment + close hook (T-AGENT-13)
   context.py          # parse_call_metadata(), CallState (userdata, token never in repr; holds the OutcomeBuilder)
   gateway_client.py   # GatewayPort protocol, GatewayClient (typed async methods over MCP), open/close_session
   guard.py            # VerifiedGateway: refuses account-data tools until CallState.verified (T-AGENT-04)
@@ -338,6 +338,31 @@ tests/agent/          # mirrors the modules above
 - **Not enforced at the speech output.** The check is a test and eval, not a runtime filter on what the model
   says; the code-level guarantees are that the model is only ever given grounded text and that the verification
   guard stands in front of every account read.
+
+## Session wiring (T-AGENT-13)
+- **Flow of a call.** `entrypoint` connects, parses the call context, opens the gateway session (`setup_call`), then
+  `run_call`: `build_agent_session` → `wire_call` → register the shutdown callback → `session.start(entry_agent, room=...)`.
+  The shutdown callback is registered *before* the session starts, so a call that fails to start is still finalized and
+  torn down. The greeting speaks the `ai_recording` disclosure first; the router, account and policy states follow.
+  `run_call(room=None)` starts a text-only session: that is the seam the tests use, with `ScriptedLLM` and `FakeGateway`.
+- **`wire_call(session, state, settings, ...)`** attaches, in order: the recorder (`attach_recorder`: turns and tool
+  calls onto `CallState.outcome`, redacted only when the transcript is written); the silence policy
+  (`voice.silence`, thresholds `SILENCE_REPROMPT_S` / `SILENCE_END_S`): one re-prompt through `session.say(REPROMPT_LINE)`,
+  then `closing.goodbye_line` (not interruptible) and `session.shutdown(drain=True)`; an `on_close` hook (the worker uses it to
+  end the job with `ctx.shutdown("session closed")`, which runs the shutdown callback); and the sentiment classifier
+  (`llm_sentiment_classifier(session.llm)`, handed to `finalize` as `classify`, called once at the end).
+- **End reason.** The agent ending a call sets `CallState.end_reason` (`"silence"`); `finalize` writes it in the
+  transcript's call-ended marker (`call ended after: greeting; reason: silence`). The PRD §8 `CallOutcome` has no
+  end-reason field and its contract belongs to another task, so none was added: a call nobody spoke in is recorded
+  as `contact_result=no_answer`.
+- **Prewarm.** `prewarm` (`AgentServer.setup_fnc`) loads the Silero VAD once per worker process. The turn detector
+  cannot be loaded there: LiveKit's `EnglishModel()` calls `get_job_context().inference_executor`, so it raises outside
+  a job (found by running `prewarm` for real). The entrypoint builds it per call, which is cheap because the model runs
+  in LiveKit's shared inference process. Its weights must be downloaded first (`python -m supportagent.agent.worker
+  download-files`); T-VOICE-05's setup guide lists that step. `initialize_process_timeout` is 60 s.
+- **Tests.** `tests/agent/test_session_wiring.py` (a whole text-mode call through the real states, the silence policy
+  on a fake clock and fake session, the close hook, the sentiment classifier) and additions to `test_worker.py`
+  (`prewarm`, `run_call` order and one `finish_call`).
 
 ## Key decisions
 | Decision | Choice | Why |

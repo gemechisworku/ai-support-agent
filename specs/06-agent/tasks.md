@@ -294,7 +294,7 @@ it yet"). Then capture a new promise or a callback, or hand to collections or es
 **Files:** `src/supportagent/agent/states/callback.py`, `prompts/callback.md`, tests above
 
 ### T-AGENT-13 · Wire the agent session into the worker
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #108
 - **Depends on:** T-AGENT-04, T-AGENT-05, T-AGENT-06, T-AGENT-07, T-AGENT-08, T-VOICE-03
@@ -307,17 +307,19 @@ starts a live conversation: `worker.entrypoint` only sets up and tears down a ca
 - `entrypoint` starts the session in the room with the entry state (`GreetingAgent`), attaches the silence policy
   (the re-prompt through `session.say`; the end through the closing goodbye and `session.shutdown`), the recorder
   (`attach_recorder`) and the sentiment classifier (`llm_sentiment_classifier`), and runs `finish_call` on shutdown.
-- `prewarm` loads Silero and the turn detector once per worker process.
+- `prewarm` loads Silero once per worker process (the turn detector needs a job context, so the entrypoint builds it per call).
 
 **Acceptance criteria**
-- [ ] A text-mode call through `entrypoint`'s wiring (fake room, scripted LLM) greets with the recording disclosure, verifies and answers a balance question, and ends with exactly one written outcome
-- [ ] The silence policy is attached: one re-prompt, then the closing goodbye and the end reason `silence` in the outcome
-- [ ] Turns reach the transcript store through the recorder; the sentiment classifier is called once at the end
-- [ ] `prewarm` loads VAD and the turn detector once, not per call
-- [ ] `lint-imports` passes (the worker is the only module wiring LiveKit session objects to the agent states)
+- [x] A text-mode call through `entrypoint`'s wiring (fake room, scripted LLM) greets with the recording disclosure, verifies and answers a balance question, and ends with exactly one written outcome
+- [x] The silence policy is attached: one re-prompt, then the closing goodbye and the end reason `silence` in the transcript's call-ended marker (the PRD §8 `CallOutcome` has no end-reason field; a silent call is `no_answer`)
+- [x] Turns reach the transcript store through the recorder; the sentiment classifier is called once at the end
+- [x] `prewarm` loads the VAD once per worker process, not per call; the turn detector is built per call inside the job (it cannot be built in `prewarm`)
+- [x] `lint-imports` passes (the worker is the only module wiring LiveKit session objects to the agent states)
 
 **Tests**
 - `tests/agent/test_worker.py` (unit): the wiring against a fake session and fake room (disclosure first, silence re-prompt then end, finalize once, prewarm once)
 - `tests/agent/test_session_wiring.py` (unit, text mode): the three flows above through the real states with `ScriptedLLM` and `FakeGateway`
 
-**Files:** `src/supportagent/agent/worker.py`, `src/supportagent/agent/session_factory.py`, tests above
+**Files:** `src/supportagent/agent/worker.py`, `src/supportagent/agent/session_factory.py`, `src/supportagent/agent/context.py` (`end_reason`), `src/supportagent/agent/finalize.py` (the marker), tests above
+
+*(Checked on 2026-11-17: `python -m supportagent.agent.worker dev` registered as `support-agent` against a local dev LiveKit server; `prewarm` loaded the real Silero VAD. A live call through the playground is T-VOICE-05.)*

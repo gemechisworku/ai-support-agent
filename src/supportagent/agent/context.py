@@ -96,6 +96,7 @@ class CallState:
     disclosures: DisclosureRegistry | None = field(default=None, repr=False)  # loaded on first use
     callee_first_name: str | None = None  # outbound: the first name from `lookup_by_phone` (not verified yet)
     third_party_callback_note: str | None = None  # what a third party said about a good time to call back
+    end_reason: str | None = None  # why the agent ended the call itself, e.g. "silence" (T-AGENT-13)
     # --- routing (T-AGENT-05)
     after_verification: str | None = None  # state to enter once verified, set by the router (inbound)
     outcome: OutcomeBuilder = field(

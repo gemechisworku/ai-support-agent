@@ -67,7 +67,7 @@ async def test_finish_call_finalizes_before_teardown_and_tears_down_even_if_fina
 
     order: list[str] = []
 
-    async def fake_finalize(state: CallState, *, settings: Settings) -> None:
+    async def fake_finalize(state: CallState, *, settings: Settings, classify: object = None) -> None:
         order.append("finalize")
         if state.metadata.campaign is Campaign.playground:
             raise RuntimeError("boom with a secret")
@@ -89,3 +89,108 @@ async def test_finish_call_finalizes_before_teardown_and_tears_down_even_if_fina
     order.clear()
     await worker.finish_call(settings, state(Campaign.playground), object())  # type: ignore[arg-type]
     assert order == ["finalize", "teardown"]
+
+
+# --------------------------------------------------------------------------- T-AGENT-13: the session wiring
+
+
+def test_prewarm_loads_only_the_vad_once_per_process(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    from supportagent.agent import worker
+    from supportagent.voice import providers
+
+    loads: list[str] = []
+    monkeypatch.setattr(providers, "build_vad", lambda: loads.append("vad") or "VAD")
+
+    def no_job_context() -> object:
+        raise RuntimeError("no job context found")  # what EnglishModel() does outside a job
+
+    monkeypatch.setattr(providers, "build_turn_detector", no_job_context)
+    proc = SimpleNamespace(userdata={})
+
+    worker.prewarm(proc)  # type: ignore[arg-type]
+
+    assert proc.userdata == {"vad": "VAD"}
+    assert loads == ["vad"]  # once, in the process, not per call; the turn detector waits for the job
+    assert worker.server.setup_fnc is worker.prewarm
+
+
+async def test_run_call_wires_the_session_then_starts_it_and_finishes_the_call_once(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    from livekit.agents import AgentSession
+    from pydantic import SecretStr
+
+    import supportagent.agent.states  # noqa: F401  (importing it registers every state)
+    from supportagent.agent import worker
+    from supportagent.agent.context import CallState
+    from supportagent.agent.testing import FakeGateway, ScriptedLLM
+    from supportagent.contracts.call import CallMetadata
+
+    events: list[str] = []
+    sessions: list[AgentSession[CallState]] = []
+
+    def fake_build(
+        settings: Settings, vad: object, state: CallState, **kwargs: object
+    ) -> AgentSession[CallState]:
+        events.append(f"build vad={vad} turn={kwargs.get('turn_detector')}")
+        session = AgentSession[CallState](llm=ScriptedLLM([]), userdata=state)
+        real_start = session.start
+
+        async def start(agent: object, **kw: object) -> object:
+            events.append(f"start room={kw.get('room', 'none')}")
+            return await real_start(agent, **kw)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(session, "start", start)
+        sessions.append(session)
+        return session
+
+    async def fake_finish(
+        settings: Settings, state: CallState, gateway: object, *, classify: object = None
+    ) -> None:
+        events.append(f"finish classify={'yes' if callable(classify) else 'no'}")
+
+    class Ctx:
+        def __init__(self) -> None:
+            self.callbacks: list[object] = []
+            self.shutdowns: list[str] = []
+
+        def add_shutdown_callback(self, callback: object) -> None:
+            events.append("register shutdown")
+            self.callbacks.append(callback)
+
+        def shutdown(self, reason: str = "") -> None:
+            self.shutdowns.append(reason)
+
+    monkeypatch.setattr(worker, "build_agent_session", fake_build)
+    monkeypatch.setattr(worker, "finish_call", fake_finish)
+    meta = CallMetadata(
+        call_id="b5b6d2c4-6f7e-4c5a-9a8e-1d2c3b4a5f61",
+        direction=Direction.inbound,
+        campaign=Campaign.playground,
+    )
+    state = CallState(metadata=meta, gateway=FakeGateway(), session_token=SecretStr("t"))
+    ctx = Ctx()
+
+    session = await worker.run_call(ctx, settings, state, object(), vad="V", turn_detector="T")  # type: ignore[arg-type]
+    try:
+        # the shutdown callback is registered before the session starts, so a failed start still tears down
+        assert events[:3] == ["build vad=V turn=T", "register shutdown", "start room=none"]
+        assert state.states_visited[:1] == ["greeting"]  # the entry state
+        assert session is sessions[0]
+
+        session.emit(
+            "close", SimpleNamespace(reason="x")
+        )  # the session closed: the job is ended through the context
+        assert ctx.shutdowns == ["session closed"]
+
+        for callback in ctx.callbacks:
+            await callback()  # type: ignore[operator]
+        assert [e for e in events if e.startswith("finish")] == ["finish classify=yes"]
+    finally:
+        await session.aclose()
