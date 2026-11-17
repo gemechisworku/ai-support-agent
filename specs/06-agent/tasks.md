@@ -292,3 +292,32 @@ it yet"). Then capture a new promise or a callback, or hand to collections or es
 - `tests/agent/test_callback.py` (unit, text mode): broken-promise follow-up for Frank; a callback with nothing due
 
 **Files:** `src/supportagent/agent/states/callback.py`, `prompts/callback.md`, tests above
+
+### T-AGENT-13 · Wire the agent session into the worker
+- **Status:** todo
+- **Milestone:** M2
+- **Issue:** #108
+- **Depends on:** T-AGENT-04, T-AGENT-05, T-AGENT-06, T-AGENT-07, T-AGENT-08, T-VOICE-03
+- **Requirements:** AGENT-R1
+
+Added on 2026-11-17: every conversation state, the silence policy and the outcome recorder exist, but nothing
+starts a live conversation: `worker.entrypoint` only sets up and tears down a call. Connect them.
+- A pure `build_agent_session(settings, vad, state)` builds the `AgentSession` from the T-VOICE-02 providers and
+  T-VOICE-03 `build_session_options`, with `CallState` as `userdata`.
+- `entrypoint` starts the session in the room with the entry state (`GreetingAgent`), attaches the silence policy
+  (the re-prompt through `session.say`; the end through the closing goodbye and `session.shutdown`), the recorder
+  (`attach_recorder`) and the sentiment classifier (`llm_sentiment_classifier`), and runs `finish_call` on shutdown.
+- `prewarm` loads Silero and the turn detector once per worker process.
+
+**Acceptance criteria**
+- [ ] A text-mode call through `entrypoint`'s wiring (fake room, scripted LLM) greets with the recording disclosure, verifies and answers a balance question, and ends with exactly one written outcome
+- [ ] The silence policy is attached: one re-prompt, then the closing goodbye and the end reason `silence` in the outcome
+- [ ] Turns reach the transcript store through the recorder; the sentiment classifier is called once at the end
+- [ ] `prewarm` loads VAD and the turn detector once, not per call
+- [ ] `lint-imports` passes (the worker is the only module wiring LiveKit session objects to the agent states)
+
+**Tests**
+- `tests/agent/test_worker.py` (unit): the wiring against a fake session and fake room (disclosure first, silence re-prompt then end, finalize once, prewarm once)
+- `tests/agent/test_session_wiring.py` (unit, text mode): the three flows above through the real states with `ScriptedLLM` and `FakeGateway`
+
+**Files:** `src/supportagent/agent/worker.py`, `src/supportagent/agent/session_factory.py`, tests above

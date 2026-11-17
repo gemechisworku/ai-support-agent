@@ -88,7 +88,7 @@ Add `supportagent.voice.providers` with `build_stt`, `build_llm`, `build_tts`, `
 **Files:** `src/supportagent/voice/providers.py`, `src/supportagent/common/settings.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/voice/test_providers.py`
 
 ### T-VOICE-03 · Pipeline tuning: VAD, turn detection, barge-in, streaming TTS, silence policy
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #43
 - **Depends on:** T-VOICE-02
@@ -108,10 +108,11 @@ events. The agent (T-AGENT-08) supplies the re-prompt and closing lines.
 - [x] `build_session_options` enables interruptions and model-based turn detection, and passes STT/LLM/TTS from the factory.
 - [x] TTS is fed sentence by sentence (the first sentence is spoken before the LLM finishes).
 - [x] Silence: one re-prompt after `SILENCE_REPROMPT_S`; `on_end("silence")` after `SILENCE_END_S`; caller speech resets the timers; agent speech does not count as caller activity.
-- [ ] Live checklist: barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in logs).
-  *(Needs the running pipeline and a person talking over the agent; not run when this task was committed,
-  which is why the status stays `todo`. `tests/voice/test_live_barge_in.py` measures it from a session event log;
-  tick this and set the status to `done` after the live run.)*
+- [x] Barge-in latency is measured by `barge_in_latency_s` from the session's `agent_state_changed` events.
+  *(Re-scoped on 2026-11-17: the live check, barge-in stops TTS in < 300 ms with a person talking over the agent,
+  needs a running conversation. That only exists after T-AGENT-13 and T-VOICE-05, which depend on this task, so
+  the live criterion moved to T-VOICE-05. Here the criterion is the measurement code, covered by
+  `tests/voice/test_session.py` on synthetic event logs.)*
 
 **Tests**
 - `tests/voice/test_session.py` (unit): the options include VAD, model-based turn detection, interruptions enabled (`turn_handling.interruption.enabled`; the flat `allow_interruptions` keyword is deprecated in livekit-agents 1.x) and the configured delays; the sentence tokenizer releases the first sentence before the reply is complete; `barge_in_latency_s` on synthetic event logs.
@@ -146,8 +147,8 @@ Add `latency.LatencyTracker`. It subscribes to `metrics_collected`, groups EOU/S
 - **Status:** todo
 - **Milestone:** M2
 - **Issue:** #45
-- **Depends on:** T-VOICE-03, T-AGENT-01
-- **Requirements:** VOICE-R7
+- **Depends on:** T-VOICE-03, T-AGENT-01, T-AGENT-13
+- **Requirements:** VOICE-R4, VOICE-R7
 
 Make the agent reachable with no telephony.
 - `make agent-dev` runs the worker (`python -m supportagent.agent.worker dev`) against the dev
@@ -161,6 +162,7 @@ Make the agent reachable with no telephony.
 - [ ] `make models-up && make agent-dev`, then opening the playground with the printed token, gives a spoken greeting.
 - [ ] The README / `docs/dev-setup.md` has a 5-step "talk to the agent" guide.
 - [ ] The playground call produces a `CallOutcome` with `campaign="playground"` and latency fields.
+- [ ] Live checklist (moved from T-VOICE-03): barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in the session event log; run `tests/voice/test_live_barge_in.py` with `BARGE_IN_EVENT_LOG`)
 
 **Tests**
 - `tests/voice/test_dev_token.py` (unit): the token decodes (PyJWT) with the room name, identity and grants; the dev key and secret come from settings.
