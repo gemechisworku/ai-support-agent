@@ -110,6 +110,9 @@ class ModelsSettings(_Group):
     # Development aid (T-VOICE-05): append turn-taking state changes (no speech) to this JSON-lines file,
     # for the live barge-in check. `make agent-dev` sets it; empty means off.
     session_event_log: str | None = None
+    # `make playground` (scripts/playground.sh reads it from .env): the port of LiveKit's open-source Agents
+    # Playground on 127.0.0.1. 3100, because Langfuse uses 3000.
+    playground_port: int = Field(3100, ge=1, le=65535)
     # Turn taking (VOICE-R4): how long to wait after speech before answering, and how long the caller must
     # speak over the agent to count as barging in.
     endpointing_min_delay_s: float = Field(0.4, gt=0)

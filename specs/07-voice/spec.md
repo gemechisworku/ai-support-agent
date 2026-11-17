@@ -24,7 +24,7 @@ LiveKit config (`08-telephony`); tracing export (`10-observability`); text-mode 
 - **VOICE-R4** (P0 · F1, NFR-LAT) — The voice session shall use Silero VAD and model-based end-of-turn detection, stream TTS sentence by sentence while the LLM is still generating, and stop TTS within 300 ms of the caller barging in.
 - **VOICE-R5** (P0 · F1) — On caller silence the session shall re-prompt once after `SILENCE_REPROMPT_S` and politely end the call after `SILENCE_END_S`, handing the closing line and the end reason to the agent.
 - **VOICE-R6** (P0 · NFR-LAT, AC-EXP) — The voice module shall measure per-turn latency (end-of-utterance delay, STT, LLM time-to-first-token, TTS time-to-first-byte, end-of-speech → first agent audio) and report p50/p90 for the call outcome.
-- **VOICE-R7** (P0 · F1) — A developer shall be able to talk to the agent from a browser (LiveKit Agents playground) with no telephony running, using one make target.
+- **VOICE-R7** (P0 · F1) — A developer shall be able to talk to the agent from a browser (LiveKit's open-source Agents Playground, run locally with `make playground`) with no telephony running, using one make target for the worker.
 - **VOICE-R8** (P1 · NFR-LAT, NFR-CAP, AC-EXP) — A repeatable benchmark shall compare local and hosted LLM configurations against the NFR-LAT targets and record memory use with 1 and 2 concurrent sessions.
 
 ## Acceptance criteria

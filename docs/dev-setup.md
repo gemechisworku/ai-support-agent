@@ -110,8 +110,11 @@ inbound `campaign="playground"` call.
    to LiveKit's CLI (which reads its environment), so nothing has to be exported in the shell, and sets
    `SESSION_EVENT_LOG=var/log/session_events.jsonl` for the barge-in check.
 4. **Token.** In a second terminal, `make dev-token` (`ARGS="--room my-room --json"` for options). It prints the
-   LiveKit URL and a one-hour token signed with the dev key. Open <https://agents-playground.livekit.io>,
-   choose its manual connection, and paste the URL and the token. The token also dispatches the agent into the
+   LiveKit URL and a one-hour token signed with the dev key. Run `make playground` in another terminal (LiveKit's
+   open-source playground: the first run clones it into the git-ignored `vendor/agents-playground` at a pinned
+   commit and runs `npm install`; it then serves <http://127.0.0.1:3100>; `PLAYGROUND_PORT` changes the port). The
+   hosted playground at agents-playground.livekit.io is being retired by LiveKit. Open the local page, paste
+   `ws://127.0.0.1:7880` and the token, and click Connect. The token also dispatches the agent into the
    room: without that, an explicitly named worker is never sent to a room.
 5. **Talk.** Allow the microphone. The agent says the recording disclosure first. Verify with a persona from the
    console's **Test personas** page, then ask about the balance or a policy.

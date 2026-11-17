@@ -92,10 +92,12 @@ docker compose up -d --wait postgres bank-api gateway
 # 3. The agent worker. Leave it running; it checks steps 1-2 first and stops with a one-line hint if one is missing.
 make agent-dev                              # the first run downloads the turn-detector weights (needs the network once)
 
-# 4. In another terminal: a room token, then open https://agents-playground.livekit.io
-make dev-token                              # prints the LiveKit URL and a token; use the playground's manual connection
+# 4. Second terminal: LiveKit's open-source playground, served locally (first run clones it and runs npm install)
+make playground                             # then open http://127.0.0.1:3100
 
-# 5. Connect in the browser, allow the microphone, and talk.
+# 5. Third terminal: a room token. In the playground paste ws://127.0.0.1:7880 and the token, click Connect,
+#    allow the microphone, and talk.
+make dev-token
 ```
 The agent speaks the recording disclosure first. You are an unverified inbound caller, so ask "what's my balance?"
 and verify with a persona from the console's **Test personas** page (name, date of birth, last 4 of the loan).

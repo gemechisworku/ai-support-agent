@@ -35,12 +35,15 @@ models-health: ## Probe each model server; exit 1 naming any that is unhealthy
 	@python3 scripts/models/health.py $(ARGS)
 
 # Talk to the agent from a browser, with no telephony (T-VOICE-05). Needs `make models-up` and the gateway.
-.PHONY: agent-dev dev-token
+.PHONY: agent-dev dev-token playground
 agent-dev: ## Run the agent worker in dev mode against the local LiveKit server (checks servers and gateway first)
 	@$(PY) python scripts/agent_dev.py
 
 dev-token: ## Mint a room token for the browser playground (ARGS="--room my-room --json")
 	@$(PY) python scripts/dev_token.py $(ARGS)
+
+playground: ## Run LiveKit's open-source Agents Playground locally on http://127.0.0.1:3100 (first run clones + npm install)
+	@bash scripts/playground.sh $(ARGS)
 
 up: ## Start Linux services (Postgres) and wait until healthy
 	docker compose up -d --wait postgres

@@ -154,6 +154,10 @@ Make the agent reachable with no telephony.
 - `make agent-dev` runs the worker (`python -m supportagent.agent.worker dev`) against the dev
   LiveKit server.
 - `scripts/dev_token.py` mints a room token for the LiveKit Agents playground or `lk room join`.
+- `make playground` runs LiveKit's open-source Agents Playground locally (`scripts/playground.sh`: pinned clone into the
+  git-ignored `vendor/agents-playground`, `.env.local` from `.env`, `npm install`, bound to 127.0.0.1:3100). Added on
+  2026-11-17: LiveKit is retiring the hosted playground (agents-playground.livekit.io redirects to a 404) and keeps
+  the open-source one "for self-hosted use"; its connect screen takes a URL and a token.
 - A room with no `call_id` metadata is treated as an inbound call with `campaign="playground"` and a
   fresh `call_id`. The worker builds that context in T-AGENT-01; this task wires the dev defaults and
   the docs.

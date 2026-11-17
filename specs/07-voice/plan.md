@@ -64,6 +64,7 @@ scripts/models/
   health.py         # probe each endpoint, exit 1 naming any unhealthy one (stdlib only)
 scripts/agent_dev.py      # make agent-dev: preflight (servers, gateway, turn-detector weights once), LiveKit env from settings, worker dev
 scripts/dev_token.py      # make dev-token: a room token for the playground that also dispatches `support-agent`
+scripts/playground.sh     # make playground: LiveKit's open-source Agents Playground, pinned clone in vendor/, 127.0.0.1:3100
 scripts/bench_latency.py  # local vs hosted benchmark -> docs/reports/
 tests/voice/
   test_providers.py  test_session.py  test_silence.py  test_latency.py  test_health_script.py
@@ -87,6 +88,7 @@ tests/voice/
 | Decision | Choice | Why |
 |---|---|---|
 | Plugin surface | `livekit-plugins-openai` for all three local servers | One plugin, OpenAI-compatible servers, easy swap |
+| Browser client | LiveKit's open-source Agents Playground, cloned at a pinned commit into `vendor/` and run on 127.0.0.1:3100 by `make playground` | The hosted playground is being retired (2026-11-17); the open-source build has no cloud login and takes a URL plus a token. A page of our own would be a Next.js app under `web/` (constitution VIII), a possible later task |
 | Streaming STT | VAD-segmented `StreamAdapter` over whisper.cpp | Whisper is not truly streaming (PRD §12) |
 | Local model server | llama.cpp `llama-server` (one process for chat, one for embeddings) | Already installed, plain GGUF files reused across projects (disk budget), OpenAI-compatible; replaced Ollama on 2026-11-07 |
 | Local LLM | Llama 3.1 8B Instruct Q4_K_M | Reliable tool calling via its chat template, no thinking mode to disable, the GGUF was already on disk |
