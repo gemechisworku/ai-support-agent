@@ -80,6 +80,10 @@ Open this link (Ctrl-C here stops the playground):
 It presets Agent name = $AGENT_NAME, so the worker is dispatched into the room. Click Connect and allow the
 microphone. The playground connects to your LiveKit server at $WS_URL and mints its own token; \`make dev-token\`
 is not needed for it.
+
+If the page shows Agent name empty or "None" (settings saved in the browser from an earlier visit win over the
+link), click Disconnect, click the Agent name value, type $AGENT_NAME, press Enter, then Connect. Or open the link
+in a private window. With no agent name, no agent is dispatched and you hear nothing.
 EOF
 echo
 run sh -c "cd '$DIR' && exec npm run dev -- -p '$PORT' -H 127.0.0.1"
