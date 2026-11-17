@@ -33,9 +33,17 @@ different plugin.
   re-prompt) neither counts nor resets it, and the agent's reply to a caller turn restarts it, so
   `SILENCE_END_S` is total caller silence. `attach_silence_policy` polls every 0.25 s and calls
   `on_reprompt()` / `on_end("silence")` (sync or async; a raising callback is logged and ignored).
-- **Latency:** `LatencyTracker` consumes `metrics_collected` events (EOU, STT, LLM, TTS metrics) and keys
-  them by `speech_id` to compute per-turn `e2e = eou_delay + llm_ttft + tts_ttfb`. Percentiles use
-  `statistics.quantiles` with the "inclusive" method.
+- **Latency:** `LatencyTracker.add(metrics)` consumes LiveKit EOU, LLM and TTS metrics and keys them by
+  `speech_id` (LiveKit 1.8: STT metrics carry no `speech_id`, so the `stt` stage is the EOU metric's
+  `transcription_delay`). A turn completes when its three metrics have arrived, in any order; incomplete turns
+  (a tool-only turn, a barge-in before any audio) and cancelled calls are skipped, never counted as zero. Per turn:
+  `e2e = eou + llm_ttft + tts_ttfb`, where `llm_ttft` is summed over the turn's model calls (a tool turn waits
+  for each; tool execution time is not included) and `tts_ttfb` is the first spoken segment's. Percentiles use
+  `statistics.quantiles(n=100, method="inclusive")` (one value gives p50 = p90 = that value). One structured
+  `turn latency` log line per completed turn carries the figures only (no transcript text).
+  `attach_latency_tracker(session, tracker)` subscribes to `metrics_collected`; the worker calls it
+  (T-AGENT-13 / T-VOICE-05) and passes `summary.p50_ms`, `summary.p90_ms` and `summary.stage_latencies()` to
+  `OutcomeBuilder.set_latency(LatencyFigures(...))`.
 
 Everything LiveKit-specific sits behind thin factory functions, so unit tests never import model weights or
 open sockets.
@@ -67,9 +75,10 @@ tests/voice/
   `ANTHROPIC_API_KEY` (SecretStr), `STT_MODEL` (default `whisper-1`, the name the OpenAI client sends; whisper-server
   serves `WHISPER_MODEL` regardless), `STT_LANGUAGE` (`en`), `TTS_MODEL` (`kokoro`), `SILENCE_REPROMPT_S`, `SILENCE_END_S` (must exceed the re-prompt delay), `ENDPOINTING_MIN_DELAY_S`, `ENDPOINTING_MAX_DELAY_S`, `INTERRUPTION_MIN_S`, `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
   `LLM_GGUF` and `EMBED_GGUF` come from T-PLAT-07.
-- `LatencySummary`: `{stage: {"p50": float, "p90": float}}` for stages `eou`, `stt`, `llm_ttft`,
-  `tts_ttfb`, `e2e`, in seconds. `to_outcome()` returns `latency_p50` / `latency_p90` as the e2e
-  values, plus a `latency_stages` dict for traces.
+- `LatencySummary{turns, stages}`: `stages[name]` is `Percentiles(p50, p90)` in seconds (both `None` with no
+  data) for `eou`, `stt`, `llm_ttft`, `tts_ttfb`, `e2e`. `p50_ms` / `p90_ms` are the e2e values in whole
+  milliseconds, `stage_latencies()` gives `contracts.outcome.StageLatency` per stage, and `to_outcome()` returns the
+  `CallOutcome` fields `latency_p50`, `latency_p90` and `latency_stages` (empty with no data).
 
 ## Key decisions
 | Decision | Choice | Why |

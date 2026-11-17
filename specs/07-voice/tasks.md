@@ -122,7 +122,7 @@ events. The agent (T-AGENT-08) supplies the re-prompt and closing lines.
 **Files:** `src/supportagent/voice/session.py`, `src/supportagent/voice/silence.py`, `src/supportagent/common/settings.py`, `.env.example`, `tests/voice/test_session.py`, `tests/voice/test_silence.py`, `tests/voice/test_live_barge_in.py`
 
 ### T-VOICE-04 · Per-stage latency metrics
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #44
 - **Depends on:** T-VOICE-03
@@ -134,9 +134,9 @@ Add `latency.LatencyTracker`. It subscribes to `metrics_collected`, groups EOU/S
 `latency_stages` for traces (OBS).
 
 **Acceptance criteria**
-- [ ] Turns with missing stages (e.g. a tool-only turn) are skipped, not counted as zero.
-- [ ] Percentiles are correct for 1, 2 and 10 turns; an empty tracker returns `None` values, not an error.
-- [ ] The tracker emits a structured log line per turn (no transcript text, so no PII).
+- [x] Turns with missing stages (e.g. a tool-only turn) are skipped, not counted as zero.
+- [x] Percentiles are correct for 1, 2 and 10 turns; an empty tracker returns `None` values, not an error.
+- [x] The tracker emits a structured log line per turn (no transcript text, so no PII).
 
 **Tests**
 - `tests/voice/test_latency.py` (unit): synthetic metric events give the known p50/p90; out-of-order events are matched by `speech_id`; incomplete turns are skipped; `to_outcome()` output validates against the `CallOutcome` model.
