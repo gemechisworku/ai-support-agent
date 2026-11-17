@@ -19,6 +19,7 @@ from pydantic import SecretStr, ValidationError
 
 from supportagent.agent.gateway_client import GatewayPort
 from supportagent.agent.guard import VerifiedGateway
+from supportagent.agent.outcome import OutcomeBuilder
 from supportagent.contracts.call import CallMetadata
 from supportagent.contracts.outcome import Campaign, ContactResult, Direction, Intent
 
@@ -83,10 +84,8 @@ class CallState:
     first_name: str | None = None
     states_visited: list[str] = field(default_factory=list)  # BaseStateAgent.on_enter appends, in order
     concerns: list[str] = field(default_factory=list)  # kinds raised through `report_concern`
-    # Interrupts (AGENT-R3): the two flags the outcome carries and the consecutive-misunderstanding counter
-    # (`interrupts.screen_turn`). The outcome `intent[]` list is `intents` below.
-    dispute_flag: bool = False
-    cease_contact_flag: bool = False
+    # Interrupts (AGENT-R3): the consecutive-misunderstanding counter (`interrupts.screen_turn`).
+    # The outcome's intents and the dispute / cease-contact flags live on `outcome` (properties below).
     misunderstandings: int = 0
     misunderstood_this_turn: bool = False  # the latest caller turn counted as a misunderstanding
     screened_messages: set[str] = field(default_factory=set)  # caller messages already checked (by id)
@@ -98,17 +97,13 @@ class CallState:
     callee_first_name: str | None = None  # outbound: the first name from `lookup_by_phone` (not verified yet)
     third_party_callback_note: str | None = None  # what a third party said about a good time to call back
     # --- routing (T-AGENT-05)
-    # Outcome `intent[]` in the order first heard, once each: written by the router's routes (T-AGENT-05)
-    # and by the interrupt handlers (T-AGENT-03) through `record_intent`.
-    intents: list[Intent] = field(default_factory=list)
     after_verification: str | None = None  # state to enter once verified, set by the router (inbound)
-
-    def record_intent(self, intent: Intent) -> None:
-        """Note what the caller wanted. Each intent is kept once, in the order first heard."""
-        if intent not in self.intents:
-            self.intents.append(intent)
+    outcome: OutcomeBuilder = field(
+        init=False, repr=False
+    )  # the PRD §8 outcome, built up during the call (T-AGENT-08): the single source of intents and flags
 
     def __post_init__(self) -> None:
+        self.outcome = OutcomeBuilder(self.metadata)
         # Verification-before-data in code (AGENT-R2): account-data tools are refused until `verified`.
         if not isinstance(self.gateway, VerifiedGateway):
             self.gateway = VerifiedGateway(self.gateway, lambda: self.verified)
@@ -117,10 +112,39 @@ class CallState:
     def call_id(self) -> str:
         return self.metadata.call_id
 
+    # Intents and the two contact flags have one home, the OutcomeBuilder that `finalize` writes from.
+    # These views let the router (T-AGENT-05) and the interrupt handlers (T-AGENT-03) use them directly.
+
+    @property
+    def intents(self) -> list[Intent]:
+        """The outcome `intent[]` so far, in the order first heard, once each."""
+        return self.outcome.intents
+
+    def record_intent(self, intent: Intent) -> None:
+        self.outcome.add_intent(intent)
+
+    @property
+    def dispute_flag(self) -> bool:
+        return self.outcome.dispute_flag
+
+    @dispute_flag.setter
+    def dispute_flag(self, value: bool) -> None:
+        if value:
+            self.outcome.flag_dispute()
+
+    @property
+    def cease_contact_flag(self) -> bool:
+        return self.outcome.cease_contact_flag
+
+    @cease_contact_flag.setter
+    def cease_contact_flag(self, value: bool) -> None:
+        if value:
+            self.outcome.flag_cease_contact()
+
     def outcome_so_far(self) -> dict[str, Any]:
         """A snapshot of what the call has established so far (the draft the text harness returns).
 
-        T-AGENT-08's `OutcomeBuilder` replaces this with the validated `CallOutcome`.
+        The validated `CallOutcome` is built at the end of the call by `finalize` (from `outcome`).
         """
         return {
             "call_id": self.call_id,

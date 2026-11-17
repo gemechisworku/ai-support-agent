@@ -35,7 +35,7 @@ from supportagent.contracts.gateway import (
     TaskCreatedOutput,
     ToolResult,
 )
-from supportagent.contracts.outcome import Campaign, ContactResult, Direction
+from supportagent.contracts.outcome import Campaign, ContactResult, Direction, Intent
 
 PERSONA = PersonaCard(
     customer_id=9001,
@@ -194,6 +194,22 @@ async def test_dispute_when_unverified_escalates_without_a_gateway_write(prompts
     assert result.gateway.calls == []
     assert entered == [("escalation", EscalationReason.dispute)]
     assert result.outcome["dispute_flag"] is True  # the caller disputed, so the outcome says so
+
+
+async def test_interrupt_flags_and_intents_reach_the_outcome_builder(prompts: PromptRegistry) -> None:
+    """T-AGENT-03 + T-AGENT-08: `finalize` writes from the OutcomeBuilder, so the flags must land there."""
+    result = await _run(
+        prompts,
+        ["I dispute this charge", "and stop calling me"],
+        verified=True,
+        results={"set_contact_flag": _flag_ok("dispute")},
+    )
+    builder = result.state.outcome
+    assert builder.dispute_flag is True and builder.cease_contact_flag is True
+    assert Intent.dispute in builder.intents and Intent.cease_contact in builder.intents
+    # the CallState views read the same data
+    assert result.state.dispute_flag is True and result.state.cease_contact_flag is True
+    assert result.state.intents is builder.intents
 
 
 async def test_the_dispute_flag_is_written_once_per_call(prompts: PromptRegistry) -> None:

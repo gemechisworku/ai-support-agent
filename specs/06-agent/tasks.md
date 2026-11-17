@@ -183,7 +183,7 @@ Implement `PolicyAgent`, which answers only from the `search_policy` chunks of t
 **Files:** `src/supportagent/agent/states/policy.py`, `prompts/policy.md`, tests above
 
 ### T-AGENT-08 · Outcome capture, close and post-call summary
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #34
 - **Depends on:** T-AGENT-04, T-OBS-03
@@ -196,15 +196,16 @@ merges latency and versions, composes the template summary (F13), classifies sen
 `record_call_outcome` exactly once.
 
 **Acceptance criteria**
-- [ ] An outcome is written for completed, third-party, locked and disconnected calls (exactly once each)
-- [ ] The outcome validates against `contracts.outcome.CallOutcome`; `versions` and `transcript_uri` are set
-- [ ] The summary contains only outcome fields; no figure is absent from the tool results
+- [x] An outcome is written for completed, third-party, locked and disconnected calls (exactly once each)
+- [x] The outcome validates against `contracts.outcome.CallOutcome`; `versions` and `transcript_uri` are set
+- [x] The summary contains only outcome fields; no figure is absent from the tool results
 
 **Tests**
 - `tests/agent/test_outcome.py` (unit): builder merges and validation; the summary template per outcome type
 - `tests/agent/test_finalize.py` (unit): a disconnect mid-flow → one `record_call_outcome` on FakeGateway; a gateway error → retried once, then logged without PII
 
-**Files:** `src/supportagent/agent/context.py`, `states/closing.py`, `summary.py`, `worker.py`, tests above
+**Files:** `src/supportagent/agent/context.py`, `outcome.py`, `finalize.py`, `states/closing.py`, `summary.py`, `worker.py`,
+`tests/agent/test_closing.py` (also), tests above
 
 ### T-AGENT-09 · Pre-due reminder flow (U1)
 - **Status:** todo

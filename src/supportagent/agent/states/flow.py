@@ -27,6 +27,7 @@ REMINDER = "reminder"  # U1 (T-AGENT-09)
 COLLECTIONS_PURPOSE = "collections_purpose"  # U2 (T-AGENT-10)
 CALLBACK = "callback"  # U5 (T-AGENT-12)
 ESCALATION = "escalation"  # U6 (T-AGENT-11)
+CLOSING = "closing"  # read-back, callback offer, goodbye (T-AGENT-08)
 
 _AFTER_VERIFICATION: dict[Campaign, str] = {
     Campaign.pre_due: REMINDER,

@@ -58,8 +58,8 @@ in U2 leads to `refer_to_human` with reason `hardship`.
 ## File layout
 ```
 src/supportagent/agent/
-  worker.py           # AgentServer entrypoint `support-agent`; setup_call/teardown_call (testable seam)
-  context.py          # parse_call_metadata(), CallState (userdata, token never in repr) + OutcomeBuilder (T-AGENT-08)
+  worker.py           # AgentServer entrypoint `support-agent`; setup_call/finish_call/teardown_call (testable seams)
+  context.py          # parse_call_metadata(), CallState (userdata, token never in repr; holds the OutcomeBuilder)
   gateway_client.py   # GatewayPort protocol, GatewayClient (typed async methods over MCP), open/close_session
   guard.py            # VerifiedGateway: refuses account-data tools until CallState.verified (T-AGENT-04)
   disclose.py         # speak_disclosure(): registry text verbatim via session.say + disclosures_given tag (T-AGENT-04)
@@ -70,7 +70,9 @@ src/supportagent/agent/
                       # reminder.py collections.py callback.py escalation.py closing.py
   prompts/            # VERSION, shared.md, <state>.md (front matter {version}); registry.py: PromptRegistry
   transfer.py         # Transferer protocol + TransferResult (TEL-04 implements, tests inject FakeTransferer)
-  summary.py          # deterministic post-call summary template (F13)
+  summary.py          # deterministic post-call summary + closing read-back templates, figure-grounding check (T-AGENT-08)
+  outcome.py          # OutcomeBuilder, LatencyFigures (T-AGENT-08)
+  finalize.py         # attach_recorder(), finalize(): redacted transcript + the one outcome, sentiment (T-AGENT-08)
   testing.py          # FakeGateway (persona data), ScriptedLLM, FakeTransferer, run_text_scenario()
 tests/agent/          # mirrors the modules above
 ```
@@ -152,7 +154,7 @@ tests/agent/          # mirrors the modules above
   depth: the gateway enforces verification-before-data too.
 - **Call state:** `CallState` gains `contact_result`, `disclosures_given`, `disclosures` (the `DisclosureRegistry`, loaded on
   first use from `data/config/disclosures.yaml`), `callee_first_name` and `third_party_callback_note`;
-  `outcome_so_far()` includes `contact_result` and `disclosures_given`. T-AGENT-08's `OutcomeBuilder` consumes them.
+  `outcome_so_far()` includes `contact_result` and `disclosures_given`. T-AGENT-08's `finalize` consumes them.
 - **Tests** (`tests/agent/test_greeting_verify.py`): the successor states belong to later tasks, so the tests register
   stand-ins under the `flow` names and check the hand-offs and arguments.
 
@@ -225,6 +227,52 @@ tests/agent/          # mirrors the modules above
   tool that returns to the router. The three routes, policy → account switch with one `verify_identity`, a second
   account question without re-verifying, the full greeting → router → policy chain, and the missing-successor paths.
 
+## Outcome capture and close (T-AGENT-08)
+- **`OutcomeBuilder`** (`outcome.py`, held as `CallState.outcome`): states record what tool results established:
+  `record_promise(date, amount)` (the gateway's accepted values), `record_callback`, `record_escalation(reason, target)`
+  (`target` is the extension or `callback_queue`), `flag_dispute`, `flag_cease_contact`, `set_reason_code`,
+  `add_intent`, `add_kb_source("doc_id@version#section")`, `set_latency(LatencyFigures)` (T-VOICE-04 plugs in here) and
+  `know(*values)` (names and dates of birth the transcript must always redact; `VerifyAgent` records what the caller
+  said). Promises, callbacks, escalations and flags add their intent. `build(...)` returns a validated `CallOutcome` and
+  repairs only what needs no invented data: a verified call is a right-party call, and a promise or its intent is dropped
+  when nobody was verified. It also keeps the raw turns heard so far.
+- **`attach_recorder(session, state)`** listens to `conversation_item_added` and stores caller and agent speech and tool
+  calls as `RawTurn`s on the builder, tagged with the current state. `finalize` is the only thing that persists them.
+- **`finalize(state, settings=...)`** (`finalize.py`), run by the worker's shutdown callback (`worker.finish_call`, which
+  always tears the call down afterwards), however the call ended:
+  1. appends the turns plus a closing marker ("call ended after: greeting, verify") through `TranscriptStore` (always
+     redacted, with the call's known values); the marker means every call has a valid `transcript_uri`. A store failure
+     is logged by error type and leaves `transcript_uri` unset; the outcome is still written;
+  2. classifies sentiment once over the redacted transcript (`llm_sentiment_classifier(llm)` is the real classifier; no
+     classifier, no caller speech, a 10 s timeout or an unusable answer give `unknown`);
+  3. composes the summary, checks every figure against the promise and callback (`ungrounded_figures`; a miss falls back
+     to a plain line) and redacts it;
+  4. builds the outcome with `compute_versions(settings)` (or the given versions) and writes it with
+     `record_call_outcome`. A failed write (an error result or an exception) is retried once; after the second failure
+     it is logged with the attempt count and error code only.
+  It runs at most once per call (the flag is set before the first `await`, so concurrent shutdown paths cannot both
+  write); `FinalizeResult{outcome, recorded, attempts, transcript_uri}` says what happened.
+- **`contact_result` when no state set it:** verified or locked → `right_party`; otherwise `right_party` for an inbound
+  caller who spoke, else `no_answer` (an outbound call dropped before the right-party check, or nobody spoke).
+- **Summary (`summary.py`)** is a template over outcome fields: verified calls get "Thank you for speaking with
+  {bank}." plus a sentence per recorded item (cease request, dispute, escalation or callback ticket, promise "You
+  promised to pay $200.72 by 12 November 2026.", callback "We will call you back on 13 November 2026 at 14:30 UTC.",
+  intent to pay, already paid, question answered); unverified calls get a neutral line by `contact_result` with no
+  figures. The escalation extension never appears in it. Dates read "4 November 2026", callback times are UTC.
+- **`ClosingAgent`** (`closing`, `states/closing.py`): on entry, in code, `session.say` of `readback_line` (only
+  commitments the builder holds: "To confirm: you will pay $200.72 by 12 November 2026, and we will call you back on
+  …"), then, after a promise, `search_policy` for the payment channels (confident chunks only: their citations go to
+  `kb_sources` and their text reaches the model inside `<policy>` as data), then one generated line asking whether
+  there is anything else. Tools: `offer_callback(when: ISO 8601 with offset, reason)` books through the gateway's
+  `request_callback` and records the `due_at` the gateway scheduled (a time without an offset is refused in code, a
+  gateway failure records nothing), and `end_call`. `goodbye_line(bank_name)` is the closing wording for the VOICE silence
+  policy to speak (wired with the session in the VOICE tasks).
+- **Not yet wired:** the worker builds no `AgentSession` yet (T-VOICE-03 session options and the remaining states), so
+  `attach_recorder` and the classifier are connected there; until then a real call finalizes with no turns.
+- **Tests:** `test_outcome.py` (builder, templates, grounding), `test_finalize.py` (the four call types, once-only,
+  retry, no-PII logs, transcript, sentiment, recorder), `test_closing.py` (closing flow, and closing + recorder + finalize
+  end to end), `test_worker.py` (`finish_call` order).
+
 ## Key decisions
 | Decision | Choice | Why |
 |---|---|---|
@@ -234,6 +282,8 @@ tests/agent/          # mirrors the modules above
 | Figures | Speak the gateway `speakable` strings | NFR-ACC: no model-computed numbers |
 | Summary | Template, not LLM | Zero fabrication; F13 is P1 |
 | Sentiment | One post-call LLM classification into the enum, falling back to `unknown` | Cheap; it does not affect the flow |
+| Outcome writer | `finalize` from the shutdown callback, flag set before the first `await`, one retry | Exactly one outcome per call, even when the caller drops (AGENT-R11) |
+| Transcript | Turns kept raw in memory, written through the redacting store at the end | The store is the only writer, so redaction cannot be skipped; a crash mid-call loses the transcript, not the outcome row |
 
 ## Dependencies
 `livekit-agents` (and the plugins VOICE selects), `mcp` (client), `httpx2` (the MCP SDK's HTTP client, declared

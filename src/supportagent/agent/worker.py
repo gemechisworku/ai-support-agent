@@ -7,8 +7,10 @@ first participant, else a playground call); opens the gateway session from code 
 worker credential); builds the `GatewayClient` and the `CallState` (the session's `userdata`); and registers
 a shutdown callback that always closes the gateway client and the session.
 
-The conversation states, prompts, outcome writing and the `AgentSession` wiring arrive in T-AGENT-02..08 and
-T-VOICE-03; until then a call is set up and torn down but nobody speaks.
+At the end of every call, however it ends, the shutdown callback runs `finish_call`: `finalize` writes the
+redacted transcript and exactly one outcome (T-AGENT-08), then the gateway client and session are closed. The
+`AgentSession` wiring arrives with T-VOICE-03 and the remaining agent states; until then a call is set up and
+torn down but nobody speaks.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import httpx2
 from livekit import agents
 
 from supportagent.agent.context import CallState, parse_call_metadata
+from supportagent.agent.finalize import finalize
 from supportagent.agent.gateway_client import GatewayClient, close_session, open_session
 from supportagent.common.logging import bind_call, configure_logging, get_logger
 from supportagent.common.settings import Settings, get_settings
@@ -53,6 +56,16 @@ async def teardown_call(settings: Settings, state: CallState, gateway: GatewayCl
     await close_session(services.gateway_url, services.gateway_worker_token, state.call_id)
 
 
+async def finish_call(settings: Settings, state: CallState, gateway: GatewayClient) -> None:
+    """The end of a call: write the transcript and the one outcome, then always tear the call down."""
+    try:
+        await finalize(state, settings=settings)
+    except Exception as exc:  # never let a failed outcome skip the teardown; the message may hold call data
+        log.error("finalize failed", extra={"error": type(exc).__name__})
+    finally:
+        await teardown_call(settings, state, gateway)
+
+
 @server.rtc_session(agent_name=AGENT_NAME)
 async def entrypoint(ctx: agents.JobContext) -> None:
     settings = get_settings()
@@ -65,10 +78,10 @@ async def entrypoint(ctx: agents.JobContext) -> None:
 
     state, gateway = await setup_call(settings, room_metadata, attributes)
 
-    async def _finalize() -> None:
-        await teardown_call(settings, state, gateway)
+    async def _finish() -> None:
+        await finish_call(settings, state, gateway)
 
-    ctx.add_shutdown_callback(_finalize)
+    ctx.add_shutdown_callback(_finish)
     with bind_call(state.call_id):
         log.info(
             "call ready",

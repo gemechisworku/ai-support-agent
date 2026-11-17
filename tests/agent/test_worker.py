@@ -4,6 +4,7 @@ import json
 
 import httpx
 import httpx2
+import pytest
 
 from supportagent.agent.worker import AGENT_NAME, setup_call, teardown_call
 from supportagent.common.settings import Settings
@@ -52,3 +53,39 @@ async def test_setup_opens_the_session_then_the_gateway_client_and_teardown_clos
 
 def test_the_worker_registers_as_support_agent() -> None:
     assert AGENT_NAME == "support-agent"
+
+
+async def test_finish_call_finalizes_before_teardown_and_tears_down_even_if_finalize_fails(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pydantic import SecretStr
+
+    from supportagent.agent import worker
+    from supportagent.agent.context import CallState
+    from supportagent.agent.testing import FakeGateway
+    from supportagent.contracts.call import CallMetadata
+
+    order: list[str] = []
+
+    async def fake_finalize(state: CallState, *, settings: Settings) -> None:
+        order.append("finalize")
+        if state.metadata.campaign is Campaign.playground:
+            raise RuntimeError("boom with a secret")
+
+    async def fake_teardown(settings: Settings, state: CallState, gateway: object) -> None:
+        order.append("teardown")
+
+    monkeypatch.setattr(worker, "finalize", fake_finalize)
+    monkeypatch.setattr(worker, "teardown_call", fake_teardown)
+
+    def state(campaign: Campaign) -> CallState:
+        meta = CallMetadata(
+            call_id="b5b6d2c4-6f7e-4c5a-9a8e-1d2c3b4a5f60", direction=Direction.inbound, campaign=campaign
+        )
+        return CallState(metadata=meta, gateway=FakeGateway(), session_token=SecretStr("t"))
+
+    await worker.finish_call(settings, state(Campaign.inbound), object())  # type: ignore[arg-type]
+    assert order == ["finalize", "teardown"]
+    order.clear()
+    await worker.finish_call(settings, state(Campaign.playground), object())  # type: ignore[arg-type]
+    assert order == ["finalize", "teardown"]

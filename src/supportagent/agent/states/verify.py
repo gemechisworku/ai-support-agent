@@ -71,6 +71,9 @@ class VerifyAgent(BaseStateAgent):
                 "That needs to be exactly four digits. Ask the caller for the last four digits of the loan."
             )
 
+        state.outcome.know(
+            full_name.strip(), dob.strip(), loan_last4.strip()
+        )  # always redacted in the transcript
         result = await state.gateway.verify_identity(full_name.strip(), dob_date, loan_last4.strip())
         if not result.ok or result.data is None:
             if result.error is not None and result.error.code == "locked":
