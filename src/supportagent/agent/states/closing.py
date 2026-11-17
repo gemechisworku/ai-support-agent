@@ -13,6 +13,7 @@ The outcome itself is not written here: `finalize` writes it when the call ends,
 from __future__ import annotations
 
 import datetime as dt
+from typing import Any
 
 from livekit.agents import RunContext, function_tool
 
@@ -51,13 +52,25 @@ def _aware(value: str) -> dt.datetime | None:
 
 @register_state
 class ClosingAgent(BaseStateAgent):
+    """`farewell=True`: the caller already said goodbye (or that they need nothing more). The state reads back
+    any commitments, says the goodbye line itself and ends the call: no "anything else?", no model reply."""
+
     state_name = flow.CLOSING
+
+    def __init__(self, *, farewell: bool = False, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.farewell = farewell
 
     async def on_state_enter(self) -> None:
         builder = self.state.outcome
         line = readback_line(promise=builder.promise, callback=builder.callback)
         if line is not None:
             self.session.say(line)
+        if self.farewell:
+            self.state.end_reason = flow.END_BY_CALLER
+            self.session.say(goodbye_line(self.variables.get("bank_name", "us")), allow_interruptions=False)
+            self.session.shutdown(drain=True)  # drain: the read-back and the goodbye are spoken first
+            return
         channels = await self._payment_channels() if builder.promise is not None else None
         instructions = CHANNELS_INSTRUCTIONS.format(text=channels) if channels else ANYTHING_ELSE_INSTRUCTIONS
         self.session.generate_reply(instructions=instructions)
@@ -88,13 +101,17 @@ class ClosingAgent(BaseStateAgent):
         result = await state.gateway.request_callback(preferred, reason_text)
         if not result.ok or result.data is None:
             log.warning("callback not booked", extra={"code": result.error.code if result.error else None})
-            return "The callback could not be booked. Apologise and say a colleague will follow up."
+            return (
+                "The callback could not be booked. Apologise briefly and say you could not arrange it on "
+                "this call. Do not say that anyone will contact the caller."
+            )
         state.outcome.record_callback(result.data.due_at)  # the time the gateway scheduled, not the request
         return f"Booked. Tell the caller we will call them back on {format_callback(result.data.due_at)}."
 
     @function_tool
     async def end_call(self, context: RunContext[CallState]) -> str:
         """End the call once the caller has nothing more to ask."""
+        context.userdata.end_reason = context.userdata.end_reason or flow.END_BY_AGENT
         flow.end_call(context)
         return (
             f"Say this closing line and nothing more: {goodbye_line(self.variables.get('bank_name', 'us'))}"

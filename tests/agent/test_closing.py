@@ -160,6 +160,36 @@ async def test_the_caller_can_end_the_call() -> None:
         on_start=_promised,
     )
     assert result.tool_names == ["end_call"]
+    assert result.state.end_reason == flow.END_BY_AGENT  # the reason the silence policy and the marker read
+
+
+async def test_a_farewell_reads_back_the_commitment_says_goodbye_and_ends_without_a_model_reply() -> None:
+    """The caller already said goodbye: no "anything else?", no policy lookup, no model step."""
+    llm = ScriptedLLM([])
+    result = await run_text_scenario(
+        FRANK,
+        [],
+        agent=ClosingAgent(farewell=True, variables={"bank_name": "Meridian Bank", "agent_name": "Ava"}),
+        llm=llm,
+        gateway=FakeGateway(FRANK, {"search_policy": CHANNELS}),
+        on_start=_promised,
+    )
+    lines = [t.text for t in result.transcript if t.role == "agent"]
+    assert "pay" in lines[0] and lines[-1] == goodbye_line("Meridian Bank")  # read-back, then the goodbye
+    assert result.gateway.tools_called == []  # no payment-channels search on a farewell
+    assert result.state.end_reason == flow.END_BY_CALLER
+    assert llm.remaining == 0
+
+
+async def test_a_farewell_from_an_unverified_caller_is_a_plain_goodbye() -> None:
+    result = await run_text_scenario(
+        FRANK,
+        [],
+        agent=ClosingAgent(farewell=True, variables={"bank_name": "Meridian Bank", "agent_name": "Ava"}),
+        llm=ScriptedLLM([]),
+        gateway=FakeGateway(FRANK),
+    )
+    assert [t.text for t in result.transcript if t.role == "agent"] == [goodbye_line("Meridian Bank")]
 
 
 async def test_offer_callback_schedules_it_through_the_gateway_and_records_it() -> None:
@@ -212,6 +242,10 @@ async def test_a_gateway_failure_scheduling_the_callback_is_not_recorded() -> No
     gateway = FakeGateway(FRANK, {"request_callback": ToolResult.failure("not_verified", "no")})
     result = await run_text_scenario(FRANK, ["call me"], agent=ClosingAgent(), llm=llm, gateway=gateway)
     assert result.state.outcome.callback is None
+    # The text the model is told after a failed booking must not tell it to promise a follow-up.
+    outputs = [r for r in result.tool_calls if r.name == "offer_callback"]
+    assert outputs and "will follow up" not in str(outputs[0].output).lower()
+    assert "Do not say that anyone will contact" in str(outputs[0].output)
 
 
 # ------------------------------------------------------- end to end: closing + recorder + finalize

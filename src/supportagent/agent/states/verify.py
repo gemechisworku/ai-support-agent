@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from typing import NoReturn
 
 from livekit.agents import Agent, RunContext, function_tool
+from livekit.agents.llm import StopResponse
 
 from supportagent.agent.base import BaseStateAgent, register_state
 from supportagent.agent.context import CallState
@@ -77,7 +79,7 @@ class VerifyAgent(BaseStateAgent):
         result = await state.gateway.verify_identity(full_name.strip(), dob_date, loan_last4.strip())
         if not result.ok or result.data is None:
             if result.error is not None and result.error.code == "locked":
-                return self._locked(state)
+                return await self._locked(state)
             log.warning(
                 "verification unavailable", extra={"code": result.error.code if result.error else None}
             )
@@ -88,9 +90,9 @@ class VerifyAgent(BaseStateAgent):
             state.verified = True
             state.first_name = data.first_name
             state.contact_result = ContactResult.right_party
-            return self._on_verified(state)
+            return await self._on_verified(state)
         if data.locked or data.attempts_remaining == 0:
-            return self._locked(state)
+            return await self._locked(state)
         left = data.attempts_remaining
         return (
             f"The details did not match, and the caller has {left} attempt{'s' if left != 1 else ''} left. "
@@ -99,28 +101,30 @@ class VerifyAgent(BaseStateAgent):
 
     # ------------------------------------------------------------------ code-driven exits
 
-    def _on_verified(self, state: CallState) -> str | Agent:
+    async def _on_verified(self, state: CallState) -> str | Agent:
         # The router sets `after_verification` when an inbound caller asked an account question (used once).
         name = state.after_verification or flow.post_verification_state(
             state.metadata.direction, state.metadata.campaign
         )
         state.after_verification = None
         target = flow.resolve(name)
-        if target is None:  # that flow's task has not landed yet: keep the call alive
+        if target is None:  # that flow's task has not landed yet: keep the call alive, honestly
             log.warning(
                 "no state registered after verification", extra={"state": self.state_name, "next": name}
             )
-            return (
-                "The caller is verified. Thank them and say a colleague will follow up about their account."
-            )
+            await self._say_unavailable("caller verified; their flow is not available")
         return self.hand_off(self.next_state(target))  # type: ignore[return-value]
 
-    def _locked(self, state: CallState) -> str | Agent:
+    async def _locked(self, state: CallState) -> str | Agent:
         state.locked = True
         target = flow.resolve(flow.ESCALATION)
         if target is None:
             log.warning("no escalation state registered", extra={"state": self.state_name})
-            return (
-                "Verification failed twice. Apologise, say a colleague will call them back, and say goodbye."
-            )
+            await self._say_unavailable("verification failed twice")
         return self.hand_off(self.next_state(target, reason="verification_failed"))  # type: ignore[return-value]
+
+    async def _say_unavailable(self, reason: str) -> NoReturn:
+        """The honest line from `flow.unavailable_line` (a promise only once the gateway booked the callback),
+        then no model reply: raises `StopResponse`."""
+        self.session.say(await flow.unavailable_line(self.state, reason))
+        raise StopResponse()

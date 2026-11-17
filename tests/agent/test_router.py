@@ -6,6 +6,7 @@ real ones will.
 """
 
 import datetime as dt
+import re
 import shutil
 from pathlib import Path
 from typing import ClassVar
@@ -19,12 +20,14 @@ from supportagent.agent.base import STATE_REGISTRY, BaseStateAgent, check_regist
 from supportagent.agent.context import CallState
 from supportagent.agent.prompts.registry import DEFAULT_PROMPTS_DIR, PromptRegistry
 from supportagent.agent.states import flow
+from supportagent.agent.states.closing import goodbye_line
 from supportagent.agent.states.greeting import GreetingAgent
 from supportagent.agent.states.router import ANYTHING_ELSE, HOW_CAN_I_HELP, RouterAgent
 from supportagent.agent.testing import FakeGateway, ScenarioResult, ScriptedLLM, call, run_text_scenario, say
 from supportagent.compliance.disclosures import load_disclosures
 from supportagent.contracts.bank import PersonaCard
 from supportagent.contracts.call import CallMetadata
+from supportagent.contracts.gateway import TaskCreatedOutput, ToolResult
 from supportagent.contracts.outcome import Campaign, Direction, Intent
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -104,6 +107,7 @@ async def _run(
     start: BaseStateAgent | None = None,
     direction: Direction = Direction.inbound,
     campaign: Campaign = Campaign.inbound,
+    results: dict | None = None,
 ) -> ScenarioResult:
     async def on_start(state: CallState) -> None:
         state.disclosures = REGISTRY
@@ -114,7 +118,7 @@ async def _run(
         turns,
         agent=start or RouterAgent(prompts=prompts, variables=VARS),
         llm=ScriptedLLM(steps),
-        gateway=FakeGateway(FRANK),
+        gateway=FakeGateway(FRANK, results=results),
         direction=direction,
         campaign=campaign,
         on_start=on_start,
@@ -254,6 +258,12 @@ async def test_an_inbound_call_goes_greeting_then_router_then_policy(
 # --------------------------------------------------------------------------- code paths and safety
 
 
+BOOKED = ToolResult.success(
+    TaskCreatedOutput(task_id=7, type="callback", due_at=dt.datetime(2026, 11, 10, 9, 0, tzinfo=dt.UTC))
+)
+PROMISES = ("will call you back", "will be in touch", "will follow up", "colleague will")
+
+
 async def test_a_successor_that_has_not_landed_keeps_the_call_alive(
     prompts: PromptRegistry, stand_ins: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -262,9 +272,52 @@ async def test_a_successor_that_has_not_landed_keeps_the_call_alive(
         prompts,
         [call("route_policy_question"), say("Someone will follow up on that.")],
         ["Can I pay early?"],
+        results={"request_callback": BOOKED},
     )
     assert result.states == ["router"]
-    assert _intents(result) == ["policy_question"]  # the intent is still recorded
+    assert _intents(result) == ["policy_question", "callback_request"]  # both recorded
+    assert _agent_lines(result)[-1] != "Someone will follow up on that."  # the model never got to speak
+
+
+async def test_an_unavailable_state_promises_a_callback_only_after_the_gateway_booked_it(
+    prompts: PromptRegistry, stand_ins: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The first real call: "A colleague will be in touch" was said with no callback ticket behind it."""
+    monkeypatch.delitem(STATE_REGISTRY, "escalation")
+    result = await _run(
+        prompts,
+        [call("request_human"), say("A colleague will be in touch with you shortly.")],
+        ["I want to talk to a person"],
+        results={"request_callback": BOOKED},
+    )
+    callbacks = [c for c in result.gateway.calls if c.tool == "request_callback"]
+    assert len(callbacks) == 1
+    assert result.state.outcome.callback is not None
+    line = _agent_lines(result)[-1]
+    assert (
+        flow.CALLBACK_BOOKED_LINE.format(when="10 November 2026 at 09:00 UTC") == line
+    )  # time from the result
+    assert "colleague will be in touch" not in " ".join(
+        _agent_lines(result)
+    )  # the model's promise never spoken
+
+
+async def test_an_unavailable_state_promises_nothing_when_the_callback_cannot_be_booked(
+    prompts: PromptRegistry, stand_ins: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delitem(STATE_REGISTRY, "escalation")
+    refused = ToolResult.failure("not_verified", "refused")
+    for results in ({}, {"request_callback": refused}):  # no fake result at all, and an explicit refusal
+        result = await _run(
+            prompts,
+            [call("request_human"), say("A colleague will be in touch with you shortly.")],
+            ["I want to talk to a person"],
+            results=results,
+        )
+        assert result.state.outcome.callback is None
+        line = _agent_lines(result)[-1]
+        assert line == flow.CALLBACK_DECLINED_LINE
+        assert not any(p in " ".join(_agent_lines(result)).lower() for p in PROMISES)
 
 
 async def test_verification_for_an_account_question_falls_back_when_account_is_missing(
@@ -275,15 +328,41 @@ async def test_verification_for_an_account_question_falls_back_when_account_is_m
         prompts,
         [call("route_account_question"), VERIFY_FRANK, say("A colleague will follow up.")],
         ["What do I owe?", "Frank Alvarez, 2 January 1980, 4417"],
+        results={"request_callback": BOOKED},
     )
     assert result.states == ["router", "verify"]
     assert result.state.verified is True
     assert result.state.after_verification is None
+    # The model's "A colleague will follow up." never spoke: the promise is the booked callback and its time.
+    lines = _agent_lines(result)
+    assert "A colleague will follow up." not in lines
+    assert lines[-1] == flow.CALLBACK_BOOKED_LINE.format(when="10 November 2026 at 09:00 UTC")
 
 
-async def test_the_router_has_exactly_its_three_tools_and_no_data_tools() -> None:
+async def test_locked_verification_without_an_escalation_state_promises_nothing_unbooked(
+    prompts: PromptRegistry, stand_ins: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delitem(STATE_REGISTRY, "escalation")
+    wrong = call("verify_identity", full_name="Frank Alvarez", dob="1999-09-09", loan_last4="4417")
+    result = await _run(
+        prompts,
+        [call("route_account_question"), wrong, wrong],  # two failed attempts: the second one locks the call
+        ["What do I owe?", "Frank Alvarez, 9 September 1999, 4417"],
+    )  # no `request_callback` result: the gateway "fails"
+    assert result.state.locked is True
+    assert _agent_lines(result)[-1] == flow.CALLBACK_DECLINED_LINE
+    assert not any(p in " ".join(_agent_lines(result)).lower() for p in PROMISES)
+
+
+async def test_the_router_has_exactly_its_four_tools_and_no_data_tools() -> None:
     names = set(class_tool_names(RouterAgent))
-    assert names == {"route_account_question", "route_policy_question", "request_human", "report_concern"}
+    assert names == {
+        "route_account_question",
+        "route_policy_question",
+        "request_human",
+        "finish_call",
+        "report_concern",
+    }
     assert not names & {"get_loan_status", "get_recent_transactions", "search_policy", "verify_identity"}
     check_registered_states()
 
@@ -308,3 +387,77 @@ def test_intents_are_recorded_once_each_in_order() -> None:
         state.record_intent(intent)
     assert state.intents == [Intent.policy_question, Intent.account_question]
     assert state.outcome_so_far()["intents"] == ["policy_question", "account_question"]
+
+
+# ------------------------------------------------------------ ending the call (the first real call)
+
+
+def _no_figures(lines: list[str]) -> bool:
+    return not re.search(r"[$\d]", " ".join(lines))
+
+
+async def test_a_goodbye_ends_the_call_in_code_without_a_model_reply(prompts: PromptRegistry) -> None:
+    """The first real call: the caller said bye, the agent said "Goodbye!" and the call kept running."""
+    result = await _run(prompts, [], ["Okay, sure. Bye."])
+    assert result.states == ["router", "closing"]
+    assert result.state.end_reason == flow.END_BY_CALLER
+    lines = _agent_lines(result)
+    assert lines == [HOW_CAN_I_HELP, goodbye_line("Meridian Bank")]
+    assert _no_figures(lines)  # an unverified caller gets a plain goodbye, no account figures
+    assert result.llm.remaining == 0
+
+
+async def test_a_bare_no_after_anything_else_ends_the_call(prompts: PromptRegistry, stand_ins: None) -> None:
+    result = await _run(
+        prompts,
+        [call("route_policy_question"), call("finish")],  # the policy stand-in's `finish` returns here
+        ["Can I pay early?", "Okay, that makes sense.", "No thanks."],
+    )
+    assert result.states == ["router", "policy", "router", "closing"]
+    assert _agent_lines(result)[-2:] == [ANYTHING_ELSE, goodbye_line("Meridian Bank")]
+    assert result.state.end_reason == flow.END_BY_CALLER
+    assert result.llm.remaining == 0
+
+
+async def test_a_bare_no_is_not_a_goodbye_before_the_agent_has_asked_anything_else(
+    prompts: PromptRegistry,
+) -> None:
+    result = await _run(prompts, [say("Which do you mean?")], ["No thanks."])
+    assert result.states == ["router"]  # still on the call: "no" answered "how can I help?"
+    assert result.state.end_reason is None
+
+
+async def test_a_goodbye_with_a_question_does_not_end_the_call(prompts: PromptRegistry) -> None:
+    result = await _run(
+        prompts, [say("I can help with fees or your account.")], ["Goodbye, what am I doing here?"]
+    )
+    assert result.states == ["router"]
+    assert result.state.end_reason is None
+
+
+async def test_the_model_can_end_the_call_with_finish_call(prompts: PromptRegistry) -> None:
+    result = await _run(prompts, [call("finish_call")], ["I think we are finished here then"])
+    assert result.states == ["router", "closing"]
+    assert result.state.end_reason == flow.END_BY_CALLER
+    assert _agent_lines(result)[-1] == goodbye_line("Meridian Bank")
+
+
+async def test_a_farewell_reads_back_a_commitment_before_the_goodbye(prompts: PromptRegistry) -> None:
+    async def on_start(state: CallState) -> None:
+        state.disclosures = REGISTRY
+        state.verified = True
+        state.outcome.record_callback(dt.datetime(2026, 11, 12, 9, 0, tzinfo=dt.UTC))
+
+    result = await run_text_scenario(
+        FRANK,
+        ["That's all, goodbye."],
+        agent=RouterAgent(prompts=prompts, variables=VARS),
+        llm=ScriptedLLM([]),
+        gateway=FakeGateway(FRANK),
+        direction=Direction.inbound,
+        campaign=Campaign.inbound,
+        on_start=on_start,
+    )
+    lines = _agent_lines(result)
+    assert lines[-1] == goodbye_line("Meridian Bank")
+    assert "call you back" in lines[-2]  # the commitment the gateway scheduled, said before the goodbye
