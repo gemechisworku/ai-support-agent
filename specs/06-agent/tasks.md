@@ -36,7 +36,7 @@ held outside any prompt.
 **Files:** `src/supportagent/agent/worker.py`, `context.py`, `gateway_client.py`, tests above
 
 ### T-AGENT-02 · State machine framework and versioned prompt registry
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #28
 - **Depends on:** T-AGENT-01, T-OBS-02
@@ -49,9 +49,17 @@ the bundle version and feeds `observability.versions`. Add `testing.py` with `Fa
 `ScriptedLLM`, `FakeTransferer` and `run_text_scenario()`.
 
 **Acceptance criteria**
-- [ ] Changing any prompt file changes the bundle version
-- [ ] A static check fails if any state has more than 4 domain tools or registers `record_call_outcome`
-- [ ] `run_text_scenario(persona, turns)` returns the transcript, tool calls and the outcome so far
+- [x] Changing any prompt file changes the bundle version
+  *(`PromptRegistry.bundle_version()` is `observability.versions.prompt_version`: `{VERSION}+{sha8}` over every
+  prompt file, so editing, adding or removing one, or bumping `VERSION`, changes it.)*
+- [x] A static check fails if any state has more than 4 domain tools or registers `record_call_outcome`
+  *(`check_registered_states()` over every `@register_state` class, and the same rule per instance, so a
+  `tools=[…]` argument cannot add one. The registry is empty until T-AGENT-04 adds the first real states; the
+  tests cover the rule with synthetic states.)*
+- [x] `run_text_scenario(persona, turns)` returns the transcript, tool calls and the outcome so far
+  *(`run_text_scenario(persona, turns, *, agent, llm, gateway=None, …)`. "Outcome so far" is
+  `CallState.outcome_so_far()`, a snapshot dict (verified, locked, states visited, concerns) until T-AGENT-08's
+  `OutcomeBuilder` makes it the validated `CallOutcome`.)*
 
 **Tests**
 - `tests/agent/test_prompts.py` (unit): front matter parsing; bundle hash stability and change detection

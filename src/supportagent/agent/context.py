@@ -77,7 +77,24 @@ class CallState:
     verified: bool = False
     locked: bool = False
     first_name: str | None = None
+    states_visited: list[str] = field(default_factory=list)  # BaseStateAgent.on_enter appends, in order
+    concerns: list[str] = field(default_factory=list)  # kinds raised through `report_concern`
 
     @property
     def call_id(self) -> str:
         return self.metadata.call_id
+
+    def outcome_so_far(self) -> dict[str, Any]:
+        """A snapshot of what the call has established so far (the draft the text harness returns).
+
+        T-AGENT-08's `OutcomeBuilder` replaces this with the validated `CallOutcome`.
+        """
+        return {
+            "call_id": self.call_id,
+            "direction": self.metadata.direction.value,
+            "campaign": self.metadata.campaign.value,
+            "verified": self.verified,
+            "locked": self.locked,
+            "states": list(self.states_visited),
+            "concerns": list(self.concerns),
+        }
