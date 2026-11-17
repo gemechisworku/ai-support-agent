@@ -57,9 +57,9 @@ in U2 leads to `refer_to_human` with reason `hardship`.
 ## File layout
 ```
 src/supportagent/agent/
-  worker.py           # entrypoint, CallMetadata parsing, session open, finalize on shutdown
-  context.py          # CallState (userdata) + OutcomeBuilder
-  gateway_client.py   # GatewayClient: typed async methods over MCP; verified-guard
+  worker.py           # AgentServer entrypoint `support-agent`; setup_call/teardown_call (testable seam)
+  context.py          # parse_call_metadata(), CallState (userdata, token never in repr) + OutcomeBuilder (T-AGENT-08)
+  gateway_client.py   # GatewayPort protocol, GatewayClient (typed async methods over MCP), open/close_session; verified-guard (T-AGENT-04)
   interrupts.py       # InterruptKind, detect_interrupt(), phrase lists
   base.py             # BaseStateAgent (interrupt hook, report_concern, prompt loading)
   states/             # greeting.py verify.py third_party.py router.py account.py policy.py
@@ -69,6 +69,24 @@ src/supportagent/agent/
   testing.py          # FakeGateway (persona data), ScriptedLLM, FakeTransferer, run_text_scenario()
 tests/agent/          # mirrors the modules above
 ```
+
+## Call setup (T-AGENT-01)
+- `contracts/call.py` owns `CallMetadata{call_id, direction, campaign, customer_id?, loan_id?, callback_task_id?,
+  caller_phone?}` (`caller_phone` is the inbound SIP number, passed on to `POST /sessions`).
+- `parse_call_metadata(room_metadata, sip_attributes)`: room metadata JSON wins (a missing `call_id` is a generated
+  UUID4); else `sip.phoneNumber` gives an inbound call (`campaign=inbound`, a non-E.164 number such as "anonymous"
+  becomes no `caller_phone`); else a **playground** call (`direction=inbound`, `campaign=playground`). Bad
+  metadata raises `InvalidCallMetadata` without echoing the content.
+- `GatewayClient` keeps one MCP session open per call (`async with`), sending `Authorization: Bearer <session token>`.
+  Every method returns `ToolResult[Output]`; `ok=false` carries the gateway's `ToolError`. A transport, protocol or
+  schema failure becomes `ToolError(code="upstream_error")`, so states handle one shape; the log line has the tool
+  name and the exception type only. `GatewayPort` is the protocol states depend on.
+- `setup_call()` = parse → `open_session` (`POST /sessions`, worker credential) → connect `GatewayClient` →
+  `CallState`; `teardown_call()` closes the MCP client and `DELETE /sessions/{call_id}` (best effort).
+  The entrypoint only wires these to the job. The `AgentSession`, states and outcome writer come with
+  T-VOICE-03 and T-AGENT-02..08.
+- The entrypoint is `agents.AgentServer` with `@server.rtc_session(agent_name="support-agent")`
+  (livekit-agents 1.8); the room metadata falls back to the job metadata.
 
 ## Key decisions
 | Decision | Choice | Why |
@@ -81,7 +99,8 @@ tests/agent/          # mirrors the modules above
 | Sentiment | One post-call LLM classification into the enum, falling back to `unknown` | Cheap; it does not affect the flow |
 
 ## Dependencies
-`livekit-agents` (and the plugins VOICE selects), `mcp` (client). Settings: `GATEWAY_URL`, `GATEWAY_WORKER_TOKEN`, `BANK_NAME`, `AGENT_NAME`, `HUMAN_AGENT_EXTENSION`.
+`livekit-agents` (and the plugins VOICE selects), `mcp` (client), `httpx2` (the MCP SDK's HTTP client, declared
+because the bearer header is set on it; T-AGENT-01). Settings: `GATEWAY_URL`, `GATEWAY_WORKER_TOKEN`, `BANK_NAME`, `AGENT_NAME`, `HUMAN_AGENT_EXTENSION`.
 
 ## Test strategy
 - **unit:** `detect_interrupt` phrase tables; `OutcomeBuilder` validation; `GatewayClient` against an in-memory fake MCP server; state transitions by calling the tool wrappers with `FakeGateway`; full text-mode flows with `AgentSession` + `ScriptedLLM` (tool calls scripted per turn) for Frank, Hana, Priya, Olivia, the spouse and Sam; a static test that `record_call_outcome` is in no state's tool list and that each state has ≤ 4 domain tools.

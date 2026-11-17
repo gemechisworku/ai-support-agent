@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-AGENT-01 · Worker skeleton: call context and gateway MCP client
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #27
 - **Depends on:** T-GW-01, T-VOICE-02
@@ -22,10 +22,12 @@ session with a bearer header, returning `ToolResult` models. Add `CallState` wit
 held outside any prompt.
 
 **Acceptance criteria**
-- [ ] `python -m supportagent.agent.worker dev` starts and registers with LiveKit (manual)
-- [ ] `GatewayClient` exposes one method per LLM-facing tool plus `record_call_outcome`; the token is never logged
-- [ ] States depend on a `GatewayPort` protocol (not the concrete client), so `FakeGateway` (T-EVAL-01) can be injected
-- [ ] `lint-imports` passes with no bank, kb, gateway, sqlalchemy or psycopg imports
+- [x] `python -m supportagent.agent.worker dev` starts and registers with LiveKit (manual)
+  *(Checked on 2026-11-17 against a local `livekit-server --dev`: the log shows `registered worker`
+  with `agent_name: support-agent`.)*
+- [x] `GatewayClient` exposes one method per LLM-facing tool plus `record_call_outcome`; the token is never logged
+- [x] States depend on a `GatewayPort` protocol (not the concrete client), so `FakeGateway` (T-EVAL-01) can be injected
+- [x] `lint-imports` passes with no bank, kb, gateway, sqlalchemy or psycopg imports
 
 **Tests**
 - `tests/agent/test_context.py` (unit): metadata parsing for outbound JSON and inbound SIP attributes; a missing `call_id` generates a UUID4
