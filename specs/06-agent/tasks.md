@@ -122,7 +122,7 @@ safe message instead of failing. Verification-before-data is also enforced in co
 `src/supportagent/agent/guard.py`, `disclose.py`, `context.py`, `tests/agent/test_greeting_verify.py`
 
 ### T-AGENT-05 · Inbound routing and intent detection
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #31
 - **Depends on:** T-AGENT-04
@@ -133,9 +133,9 @@ account questions go to `VerifyAgent`, then `AccountAgent`; a request for a pers
 escalation. Record `intent[]`. Support switching between policy and account questions within one call.
 
 **Acceptance criteria**
-- [ ] "Can I pay early?" reaches Policy with no `verify_identity` call
-- [ ] "What do I owe?" forces verification before any account tool
-- [ ] After verification in the same call, later account questions do not re-verify
+- [x] "Can I pay early?" reaches Policy with no `verify_identity` call
+- [x] "What do I owe?" forces verification before any account tool
+- [x] After verification in the same call, later account questions do not re-verify
 
 **Tests**
 - `tests/agent/test_router.py` (unit, text mode): the three routes; policy → account switch; `intent[]` contents

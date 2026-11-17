@@ -3,8 +3,9 @@
 On entry, in code: ask for the three details (no name is spoken). The model's one tool collects what the
 caller said; everything after that is code on the gateway's answer:
 
-- verified → `CallState.verified = True`, `first_name`, `contact_result = right_party`, then the state for
-  this direction and campaign (`flow.post_verification_state`);
+- verified → `CallState.verified = True`, `first_name`, `contact_result = right_party`, then the state the
+  router asked for (`CallState.after_verification`, used once) or the one for this direction and
+  campaign (`flow.post_verification_state`);
 - not verified, attempts left → the model is told how many attempts remain and to ask again, without
   saying which detail was wrong;
 - locked (two failures) → `CallState.locked = True` and `EscalationAgent(reason="verification_failed")`;
@@ -96,7 +97,11 @@ class VerifyAgent(BaseStateAgent):
     # ------------------------------------------------------------------ code-driven exits
 
     def _on_verified(self, state: CallState) -> str | Agent:
-        name = flow.post_verification_state(state.metadata.direction, state.metadata.campaign)
+        # The router sets `after_verification` when an inbound caller asked an account question (used once).
+        name = state.after_verification or flow.post_verification_state(
+            state.metadata.direction, state.metadata.campaign
+        )
+        state.after_verification = None
         target = flow.resolve(name)
         if target is None:  # that flow's task has not landed yet: keep the call alive
             log.warning(

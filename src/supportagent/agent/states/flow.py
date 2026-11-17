@@ -1,9 +1,9 @@
 """Where each state hands off to: names, the post-verification table and ending the call (AGENT-R2).
 
 States are referred to by `state_name` and looked up in `STATE_REGISTRY` when the hand-off happens, so a
-state can name a successor that a later task implements (router: T-AGENT-05, reminder / collections /
-callback: T-AGENT-09/10/12, escalation: T-AGENT-11). `resolve` returns `None` for a state that is not
-registered yet; callers then keep the call alive with a safe message instead of failing.
+state can name a successor that a later task implements (router: T-AGENT-05, account / policy: T-AGENT-06/07,
+reminder / collections / callback: T-AGENT-09/10/12, escalation: T-AGENT-11). `resolve` returns `None` for a
+state that is not registered yet; callers then keep the call alive with a safe message instead of failing.
 
 A state that is escalated to takes the keyword argument `reason` (an `EscalationReason` value), for example
 `self.next_state(resolve("escalation"), reason="verification_failed")`.
@@ -21,6 +21,8 @@ GREETING = "greeting"
 VERIFY = "verify"
 THIRD_PARTY = "third_party"
 ROUTER = "router"  # inbound: "How can I help?" (T-AGENT-05)
+ACCOUNT = "account"  # U3 (T-AGENT-06)
+POLICY = "policy"  # U4 (T-AGENT-07)
 REMINDER = "reminder"  # U1 (T-AGENT-09)
 COLLECTIONS_PURPOSE = "collections_purpose"  # U2 (T-AGENT-10)
 CALLBACK = "callback"  # U5 (T-AGENT-12)

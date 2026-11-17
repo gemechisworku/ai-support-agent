@@ -203,6 +203,28 @@ tests/agent/          # mirrors the modules above
   runs inside the reply being generated for that very turn, so waiting for new speech to play out would wait on
   itself (the test run hung). A hand-off and `shutdown(drain=True)` both let queued speech finish first.
 
+## Inbound routing (T-AGENT-05)
+- **`RouterAgent`** (`router`): on entry, in code, `"How can I help?"` the first time and `"Is there anything else I can
+  help you with?"` when the caller comes back from the account or policy state. Three tools, no data tools:
+  `route_policy_question` → `PolicyAgent` (`flow.POLICY`, no verification), `route_account_question` →
+  `AccountAgent` (`flow.ACCOUNT`) when `CallState.verified`, else `VerifyAgent` first, and `request_human` →
+  `EscalationAgent(reason="human_requested")`. Each route records its `Intent` (`policy_question`, `account_question`,
+  `human_request`) through `CallState.record_intent`, once each in order; `CallState.intents` is in `outcome_so_far()`
+  for T-AGENT-08.
+- **Verification then account:** the router sets `CallState.after_verification = "account"` before handing to
+  `VerifyAgent`. `VerifyAgent._on_verified` enters that state (used once, then cleared) instead of the router, so
+  the caller lands in the account state; without it the old rule (`flow.post_verification_state`) applies, so outbound
+  flows are unchanged. A verified caller is never sent to `VerifyAgent` again in the same call.
+- **Switching:** account and policy states return to the router with `self.hand_off(self.next_state(RouterAgent))`
+  when they finish (T-AGENT-06/07), so one call can go policy → account → policy.
+- **Hand-offs are silent**, so a successor state must answer the question already in the chat history: call
+  `self.session.generate_reply()` from `on_state_enter` (the router never answers it).
+- **Missing successors:** a route whose state is not registered yet keeps the call alive (the model is told to
+  apologise and say a colleague will follow up); the intent is still recorded.
+- **Tests** (`tests/agent/test_router.py`): stand-ins for `policy`, `account` and `escalation`, each with a `finish`
+  tool that returns to the router. The three routes, policy → account switch with one `verify_identity`, a second
+  account question without re-verifying, the full greeting → router → policy chain, and the missing-successor paths.
+
 ## Key decisions
 | Decision | Choice | Why |
 |---|---|---|

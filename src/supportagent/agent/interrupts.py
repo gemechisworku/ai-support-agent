@@ -283,7 +283,7 @@ def record_kind(state: CallState, kind: str) -> None:
     """Record `kind`'s outcome intent on the call (once)."""
     intent = INTENT_FOR.get(kind)
     if intent is not None:
-        state.add_intent(intent)
+        state.record_intent(intent)
 
 
 def screen_turn(state: CallState, text: str) -> ConcernKind | None:

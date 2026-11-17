@@ -83,9 +83,8 @@ class CallState:
     first_name: str | None = None
     states_visited: list[str] = field(default_factory=list)  # BaseStateAgent.on_enter appends, in order
     concerns: list[str] = field(default_factory=list)  # kinds raised through `report_concern`
-    # Interrupts (AGENT-R3): outcome `intent[]` values in order (once each), the two flags the outcome
-    # carries, and the consecutive-misunderstanding counter (`interrupts.screen_turn`).
-    intents: list[str] = field(default_factory=list)
+    # Interrupts (AGENT-R3): the two flags the outcome carries and the consecutive-misunderstanding counter
+    # (`interrupts.screen_turn`). The outcome `intent[]` list is `intents` below.
     dispute_flag: bool = False
     cease_contact_flag: bool = False
     misunderstandings: int = 0
@@ -98,6 +97,16 @@ class CallState:
     disclosures: DisclosureRegistry | None = field(default=None, repr=False)  # loaded on first use
     callee_first_name: str | None = None  # outbound: the first name from `lookup_by_phone` (not verified yet)
     third_party_callback_note: str | None = None  # what a third party said about a good time to call back
+    # --- routing (T-AGENT-05)
+    # Outcome `intent[]` in the order first heard, once each: written by the router's routes (T-AGENT-05)
+    # and by the interrupt handlers (T-AGENT-03) through `record_intent`.
+    intents: list[Intent] = field(default_factory=list)
+    after_verification: str | None = None  # state to enter once verified, set by the router (inbound)
+
+    def record_intent(self, intent: Intent) -> None:
+        """Note what the caller wanted. Each intent is kept once, in the order first heard."""
+        if intent not in self.intents:
+            self.intents.append(intent)
 
     def __post_init__(self) -> None:
         # Verification-before-data in code (AGENT-R2): account-data tools are refused until `verified`.
@@ -107,11 +116,6 @@ class CallState:
     @property
     def call_id(self) -> str:
         return self.metadata.call_id
-
-    def add_intent(self, intent: Intent) -> None:
-        """Record an outcome intent once, keeping the order the caller raised them in."""
-        if intent.value not in self.intents:
-            self.intents.append(intent.value)
 
     def outcome_so_far(self) -> dict[str, Any]:
         """A snapshot of what the call has established so far (the draft the text harness returns).
@@ -128,7 +132,7 @@ class CallState:
             "locked": self.locked,
             "states": list(self.states_visited),
             "concerns": list(self.concerns),
-            "intents": list(self.intents),
+            "intents": [i.value for i in self.intents],
             "dispute_flag": self.dispute_flag,
             "cease_contact_flag": self.cease_contact_flag,
         }
