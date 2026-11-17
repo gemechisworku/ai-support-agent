@@ -62,7 +62,8 @@ src/supportagent/agent/
   context.py          # parse_call_metadata(), CallState (userdata, token never in repr; holds the OutcomeBuilder)
   gateway_client.py   # GatewayPort protocol, GatewayClient (typed async methods over MCP), open/close_session
   guard.py            # VerifiedGateway: refuses account-data tools until CallState.verified (T-AGENT-04)
-  disclose.py         # speak_disclosure(): registry text verbatim via session.say + disclosures_given tag (T-AGENT-04)
+  disclose.py         # speak_disclosure(): registry text verbatim via an uninterruptible session.say; the
+                      # disclosures_given tag is added only once it was spoken, not interrupted (T-AGENT-04)
   interrupts.py       # InterruptKind, detect_interrupt(s), is_misunderstanding, screen_turn, handle_concern (handlers) (T-AGENT-03)
   base.py             # BaseStateAgent (prompt loading, report_concern, hand_off), tool allow-list checks, @register_state
   grounding.py        # numbers_in, ungrounded_numbers, assert_grounded: every figure said is in a tool result (T-AGENT-06)
@@ -127,7 +128,9 @@ tests/agent/          # mirrors the modules above
 
 ## Greeting, disclosure and verification (T-AGENT-04)
 - **`GreetingAgent`** (`state_name="greeting"`): on entry, in code, `speak_disclosure("ai_recording")` (the first utterance of
-  every call, `ai_recording@<version>` appended to `CallState.disclosures_given`). Outbound: `lookup_by_phone`, then
+  every call, not interruptible; `ai_recording@<version>` is appended to `CallState.disclosures_given` only once it
+  was spoken without being interrupted: on the first real call the caller's first words, 0.9 s in, cancelled it before
+  the TTS had produced audio, so it was never spoken, never reached the transcript, yet the tag had been recorded). Outbound: `lookup_by_phone`, then
   "May I speak with {first_name}?" (or "May I speak with the account holder?" without a match; the name is kept in
   `CallState.callee_first_name`, not as `first_name`, which only verification sets). Inbound: wait for the disclosure to
   finish, then hand to the router; no name is spoken. Tools: `confirm_right_party` → `VerifyAgent`,
@@ -348,7 +351,9 @@ tests/agent/          # mirrors the modules above
 - **`wire_call(session, state, settings, ...)`** attaches, in order: the recorder (`attach_recorder`: turns and tool
   calls onto `CallState.outcome`, redacted only when the transcript is written); the silence policy
   (`voice.silence`, thresholds `SILENCE_REPROMPT_S` / `SILENCE_END_S`): one re-prompt through `session.say(REPROMPT_LINE)`,
-  then `closing.goodbye_line` (not interruptible) and `session.shutdown(drain=True)`; an `on_close` hook (the worker uses it to
+  then `closing.goodbye_line` (not interruptible) and `session.shutdown(drain=True)`; the policy's clock is held while
+  the session has speech in flight (`current_speech`) and re-prompts stop once the closing state is current or
+  `end_reason` is set (a re-prompt was spoken after "Goodbye!" on the first real call); an `on_close` hook (the worker uses it to
   end the job with `ctx.shutdown("session closed")`, which runs the shutdown callback); and the sentiment classifier
   (`llm_sentiment_classifier(session.llm)`, handed to `finalize` as `classify`, called once at the end).
 - **End reason.** The agent ending a call sets `CallState.end_reason` (`"silence"`); `finalize` writes it in the

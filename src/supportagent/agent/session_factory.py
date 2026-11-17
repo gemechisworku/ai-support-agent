@@ -123,8 +123,25 @@ def wire_call(
         session.say(goodbye_line(bank_name), allow_interruptions=False)
         session.shutdown(drain=True)  # drain: the goodbye is spoken before the session closes
 
+    def speech_in_flight() -> bool:
+        """A reply is being generated or spoken, or a line is queued: not caller silence (see
+        voice.silence)."""
+        handle = getattr(session, "current_speech", None)
+        return handle is not None and not handle.done()
+
+    def wrapping_up() -> bool:
+        """The call is ending (the silence end fired) or the closing state has the floor: no more
+        re-prompts."""
+        return state.end_reason is not None or state.states_visited[-1:] == ["closing"]
+
     silence = attach_silence_policy(
-        session, policy or silence_policy(settings), on_reprompt, on_end, tick_s=tick_s
+        session,
+        policy or silence_policy(settings),
+        on_reprompt,
+        on_end,
+        tick_s=tick_s,
+        is_busy=speech_in_flight,
+        is_closing=wrapping_up,
     )
 
     if on_close is not None:

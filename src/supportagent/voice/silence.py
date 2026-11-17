@@ -9,6 +9,12 @@
   caller turn. The agent's own speech, such as the re-prompt, neither counts as silence nor as caller
   activity, so `end_after_s` is total caller silence.
 - No action is ever emitted while the agent is speaking or thinking (no re-prompt over its own speech).
+- `hold(True)` also pauses the clock. The agent's *state* can flicker to `listening` for a moment between
+  `thinking` stages while a reply is still being generated or queued (seen on the first real call: a re-prompt
+  was queued behind a reply that took 80 s). `attach_silence_policy` therefore holds the clock whenever the
+  session still has speech in flight (`is_busy`).
+- `set_closing(True)` (the call is wrapping up: the agent has said, or is about to say, goodbye) suppresses
+  re-prompts for good; the end of the call still fires if the caller says nothing. `close()` stops the policy.
 - `poll()` returns `SilenceAction.REPROMPT` (at most `max_reprompts` times) and then `SilenceAction.END`
   (once), or `None`.
 
@@ -72,6 +78,8 @@ class SilencePolicy:
         self._reprompts = 0
         self._agent_busy = False
         self._user_speaking = False
+        self._hold = False
+        self._closing = False
         self._ended = False
 
     # ------------------------------------------------------------------ state inputs
@@ -79,7 +87,7 @@ class SilencePolicy:
     def _refresh(self) -> None:
         """Silence counts only while a period is armed, the agent is not talking and the caller is not."""
         now = self._clock()
-        counting = self._armed and not self._agent_busy and not self._user_speaking
+        counting = self._armed and not self._agent_busy and not self._user_speaking and not self._hold
         if counting and self._since is None:
             self._since = now
         elif not counting and self._since is not None:
@@ -118,6 +126,22 @@ class SilencePolicy:
             self._armed = True  # the agent finished a turn (greeting, answer or re-prompt)
             self._refresh()
 
+    def hold(self, on: bool) -> None:
+        """Pause (or resume) the clock because something else is still going on: speech in flight."""
+        if on != self._hold:
+            self._refresh()  # bank the silence counted so far under the old setting
+            self._hold = on
+            self._refresh()
+
+    def set_closing(self, closing: bool = True) -> None:
+        """The call is wrapping up: no more re-prompts (the end of the call can still fire)."""
+        self._closing = closing
+
+    def close(self) -> None:
+        """Stop the policy for good (the call is ending for another reason): `poll()` returns None."""
+        self._ended = True
+        self._since = None
+
     # ------------------------------------------------------------------ decisions
 
     def _elapsed(self) -> float:
@@ -128,7 +152,7 @@ class SilencePolicy:
 
     def _reprompt_at(self) -> float | None:
         """Silence (seconds) at which the next re-prompt is due, or None when the budget is spent."""
-        if self._reprompts >= self.max_reprompts:
+        if self._closing or self._reprompts >= self.max_reprompts:
             return None
         return self.reprompt_after_s + self._reprompts * self.reprompt_every_s
 
@@ -192,11 +216,18 @@ def attach_silence_policy(
     on_end: Callable[[str], Awaitable[None] | None],
     *,
     tick_s: float = 0.25,
+    is_busy: Callable[[], bool] | None = None,
+    is_closing: Callable[[], bool] | None = None,
 ) -> SilenceHandle:
     """Feed `policy` from `session`'s state events and run it; must be called inside a running event loop.
 
     `on_reprompt()` should make the agent say its re-prompt line; `on_end("silence")` should say the closing
     line and end the call. A callback that raises is logged (without content) and the policy carries on.
+
+    `is_busy()` says whether the session still has speech in flight (a reply being generated or spoken,
+    a queued
+    line): the clock is held while it is true, so the policy never re-prompts over a reply that has not been
+    delivered yet. `is_closing()` says the call is wrapping up: re-prompts stop for good.
     """
 
     def user_changed(event: Any) -> None:
@@ -210,6 +241,9 @@ def attach_silence_policy(
 
     async def run() -> None:
         while True:
+            policy.hold(bool(is_busy()) if is_busy is not None else False)
+            if is_closing is not None and is_closing():
+                policy.set_closing(True)
             action = policy.poll()
             if action is SilenceAction.REPROMPT:
                 try:

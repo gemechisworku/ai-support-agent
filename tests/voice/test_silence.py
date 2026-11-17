@@ -282,3 +282,111 @@ async def test_a_failing_callback_does_not_kill_the_poller(clock: FakeClock) -> 
         assert calls == ["silence"]
     finally:
         handle.stop()
+
+
+# ------------------------------------------------------------------ hold, closing, close (first real call)
+
+
+def test_hold_pauses_the_clock_like_the_agent_talking(clock: FakeClock) -> None:
+    p = policy(clock)
+    agent_finishes_talking(p)
+    clock.advance(4)
+    p.hold(True)  # a reply is still in flight (the agent state flickered back to listening)
+    clock.advance(60)
+    assert p.poll() is None
+    p.hold(False)
+    clock.advance(1.9)
+    assert p.poll() is None  # only 4 + 1.9 s of silence so far
+    clock.advance(0.2)
+    assert p.poll() is SilenceAction.REPROMPT
+
+
+def test_hold_before_any_silence_counts_nothing(clock: FakeClock) -> None:
+    p = policy(clock)
+    p.hold(True)
+    agent_finishes_talking(p)
+    clock.advance(30)
+    assert p.poll() is None
+
+
+def test_closing_stops_the_reprompt_but_the_end_still_fires(clock: FakeClock) -> None:
+    p = policy(clock)
+    agent_finishes_talking(p)
+    p.set_closing(True)  # the agent has said goodbye
+    clock.advance(6)
+    assert p.poll() is None  # no "Hello, are you still there?" after a goodbye
+    clock.advance(9)
+    assert p.poll() is SilenceAction.END
+
+
+def test_closing_after_the_reprompt_was_due_still_suppresses_it(clock: FakeClock) -> None:
+    p = policy(clock)
+    agent_finishes_talking(p)
+    clock.advance(5)
+    p.set_closing(True)
+    clock.advance(5)  # 10 s of silence: the re-prompt would have been due at 6 s
+    assert p.poll() is None
+
+
+def test_close_stops_the_policy_for_good(clock: FakeClock) -> None:
+    p = policy(clock)
+    agent_finishes_talking(p)
+    p.close()
+    clock.advance(60)
+    assert p.poll() is None
+    assert p.next_deadline() is None
+
+
+async def test_attach_holds_the_clock_while_speech_is_in_flight(clock: FakeClock) -> None:
+    session = FakeSession()
+    calls: list[str] = []
+    in_flight = {"on": True}
+    handle = attach_silence_policy(
+        session,  # type: ignore[arg-type]
+        policy(clock),
+        lambda: calls.append("reprompt"),
+        lambda reason: calls.append(f"end:{reason}"),
+        tick_s=0.001,
+        is_busy=lambda: in_flight["on"],
+    )
+    try:
+        session.emit("agent_state_changed", "speaking")
+        session.emit("agent_state_changed", "listening")  # the flicker: state says idle, a reply is pending
+        await settle()  # one poller tick registers the hold (a real tick is 0.25 s, the clock does not jump)
+        clock.advance(40)
+        await settle()
+        assert calls == []
+        in_flight["on"] = False  # the reply was delivered
+        await settle()
+        clock.advance(6)
+        await settle()
+        assert calls == ["reprompt"]
+    finally:
+        handle.stop()
+
+
+async def test_attach_stops_reprompting_once_the_call_is_wrapping_up(clock: FakeClock) -> None:
+    session = FakeSession()
+    calls: list[str] = []
+    closing = {"on": False}
+    handle = attach_silence_policy(
+        session,  # type: ignore[arg-type]
+        policy(clock),
+        lambda: calls.append("reprompt"),
+        lambda reason: calls.append(f"end:{reason}"),
+        tick_s=0.001,
+        is_closing=lambda: closing["on"],
+    )
+    try:
+        session.emit("agent_state_changed", "speaking")
+        session.emit("agent_state_changed", "listening")
+        closing["on"] = True
+        await settle()
+        clock.advance(8)
+        await settle()
+        assert calls == []  # past the 6 s re-prompt point, but the agent has said goodbye
+        clock.advance(8)
+        await settle()
+        assert calls == ["end:silence"]
+    finally:
+        handle.stop()

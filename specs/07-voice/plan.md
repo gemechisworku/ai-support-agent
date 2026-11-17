@@ -33,6 +33,14 @@ different plugin.
   re-prompt) neither counts nor resets it, and the agent's reply to a caller turn restarts it, so
   `SILENCE_END_S` is total caller silence. `attach_silence_policy` polls every 0.25 s and calls
   `on_reprompt()` / `on_end("silence")` (sync or async; a raising callback is logged and ignored).
+  Found on the first real call (2026-11-17): the agent *state* flickers to `listening` for a moment between
+  `thinking` stages while a reply is still being generated, which armed the clock and produced a re-prompt
+  over an undelivered reply. `attach_silence_policy(..., is_busy=...)` therefore calls `policy.hold(...)` every
+  tick: the wiring passes "the session still has speech in flight" (`AgentSession.current_speech` not done),
+  and the clock stands still while it is true. `is_closing=...` makes `set_closing(True)`: no re-prompt once
+  the closing state has the floor or the silence end has fired (the end of the call still can). Defaults are
+  `SILENCE_REPROMPT_S=10` / `SILENCE_END_S=25`: the same call showed the caller needing 8-11 s to answer after
+  each reply. `tests/voice/test_silence_real_call.py` replays that call's turn-taking (synthetic copy).
 - **Latency:** `LatencyTracker.add(metrics)` consumes LiveKit EOU, LLM and TTS metrics and keys them by
   `speech_id` (LiveKit 1.8: STT metrics carry no `speech_id`, so the `stt` stage is the EOU metric's
   `transcription_delay`). A turn completes when its three metrics have arrived, in any order; incomplete turns

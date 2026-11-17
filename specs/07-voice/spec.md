@@ -61,4 +61,4 @@ the agent worker entrypoint (`06-agent`, T-AGENT-01) for playground mode; the te
 
 ## Open questions
 - Is Kokoro voice `af_heart` acceptable for the persona? (Default for now; set in settings `TTS_VOICE`.)
-- Exact silence timings: defaults `SILENCE_REPROMPT_S=7`, `SILENCE_END_S=20`. Tune in T-VOICE-06.
+- Exact silence timings: defaults `SILENCE_REPROMPT_S=10`, `SILENCE_END_S=25` (7 and 20 were the first guess; the first real call showed callers pausing 8-11 s after each reply, so 6-7 s re-prompted over an active conversation). Tune in T-VOICE-06.

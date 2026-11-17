@@ -105,8 +105,11 @@ class ModelsSettings(_Group):
     stt_model: str = "whisper-1"
     stt_language: str = "en"
     whisper_model: str = "small.en"
-    silence_reprompt_s: float = Field(6, gt=0)
-    silence_end_s: float = Field(15, gt=0)
+    # Caller silence before the one re-prompt, and before the agent ends the call. 10 and 25: on the
+    # first real
+    # call the caller took 8-11 s to answer after each reply, and 6 s re-prompted over an active conversation.
+    silence_reprompt_s: float = Field(10, gt=0)
+    silence_end_s: float = Field(25, gt=0)
     # Development aid (T-VOICE-05): append turn-taking state changes (no speech) to this JSON-lines file,
     # for the live barge-in check. `make agent-dev` sets it; empty means off.
     session_event_log: str | None = None
