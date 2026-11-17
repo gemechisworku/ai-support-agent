@@ -124,6 +124,14 @@ class CallState:
         self.outcome.add_intent(intent)
 
     @property
+    def kb_sources(self) -> list[str]:
+        """`doc_id@version#section` of each policy chunk an answer was given from (T-AGENT-07), once each."""
+        return self.outcome.kb_sources
+
+    def add_kb_source(self, citation: str) -> None:
+        self.outcome.add_kb_source(citation)
+
+    @property
     def dispute_flag(self) -> bool:
         return self.outcome.dispute_flag
 
@@ -159,4 +167,5 @@ class CallState:
             "intents": [i.value for i in self.intents],
             "dispute_flag": self.dispute_flag,
             "cease_contact_flag": self.cease_contact_flag,
+            "kb_sources": list(self.kb_sources),
         }

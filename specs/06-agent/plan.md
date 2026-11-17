@@ -273,6 +273,37 @@ tests/agent/          # mirrors the modules above
   retry, no-PII logs, transcript, sentiment, recorder), `test_closing.py` (closing flow, and closing + recorder + finalize
   end to end), `test_worker.py` (`finish_call` order).
 
+## Policy answers (T-AGENT-07)
+- **`PolicyAgent`** (`policy`, `flow.POLICY`): general "how does this work" questions; no verification needed. The router
+  hands off silently, so `on_state_enter` calls `session.generate_reply()` and the model answers the question already
+  in the chat history. Tools: `search_policy(query, product?)`, `offer_follow_up(topic)`, `finish()` (three domain tools,
+  plus the shared `report_concern`); no account tools exist in this state.
+- **No answer without a search in the same turn (code).** `llm_node` sets `tool_choice="required"` on the first model
+  step after a caller turn (the newest chat item is not a tool result), so the model must call a tool before it can
+  speak; after any tool result the choice is `"none"`, so it speaks and cannot search elsewhere. `tool_choice_for(items)`
+  is the pure rule. A policy claim can therefore only follow a `search_policy` result of the same turn.
+- **Only retrieved text reaches the model.** A confident result is rendered by `render_excerpts` (each chunk with its
+  `doc_id@version#section`). Each citation goes to `CallState.kb_sources` once each (also in `outcome_so_far()`); the
+  gateway records the same strings in its session, and the outcome merge de-duplicates them. The entry carries the
+  `#section`, as the outcome contract (`kb_sources`: `doc_id@version#section`) and `PolicySource.citation` define.
+  T-AGENT-08's `OutcomeBuilder.add_kb_source` is the same list written through the builder.
+- **Low confidence says nothing about policy (code).** `low_confidence`, an empty chunk list or a failed search never
+  shows the retrieved text to the model. The state speaks a fixed line itself (`LOW_CONFIDENCE_OFFER` or
+  `UNAVAILABLE_OFFER`, both ending in an offer of a call back from a colleague) with `session.say` (queued, not
+  awaited) and raises `StopResponse`, so the model is not asked to add anything. Nothing is cited.
+- **Follow-up.** After the caller says yes, the model calls `offer_follow_up(topic)`: `request_callback(now + 1 day,
+  "policy question: <topic, 80 characters at most>")`. On success `Intent.callback_request` is recorded and the model
+  confirms in one sentence; on failure it apologises and nothing is recorded as booked. The topic is the model's
+  short label (the prompt forbids names and numbers); the gateway sanitises the reason as well.
+- **Product.** The state does not pick one: the gateway defaults to the verified caller's loan product when there is a
+  single loan and searches all products otherwise (GW policy tool). A product the model passes is forwarded only when it
+  is a known `ProductCode` (`valid_product`), else dropped.
+- **Back to the router.** `finish` hands off with `self.hand_off(self.next_state(router))`; the router asks "Is there
+  anything else I can help you with?".
+- **Tests** (`tests/agent/test_policy.py`): the caller reaches the state through the real router. A `RecordingLLM`
+  records each request's `tool_choice` (the scripted LLM ignores it): `[None, "required", "none"]` for a question
+  answered from retrieved text.
+
 ## Key decisions
 | Decision | Choice | Why |
 |---|---|---|

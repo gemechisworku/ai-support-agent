@@ -163,7 +163,7 @@ answered from `speakable` strings. For more than one loan, ask which one by prod
 **Files:** `src/supportagent/agent/states/account.py`, `prompts/account.md`, tests above
 
 ### T-AGENT-07 · Policy questions with citations and low-confidence fallback (U4)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #33
 - **Depends on:** T-AGENT-05
@@ -174,8 +174,8 @@ Implement `PolicyAgent`, which answers only from the `search_policy` chunks of t
 `offer_follow_up` (`request_callback`). The product defaults to the verified loan's product.
 
 **Acceptance criteria**
-- [ ] A policy answer without a preceding `search_policy` call in the same turn is impossible (the reply is generated only after the tool result; enforced by `tool_choice=required` on the first step)
-- [ ] Low confidence → no policy claim, plus a follow-up offer
+- [x] A policy answer without a preceding `search_policy` call in the same turn is impossible (the reply is generated only after the tool result; enforced by `tool_choice=required` on the first step)
+- [x] Low confidence → no policy claim, plus a follow-up offer
 
 **Tests**
 - `tests/agent/test_policy.py` (unit, text mode): "can I pay early?" cites the early-repayment doc; low-confidence path; sources recorded once per doc
