@@ -104,9 +104,11 @@ inbound `campaign="playground"` call.
 2. **Gateway and data.** `docker compose up -d --wait postgres bank-api gateway`, with the bank seeded and the
    policies ingested (README, "Run it locally", steps 2–3).
 3. **Worker.** `make agent-dev`. It checks the servers and the gateway first and stops with a one-line hint if
-   one is missing. On the first run it also downloads the turn-detector weights
-   (`python -m supportagent.agent.worker download-files`, which needs the network once) and records that in
-   `var/run/turn-detector.ok`. It passes `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` from `.env`
+   one is missing. On the first run it also downloads the end-of-turn model
+   (`python -m supportagent.voice.turn_files`, about 100 MB, which needs the network once). It checks the Hugging Face
+   cache for the real files on every start, so a stale or false "done" marker can't hide a missing model. (LiveKit's own
+   `download-files` command is not enough: it fetches only for plugins already imported, and it exits 0 having
+   fetched nothing.) It passes `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` from `.env`
    to LiveKit's CLI (which reads its environment), so nothing has to be exported in the shell, and sets
    `SESSION_EVENT_LOG=var/log/session_events.jsonl` for the barge-in check.
 4. **Playground.** In a second terminal, `make playground`: LiveKit's open-source Agents Playground. The first run
@@ -162,6 +164,7 @@ against the local model. The data is synthetic, but never put a real key in a co
 | `HTTP 403` (or another unexpected server) on a model URL | something else listens on `[::1]` at that port: use `127.0.0.1` in the URL (see §2); `lsof -nP -iTCP:<port> -sTCP:LISTEN` shows who |
 | `make models-up` says a server exited | read `var/log/<name>.log`; a missing model file means `make models-setup` |
 | `make agent-dev` stops with "the gateway is not reachable" | `docker compose up -d --wait postgres bank-api gateway`, then `curl localhost:8002/healthz` |
-| `make agent-dev`: the turn-detector download failed | it needs the network once; re-run `make agent-dev` (it only records success in `var/run/turn-detector.ok`) |
+| `make agent-dev`: the turn-detector download failed | it needs the network once; re-run `make agent-dev`, or run `uv run python -m supportagent.voice.turn_files` yourself (it exits 1 and names any file still missing) |
+| The agent joins the room, then leaves within a second (`job ended … agent worker left the room`, status `JS_FAILED` in `var/log/livekit.log`) | the worker process crashed after the dispatch. Read the traceback in the `make agent-dev` terminal. The usual cause is the end-of-turn model missing from the Hugging Face cache: `uv run python -m supportagent.voice.turn_files` |
 | The playground connects but no agent joins, and you hear nothing | The page's **Agent name** is empty or "None": the playground keeps its settings in a browser cookie, which wins over the link, so no agent is dispatched. Click Disconnect, click the Agent name value in the right-hand panel (scroll up to AGENT), type `support-agent`, press Enter, then Connect; or open the link in a private window. Also check that `make agent-dev` is running (`registered worker` in its log). `var/log/livekit.log` shows who is in the room: only your own `user-…` participant means no dispatch |
 | The agent joins but is silent for several seconds the first time | the worker loads Silero and Kokoro's first request is slow; the second call is faster |

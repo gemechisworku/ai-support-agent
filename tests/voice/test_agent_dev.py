@@ -52,9 +52,16 @@ def test_gateway_up_reflects_the_health_endpoint(settings: Settings, monkeypatch
     assert agent_dev.gateway_up(settings) is False
 
 
-def test_the_turn_detector_download_is_remembered(tmp_path: Path) -> None:
+def test_turn_detector_readiness_is_the_real_cache_not_a_marker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tonight's bug: `download-files` fetched nothing, exited 0, and a marker said "ready"."""
+    from supportagent.voice import turn_files
+
     marker = tmp_path / "run" / "turn-detector.ok"
-    assert agent_dev.turn_detector_ready(marker) is False
     marker.parent.mkdir()
-    marker.touch()
-    assert agent_dev.turn_detector_ready(marker) is True
+    marker.touch()  # the stale marker an earlier version of agent-dev left behind
+    monkeypatch.setattr(turn_files, "files_present", lambda cache_dir=None: False)
+    assert agent_dev.turn_detector_ready() is False
+    monkeypatch.setattr(turn_files, "files_present", lambda cache_dir=None: True)
+    assert agent_dev.turn_detector_ready() is True

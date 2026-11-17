@@ -90,7 +90,7 @@ make models-up && make models-health        # want: all healthy
 docker compose up -d --wait postgres bank-api gateway
 
 # 3. The agent worker. Leave it running; it checks steps 1-2 first and stops with a one-line hint if one is missing.
-make agent-dev                              # the first run downloads the turn-detector weights (needs the network once)
+make agent-dev                              # the first run downloads the end-of-turn model, ~100 MB (needs the network once)
 
 # 4. Second terminal: LiveKit's open-source playground, served locally (first run clones it and runs npm install)
 make playground                             # prints a link: open it

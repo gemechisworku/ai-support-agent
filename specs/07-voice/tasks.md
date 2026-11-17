@@ -163,7 +163,7 @@ Make the agent reachable with no telephony.
   fresh `call_id`. The worker builds that context in T-AGENT-01; this task wires the dev defaults and
   the docs.
 - The launcher (`scripts/agent_dev.py`, behind `make agent-dev`) checks the model servers and the gateway,
-  fetches the turn-detector weights once, takes the LiveKit connection from settings (LiveKit's CLI reads its
+  fetches the end-of-turn model once (`python -m supportagent.voice.turn_files`, verified in the cache on every start), takes the LiveKit connection from settings (LiveKit's CLI reads its
   environment) and sets `SESSION_EVENT_LOG`. The token carries a room configuration that dispatches
   `support-agent`: the worker registers with an explicit agent name, so without it no agent joins the room.
 - The worker feeds a `LatencyTracker` (T-VOICE-04) and puts its p50/p90 on the outcome before `finalize`;

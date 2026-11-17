@@ -358,8 +358,10 @@ tests/agent/          # mirrors the modules above
 - **Prewarm.** `prewarm` (`AgentServer.setup_fnc`) loads the Silero VAD once per worker process. The turn detector
   cannot be loaded there: LiveKit's `EnglishModel()` calls `get_job_context().inference_executor`, so it raises outside
   a job (found by running `prewarm` for real). The entrypoint builds it per call, which is cheap because the model runs
-  in LiveKit's shared inference process. Its weights must be downloaded first (`python -m supportagent.agent.worker
-  download-files`); T-VOICE-05's setup guide lists that step. `initialize_process_timeout` is 60 s.
+  in LiveKit's shared inference process. Its files must be in the Hugging Face cache first: `python -m supportagent.voice.turn_files` (T-VOICE-05) downloads
+  and verifies them, and `providers.build_turn_detector` raises a clear error if they are missing. (`worker
+  download-files` is not enough: it fetches only for plugins already imported, and exits 0 having fetched nothing.)
+  `initialize_process_timeout` is 60 s.
 - **Tests.** `tests/agent/test_session_wiring.py` (a whole text-mode call through the real states, the silence policy
   on a fake clock and fake session, the close hook, the sentiment classifier) and additions to `test_worker.py`
   (`prewarm`, `run_call` order and one `finish_call`).

@@ -7,8 +7,8 @@ Before it starts the worker it checks what the agent needs and fails with a one-
 missing:
 - the native model servers (LLM, whisper, Kokoro, LiveKit): `make models-up`;
 - the gateway: `docker compose up -d --wait postgres bank-api gateway` (it serves the agent's tools);
-- the turn-detector weights, fetched once with `python -m supportagent.agent.worker download-files` (a
-  marker in `var/run/` records that it succeeded, so later runs do not need the network).
+- the turn-detector weights, fetched once with `python -m supportagent.voice.turn_files` and checked in the
+  Hugging Face cache on every start (so later runs do not need the network).
 
 LiveKit's worker CLI reads LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET from the process environment, so
 this script takes them from `supportagent.common.settings` (the project's `.env`) and passes them on: nothing
@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from supportagent.common.settings import Settings, get_settings  # noqa: E402
 
 WORKER = "supportagent.agent.worker"
-TURN_DETECTOR_MARKER = ROOT / "var" / "run" / "turn-detector.ok"
+TURN_FILES = "supportagent.voice.turn_files"
 DEFAULT_EVENT_LOG = "var/log/session_events.jsonl"
 SERVERS = ("llm", "whisper", "kokoro", "livekit")
 
@@ -62,8 +62,11 @@ def gateway_up(settings: Settings, *, timeout_s: float = 3.0) -> bool:
         return False
 
 
-def turn_detector_ready(marker: Path = TURN_DETECTOR_MARKER) -> bool:
-    return marker.exists()
+def turn_detector_ready() -> bool:
+    """Are the end-of-turn model's files really in the Hugging Face cache? (Not a marker: see turn_files.)"""
+    from supportagent.voice import turn_files
+
+    return turn_files.files_present()
 
 
 def fail(message: str) -> int:
@@ -89,12 +92,10 @@ def main() -> int:
     if not turn_detector_ready():
         print("agent-dev: downloading the turn-detector weights (once)...", flush=True)
         download = subprocess.run(  # noqa: S603  (our own interpreter, fixed arguments)
-            [sys.executable, "-m", WORKER, "download-files"], cwd=ROOT, env=env, check=False
+            [sys.executable, "-W", "ignore", "-m", TURN_FILES], cwd=ROOT, env=env, check=False
         )
-        if download.returncode != 0:
-            return fail(f"`python -m {WORKER} download-files` failed (needs the network once): see above")
-        TURN_DETECTOR_MARKER.parent.mkdir(parents=True, exist_ok=True)
-        TURN_DETECTOR_MARKER.touch()
+        if download.returncode != 0 or not turn_detector_ready():
+            return fail(f"`python -m {TURN_FILES}` failed (needs the network once): see above")
 
     print("agent-dev: starting the worker. In another terminal run `make dev-token` and open the playground.")
     sys.stdout.flush()

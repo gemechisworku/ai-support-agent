@@ -82,7 +82,15 @@ def build_vad() -> lk_vad.VAD:
 
 
 def build_turn_detector() -> EnglishModel:
-    """LiveKit's English end-of-turn model. Its weights are fetched by `download-files` (T-VOICE-03)."""
+    """LiveKit's English end-of-turn model. Its files come from `python -m supportagent.voice.turn_files`."""
+    from supportagent.voice import turn_files
+
+    missing = turn_files.missing_files()
+    if missing:  # the plugin would raise a cryptic LocalEntryNotFoundError and the call would die silently
+        raise RuntimeError(
+            f"the end-of-turn model files are not downloaded ({', '.join(missing)}): "
+            "run `uv run python -m supportagent.voice.turn_files` (or `make agent-dev`, which does it)"
+        )
     from livekit.plugins.turn_detector.english import EnglishModel
 
     return EnglishModel()

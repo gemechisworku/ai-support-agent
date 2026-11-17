@@ -62,7 +62,8 @@ scripts/models/
   setup.sh          # brew deps, missing GGUF/GGML downloads (sha256-checked) into ./models, Kokoro (idempotent)
   up.sh / down.sh   # start/stop native servers, pids in var/run, logs in var/log; ports already in use are left alone
   health.py         # probe each endpoint, exit 1 naming any unhealthy one (stdlib only)
-scripts/agent_dev.py      # make agent-dev: preflight (servers, gateway, turn-detector weights once), LiveKit env from settings, worker dev
+scripts/agent_dev.py      # make agent-dev: preflight (servers, gateway, turn-detector files in the cache), LiveKit env from settings, worker dev
+  voice/turn_files.py     # python -m supportagent.voice.turn_files: download the English end-of-turn model, check the cache
 scripts/dev_token.py      # make dev-token: a room token for the playground that also dispatches `support-agent`
 scripts/playground.sh     # make playground: LiveKit's open-source Agents Playground, pinned clone in vendor/, 127.0.0.1:3100
 scripts/bench_latency.py  # local vs hosted benchmark -> docs/reports/
@@ -99,7 +100,7 @@ tests/voice/
 | Servers already running | `up.sh` leaves a port that already answers alone; `down.sh` stops only pids it wrote | Hand-started servers keep running |
 | Playground dispatch | the room token carries a `RoomConfiguration` with `RoomAgentDispatch("support-agent")` | The worker registers with an explicit agent name, which turns off automatic dispatch: a plain token joins an empty room |
 | Worker environment | `scripts/agent_dev.py` copies `LIVEKIT_*` from settings into the worker's environment | LiveKit's CLI reads only the process environment; the project reads `.env` through settings |
-| Turn-detector weights | `download-files` once, remembered in `var/run/turn-detector.ok` | The weights cannot load in `prewarm` (T-AGENT-13) and later runs should not need the network |
+| Turn-detector weights | `python -m supportagent.voice.turn_files` downloads the English model once; `files_present` checks the Hugging Face cache on every `make agent-dev` (no marker) | The weights cannot load in `prewarm` (T-AGENT-13) and the plugin loads them with `local_files_only=True`, so a missing model kills the call. LiveKit's `download-files` fetches only for plugins already imported (ours is imported lazily), so it exited 0 having fetched nothing, and a marker made that look like success (found on the first playground call, 2026-11-17) |
 
 ## Dependencies
 Runtime: `livekit-agents`, `livekit-plugins-openai`, `livekit-plugins-silero`,
