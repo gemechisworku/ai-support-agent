@@ -233,3 +233,10 @@ def test_unit_tests_cannot_open_a_connection() -> None:
         s.connect(("127.0.0.1", 9))
     with pytest.raises(NetworkBlocked):
         socket.getaddrinfo("example.com", 80)
+
+
+def test_the_default_entry_agent_can_speak_the_recording_disclosure() -> None:
+    """The greeting's disclosure needs {bank_name} and {agent_name}; the default entry agent supplies them."""
+    agent = harness.default_entry_agent()
+    assert set(agent.variables) >= {"bank_name", "agent_name"}  # type: ignore[attr-defined]
+    assert all(agent.variables.values())  # type: ignore[attr-defined]

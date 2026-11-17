@@ -29,6 +29,7 @@ from supportagent.agent.base import STATE_REGISTRY
 from supportagent.agent.context import CallState
 from supportagent.agent.prompts.registry import PromptRegistry
 from supportagent.common.clock import freeze_clock, now
+from supportagent.common.settings import PersonaSettings
 from supportagent.contracts.bank import PersonaCard
 from supportagent.contracts.outcome import Campaign, Direction, Versions
 from supportagent.contracts.transcript import TranscriptTurn
@@ -90,7 +91,10 @@ def default_entry_agent() -> Agent:
     cls = STATE_REGISTRY.get(ENTRY_STATE)
     if cls is None:
         raise NoEntryState(f"no '{ENTRY_STATE}' state is registered; pass agent=<factory> to run_scenario")
-    return cls()
+    # The greeting speaks the recording disclosure, which needs {bank_name} and {agent_name}. The persona
+    # defaults (and BANK_NAME / AGENT_NAME from the environment, never a local .env) keep runs reproducible.
+    persona = PersonaSettings(_env_file=None)
+    return cls(variables={"bank_name": persona.bank_name, "agent_name": persona.agent_name})
 
 
 async def run_scenario(
