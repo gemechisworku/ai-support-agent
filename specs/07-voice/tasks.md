@@ -157,7 +157,8 @@ Make the agent reachable with no telephony.
 - `make playground` runs LiveKit's open-source Agents Playground locally (`scripts/playground.sh`: pinned clone into the
   git-ignored `vendor/agents-playground`, `.env.local` from `.env`, `npm install`, bound to 127.0.0.1:3100). Added on
   2026-11-17: LiveKit is retiring the hosted playground (agents-playground.livekit.io redirects to a 404) and keeps
-  the open-source one "for self-hosted use"; its connect screen takes a URL and a token.
+  the open-source one "for self-hosted use". With the LiveKit URL in its `.env.local` it mints its own token, and the
+  page's `#agent=support-agent` hash presets the explicit dispatch, so no token has to be pasted.
 - A room with no `call_id` metadata is treated as an inbound call with `campaign="playground"` and a
   fresh `call_id`. The worker builds that context in T-AGENT-01; this task wires the dev defaults and
   the docs.

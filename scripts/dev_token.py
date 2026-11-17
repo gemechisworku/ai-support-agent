@@ -11,8 +11,9 @@ asks LiveKit to dispatch the `support-agent` worker into it: the worker register
 name, so without that dispatch the room would stay empty. The room carries no call metadata, which the worker
 treats as an inbound playground call (`campaign="playground"`).
 
-Run `make playground` (LiveKit's open-source playground on http://127.0.0.1:3100; the hosted one is being
-retired), paste the URL and the token, and connect. Only the token is printed (never the secret).
+This token is for clients that need one pasted: `lk room join`, or any LiveKit client. The local playground
+(`make playground`; the hosted one is being retired) mints its own token and needs none. Only the token is
+printed (never the secret).
 """
 
 from __future__ import annotations
@@ -35,7 +36,6 @@ from supportagent.common.settings import Settings, get_settings  # noqa: E402
 # The worker's registered name (`supportagent.agent.worker.AGENT_NAME`; a test keeps the two equal). It is a
 # constant here because importing the worker would load the whole agent just to mint a token.
 AGENT_NAME = "support-agent"
-PLAYGROUND_URL = "http://127.0.0.1:3100"  # `make playground`
 DEFAULT_TTL_S = 3600
 
 # The documented dev key of `livekit-server --dev` is `devkey` / `secret` (6 bytes): PyJWT's length warning
@@ -102,7 +102,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"url       {url}")
     print(f"token     {token}")
     print()
-    print(f"Run `make playground`, open {PLAYGROUND_URL}, paste the url and token above, and click Connect.")
+    print("The browser playground (`make playground`) mints its own token. Use this one with `lk room join`")
+    print("or another client.")
     print(f"The token is valid for {args.ttl // 60} minutes. Make sure `make agent-dev` is running first.")
     return 0
 

@@ -109,14 +109,18 @@ inbound `campaign="playground"` call.
    `var/run/turn-detector.ok`. It passes `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` from `.env`
    to LiveKit's CLI (which reads its environment), so nothing has to be exported in the shell, and sets
    `SESSION_EVENT_LOG=var/log/session_events.jsonl` for the barge-in check.
-4. **Token.** In a second terminal, `make dev-token` (`ARGS="--room my-room --json"` for options). It prints the
-   LiveKit URL and a one-hour token signed with the dev key. Run `make playground` in another terminal (LiveKit's
-   open-source playground: the first run clones it into the git-ignored `vendor/agents-playground` at a pinned
-   commit and runs `npm install`; it then serves <http://127.0.0.1:3100>; `PLAYGROUND_PORT` changes the port). The
-   hosted playground at agents-playground.livekit.io is being retired by LiveKit. Open the local page, paste
-   `ws://127.0.0.1:7880` and the token, and click Connect. The token also dispatches the agent into the
-   room: without that, an explicitly named worker is never sent to a room.
-5. **Talk.** Allow the microphone. The agent says the recording disclosure first. Verify with a persona from the
+4. **Playground.** In a second terminal, `make playground`: LiveKit's open-source Agents Playground. The first run
+   clones it into the git-ignored `vendor/agents-playground` at a pinned commit, writes its `.env.local` from your
+   `.env` (LiveKit URL, key and secret) and runs `npm install`; it then serves <http://127.0.0.1:3100>
+   (`PLAYGROUND_PORT` changes the port). The hosted playground at agents-playground.livekit.io is being retired by
+   LiveKit. Open the link `make playground` prints:
+   `http://127.0.0.1:3100/#agent=support-agent&mic=1&audio=1&chat=1`. With the LiveKit URL configured, the
+   playground mints its own token and joins a random room on **your local LiveKit server**, so there is nothing to
+   paste. The `agent=support-agent` part fills in the page's **Agent name** field: the worker registers under an
+   explicit name, so LiveKit sends it only to rooms that ask for it (with the field on "None", no agent joins).
+   `make dev-token` mints a token for other clients (`lk room join`, `ARGS="--room my-room --json"`); it carries the
+   same dispatch.
+5. **Talk.** Click **Connect** and allow the microphone. The agent says the recording disclosure first. Verify with a persona from the
    console's **Test personas** page, then ask about the balance or a policy.
 
 Afterwards the outcome (with latency figures) is written once, the redacted transcript is in
@@ -159,5 +163,5 @@ against the local model. The data is synthetic, but never put a real key in a co
 | `make models-up` says a server exited | read `var/log/<name>.log`; a missing model file means `make models-setup` |
 | `make agent-dev` stops with "the gateway is not reachable" | `docker compose up -d --wait postgres bank-api gateway`, then `curl localhost:8002/healthz` |
 | `make agent-dev`: the turn-detector download failed | it needs the network once; re-run `make agent-dev` (it only records success in `var/run/turn-detector.ok`) |
-| The playground connects but no agent joins | `make agent-dev` must be running, and the token must come from `make dev-token` (it carries the agent dispatch); check the worker log for `registered worker` |
+| The playground connects but no agent joins | `make agent-dev` must be running, and the page's **Agent name** must be `support-agent` (open the link `make playground` prints, which presets it; "None" means no dispatch); check the worker log for `registered worker` |
 | The agent joins but is silent for several seconds the first time | the worker loads Silero and Kokoro's first request is slow; the second call is faster |

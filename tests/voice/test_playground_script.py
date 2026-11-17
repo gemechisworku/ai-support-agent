@@ -38,8 +38,8 @@ def test_dry_run_plans_a_pinned_clone_and_a_loopback_dev_server(tmp_path: Path) 
     assert "fetch -q --depth 1 origin 2cfc4ac2257dabb4385f8a436e65cfd8a739d357" in out  # pinned, not main
     assert "npm install" in out
     assert "-p '3100' -H 127.0.0.1" in out  # loopback only; 3100 leaves 3000 to Langfuse
-    assert "paste  ws://127.0.0.1:7880" in out
-    assert "make dev-token" in out
+    assert "http://127.0.0.1:3100/#agent=support-agent&mic=1&audio=1&chat=1" in out  # presets the dispatch
+    assert "connects to your LiveKit server at ws://127.0.0.1:7880" in out
 
 
 def test_dry_run_never_prints_the_secret_and_changes_nothing(tmp_path: Path) -> None:
@@ -61,3 +61,10 @@ def test_unknown_option_is_a_usage_error() -> None:
         ["bash", str(SCRIPT), "--nope"], capture_output=True, text=True, timeout=30, check=False
     )
     assert res.returncode == 2
+
+
+def test_the_preset_agent_name_is_the_workers() -> None:
+    """The worker registers under an explicit name, so the link must ask for exactly that name."""
+    from supportagent.agent.worker import AGENT_NAME
+
+    assert f'AGENT_NAME="{AGENT_NAME}"' in SCRIPT.read_text()

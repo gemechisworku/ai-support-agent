@@ -88,7 +88,7 @@ tests/voice/
 | Decision | Choice | Why |
 |---|---|---|
 | Plugin surface | `livekit-plugins-openai` for all three local servers | One plugin, OpenAI-compatible servers, easy swap |
-| Browser client | LiveKit's open-source Agents Playground, cloned at a pinned commit into `vendor/` and run on 127.0.0.1:3100 by `make playground` | The hosted playground is being retired (2026-11-17); the open-source build has no cloud login and takes a URL plus a token. A page of our own would be a Next.js app under `web/` (constitution VIII), a possible later task |
+| Browser client | LiveKit's open-source Agents Playground, cloned at a pinned commit into `vendor/` and run on 127.0.0.1:3100 by `make playground` | The hosted playground is being retired (2026-11-17); the open-source build has no cloud login; with the LiveKit URL set it mints its own token, and the `agent=support-agent` URL-hash setting makes it request the explicit dispatch our worker needs. A page of our own would be a Next.js app under `web/` (constitution VIII), a possible later task |
 | Streaming STT | VAD-segmented `StreamAdapter` over whisper.cpp | Whisper is not truly streaming (PRD §12) |
 | Local model server | llama.cpp `llama-server` (one process for chat, one for embeddings) | Already installed, plain GGUF files reused across projects (disk budget), OpenAI-compatible; replaced Ollama on 2026-11-07 |
 | Local LLM | Llama 3.1 8B Instruct Q4_K_M | Reliable tool calling via its chat template, no thinking mode to disable, the GGUF was already on disk |

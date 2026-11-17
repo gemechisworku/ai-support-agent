@@ -7,8 +7,11 @@
 # The hosted playground (agents-playground.livekit.io) is being retired by LiveKit, which keeps the open-source
 # one "available for self-hosted use". This clones it into the git-ignored vendor/agents-playground at a pinned
 # commit (PLAYGROUND_REF), writes its .env.local from LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET, runs
-# `npm install` once, and starts it bound to 127.0.0.1. Open it, paste LIVEKIT_URL and the token that
-# `make dev-token` prints, and connect. Needs Node and npm (see docs/dev-setup.md). Idempotent.
+# `npm install` once, and starts it bound to 127.0.0.1. With LIVEKIT_URL set, the playground mints its own
+# token (its server uses the key and secret from .env.local) and joins a random room on that server, so no token
+# has to be pasted. The worker registers under an explicit agent name, so the playground must ask for it: the
+# link printed below presets `agent=support-agent` (the "Agent name" field) and turns the microphone and agent
+# audio on, through the URL hash. Needs Node and npm (see docs/dev-setup.md). Idempotent.
 set -euo pipefail
 . "$(dirname "$0")/models/_env.sh"
 
@@ -30,6 +33,7 @@ API_KEY="$(setting LIVEKIT_API_KEY devkey)"
 API_SECRET="$(setting LIVEKIT_API_SECRET secret)"
 # The playground's browser code connects to this URL: the loopback address, never `localhost` (see dev-setup).
 WS_URL="$(setting LIVEKIT_URL ws://127.0.0.1:7880)"
+AGENT_NAME="support-agent"   # supportagent.agent.worker.AGENT_NAME (a test keeps the two equal)
 
 run() { if [ "$DRY" = 1 ]; then echo "  would run: $*"; else "$@"; fi; }
 
@@ -69,9 +73,13 @@ fi
 
 cat <<EOF
 
-Playground: http://127.0.0.1:$PORT   (Ctrl-C stops it)
-  1. In another terminal:  make dev-token
-  2. In the page, paste  $WS_URL  and the token, then click Connect and allow the microphone.
+Open this link (Ctrl-C here stops the playground):
+
+  http://127.0.0.1:$PORT/#agent=$AGENT_NAME&mic=1&audio=1&chat=1
+
+It presets Agent name = $AGENT_NAME, so the worker is dispatched into the room. Click Connect and allow the
+microphone. The playground connects to your LiveKit server at $WS_URL and mints its own token; \`make dev-token\`
+is not needed for it.
 EOF
 echo
 run sh -c "cd '$DIR' && exec npm run dev -- -p '$PORT' -H 127.0.0.1"
