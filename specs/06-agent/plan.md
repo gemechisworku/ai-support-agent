@@ -21,8 +21,9 @@ is never wrapped as an LLM tool.
 decision is made in Python from tool results (for example `verified=true` → the next state for this
 direction and campaign), not by the LLM.
 
-**Global interrupts.** `BaseStateAgent.on_user_turn_completed` runs `detect_interrupt(text)` (regex and
-keyword lists per kind) before the LLM sees the turn. On a hit, it stops the reply and hands off to
+**Global interrupts.** `BaseStateAgent` runs `detect_interrupt(text)` (regex and keyword lists per kind)
+on every caller turn before the LLM sees it, from `on_user_turn_completed` (spoken turns) and from `llm_node`
+(typed turns; see "Global interrupts (T-AGENT-03)" below). On a hit, it stops the reply and hands off to
 the handler. The LLM-side catch-all is the shared `report_concern(kind)` tool, present in every
 state. The handlers are:
 
@@ -62,7 +63,7 @@ src/supportagent/agent/
   gateway_client.py   # GatewayPort protocol, GatewayClient (typed async methods over MCP), open/close_session
   guard.py            # VerifiedGateway: refuses account-data tools until CallState.verified (T-AGENT-04)
   disclose.py         # speak_disclosure(): registry text verbatim via session.say + disclosures_given tag (T-AGENT-04)
-  interrupts.py       # InterruptKind, detect_interrupt(), phrase lists
+  interrupts.py       # InterruptKind, detect_interrupt(s), is_misunderstanding, screen_turn, handle_concern (handlers) (T-AGENT-03)
   base.py             # BaseStateAgent (prompt loading, report_concern, hand_off), tool allow-list checks, @register_state
   states/             # flow.py (state names, post-verification table, end_call) greeting.py verify.py third_party.py
                       # router.py account.py policy.py
@@ -106,7 +107,7 @@ tests/agent/          # mirrors the modules above
   reply to the tool result before switching).
 - **Shared tool:** `report_concern(kind)` (`ConcernKind`: human_requested, complaint, legal, hardship, dispute,
   stop_calling, third_party, misunderstanding) records the kind in `CallState.concerns` and calls `on_concern`, which
-  T-AGENT-03 turns into the handler hand-offs.
+  runs the same handlers as the detector (T-AGENT-03, below).
 - **Allow-list, enforced twice:** at most 4 domain tools (`MAX_DOMAIN_TOOLS`) besides `report_concern`
   (`SHARED_TOOLS`), and never `record_call_outcome` (`FORBIDDEN_TOOLS`). `register_state` checks the class when it
   is decorated; `check_registered_states()` checks them all (tests/agent/test_state_registry.py); the constructor
@@ -154,6 +155,53 @@ tests/agent/          # mirrors the modules above
   `outcome_so_far()` includes `contact_result` and `disclosures_given`. T-AGENT-08's `OutcomeBuilder` consumes them.
 - **Tests** (`tests/agent/test_greeting_verify.py`): the successor states belong to later tasks, so the tests register
   stand-ins under the `flow` names and check the hand-offs and arguments.
+
+## Global interrupts (T-AGENT-03)
+- **Detector (`interrupts.py`, pure, no I/O):** `detect_interrupts(text)` returns every kind found, most serious
+  first (`PRIORITY`: stop_calling, legal, dispute, hardship, complaint, human_requested, third_party);
+  `detect_interrupt` returns the first. Text is lower-cased, apostrophes and "dont"-style spellings are normalised,
+  and it is split into clauses at punctuation and "but/so/though/anyway". A match is ignored when a negator
+  ("don't", "not", "never", "without", "no") directly precedes it, allowing a few filler words ("I don't *want to*
+  dispute", "no *need for a* lawyer"); a negation never crosses a clause. Cease wording is conservative: "stop
+  calling me" counts even with "at work", while "don't call me at work, call after six" is a calling window and
+  does not. Detection costs well under a millisecond a turn (budget 20 ms).
+- **Where it runs.** `BaseStateAgent._screen(message)` does the work once per caller message (dedupe by message id in
+  `CallState.screened_messages`). It is called from `on_user_turn_completed` (spoken turns; raises `StopResponse` on a
+  hand-off so the model's reply is skipped) and from an `llm_node` override that screens the newest caller message
+  (typed turns). LiveKit 1.8 does **not** call `on_user_turn_completed` for `session.run(user_input=...)` or
+  `generate_reply(user_input=...)`, so without the `llm_node` twin the text-mode harness (and any chat box in the
+  playground) would bypass the detector. Both paths hand off with `session.update_agent(next_state)`.
+- **Misunderstanding.** `is_misunderstanding(text)` ("I don't understand", "what?", "can you repeat that") and the
+  model's `report_concern("misunderstanding")` both feed `CallState.misunderstandings`, a **consecutive** counter
+  (reset at the start of any turn that follows a turn without one; counted once per turn however it was noticed).
+  At `MISUNDERSTANDING_LIMIT` (2) the call goes to `escalation` with reason `misunderstanding`; below that the model
+  is told to rephrase. Non-consecutive ones do not add up.
+- **Handlers (`handle_concern`):** each records its outcome intent (`INTENT_FOR`: human_request, dispute,
+  cease_contact, legal, complaint, hardship; third_party is a contact result, not an intent) and returns the state to
+  hand off to, or None (stay).
+
+  | Kind | Code path | Hand-off |
+  |---|---|---|
+  | human_requested, complaint, legal, hardship | intent only | `escalation(reason=…)` |
+  | dispute | `dispute_flag=True`; verified: `set_contact_flag("dispute")` once | `escalation(reason=dispute)` |
+  | stop_calling | `cease_contact_flag=True`; verified: `set_contact_flag("cease_contact")`, else `request_callback(now, "cease request")`, once; queue `CEASE_CONFIRMATION` | `closing` (no closing state registered: `session.shutdown(drain=True)`) |
+  | third_party | none | `third_party` |
+  | misunderstanding | none (at the limit) | `escalation(reason=misunderstanding)` |
+
+  The flags are set on `CallState` before any gateway call and stay set when it fails (the outcome records what the
+  caller said; a failure is logged with the tool and error code only, never the text). Verification gates the
+  gateway writes only: an unverified dispute still sets `dispute_flag` and escalates.
+- **Contract with later states.** The handlers find their targets by registry name in `STATE_REGISTRY`
+  (`escalation`, `third_party`, `closing`), so this task needs none of them to exist. A target that is not registered
+  is logged and skipped (flags and intents are still recorded). When the current state *is* the target (a caller asks
+  for a human inside `escalation`) nothing is handed off: no loops. `escalation` must accept
+  `reason: EscalationReason` as a keyword argument of its constructor (`next_state(cls, reason=…)`); `closing` must
+  not offer anything more when `CallState.cease_contact_flag` is set (the confirmation has already been queued).
+  `CallState.outcome_so_far()` now carries `intents`, `dispute_flag` and `cease_contact_flag` for T-AGENT-08's
+  `OutcomeBuilder`.
+- **Speech inside a hand-off.** The confirmation is queued with `session.say(...)` and not awaited: the handler
+  runs inside the reply being generated for that very turn, so waiting for new speech to play out would wait on
+  itself (the test run hung). A hand-off and `shutdown(drain=True)` both let queued speech finish first.
 
 ## Key decisions
 | Decision | Choice | Why |

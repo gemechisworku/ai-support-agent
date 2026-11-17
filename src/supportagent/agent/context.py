@@ -20,7 +20,7 @@ from pydantic import SecretStr, ValidationError
 from supportagent.agent.gateway_client import GatewayPort
 from supportagent.agent.guard import VerifiedGateway
 from supportagent.contracts.call import CallMetadata
-from supportagent.contracts.outcome import Campaign, ContactResult, Direction
+from supportagent.contracts.outcome import Campaign, ContactResult, Direction, Intent
 
 if TYPE_CHECKING:
     from supportagent.compliance.disclosures import DisclosureRegistry
@@ -83,6 +83,15 @@ class CallState:
     first_name: str | None = None
     states_visited: list[str] = field(default_factory=list)  # BaseStateAgent.on_enter appends, in order
     concerns: list[str] = field(default_factory=list)  # kinds raised through `report_concern`
+    # Interrupts (AGENT-R3): outcome `intent[]` values in order (once each), the two flags the outcome
+    # carries, and the consecutive-misunderstanding counter (`interrupts.screen_turn`).
+    intents: list[str] = field(default_factory=list)
+    dispute_flag: bool = False
+    cease_contact_flag: bool = False
+    misunderstandings: int = 0
+    misunderstood_this_turn: bool = False  # the latest caller turn counted as a misunderstanding
+    screened_messages: set[str] = field(default_factory=set)  # caller messages already checked (by id)
+
     # --- identity and disclosures (T-AGENT-04); T-AGENT-08's OutcomeBuilder reads these
     contact_result: ContactResult | None = None  # who answered: right_party, third_party, wrong_number, ...
     disclosures_given: list[str] = field(default_factory=list)  # "ai_recording@1.0", spoken verbatim
@@ -99,6 +108,11 @@ class CallState:
     def call_id(self) -> str:
         return self.metadata.call_id
 
+    def add_intent(self, intent: Intent) -> None:
+        """Record an outcome intent once, keeping the order the caller raised them in."""
+        if intent.value not in self.intents:
+            self.intents.append(intent.value)
+
     def outcome_so_far(self) -> dict[str, Any]:
         """A snapshot of what the call has established so far (the draft the text harness returns).
 
@@ -114,4 +128,7 @@ class CallState:
             "locked": self.locked,
             "states": list(self.states_visited),
             "concerns": list(self.concerns),
+            "intents": list(self.intents),
+            "dispute_flag": self.dispute_flag,
+            "cease_contact_flag": self.cease_contact_flag,
         }

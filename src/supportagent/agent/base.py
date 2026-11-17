@@ -31,15 +31,16 @@ sneak a forbidden tool in). The gateway enforces verification-before-data again,
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
-from typing import ClassVar, Literal
+from collections.abc import AsyncGenerator, Callable, Iterable, Mapping
+from typing import Any, ClassVar, Literal
 
-from livekit.agents import Agent, RunContext, function_tool
-from livekit.agents.llm import ChatContext, Tool, Toolset, find_function_tools
+from livekit.agents import Agent, ModelSettings, RunContext, function_tool
+from livekit.agents.llm import ChatContext, ChatMessage, StopResponse, Tool, Toolset, find_function_tools
 from livekit.agents.llm.tool_context import get_fnc_tool_names
 from livekit.agents.types import NOT_GIVEN
 
 from supportagent.agent.context import CallState
+from supportagent.agent.interrupts import handle_concern, note_misunderstanding, screen_turn
 from supportagent.agent.prompts.registry import PromptRegistry
 from supportagent.common.logging import get_logger
 from supportagent.common.settings import Settings
@@ -60,7 +61,7 @@ ConcernKind = Literal[
     "third_party",
     "misunderstanding",
 ]
-"""What `report_concern` accepts. T-AGENT-03 maps each kind to its handler (as the detector does)."""
+"""What `report_concern` accepts: the detector's `InterruptKind`s plus `misunderstanding`."""
 
 
 class StateToolError(AssertionError):
@@ -156,7 +157,7 @@ class BaseStateAgent(Agent):
     @function_tool
     async def report_concern(
         self, context: RunContext[CallState], kind: ConcernKind
-    ) -> str | tuple[Agent, str]:
+    ) -> str | Agent | tuple[Agent, str]:
         """Report that the caller raised something outside this call's purpose, then follow the result.
 
         Use it when the caller asks for a person, complains, mentions a lawyer or bankruptcy, describes
@@ -171,9 +172,63 @@ class BaseStateAgent(Agent):
         log.info("concern reported", extra={"state": self.state_name, "kind": kind})
         return await self.on_concern(kind)
 
-    async def on_concern(self, kind: ConcernKind) -> str | tuple[Agent, str]:
-        """What a concern does. The base records it only; T-AGENT-03 hands off to the right handler."""
-        return "Noted."
+    async def on_concern(self, kind: ConcernKind) -> str | Agent | tuple[Agent, str]:
+        """What a concern the model reported does: the same handler the detector uses (AGENT-R3).
+
+        A hand-off is silent (the new state speaks first). A misunderstanding is only passed on to a person
+        once it has happened `MISUNDERSTANDING_LIMIT` turns in a row; before that the model is told to
+        rephrase.
+        """
+        if kind == "misunderstanding" and not note_misunderstanding(self.state):
+            return "Noted. Ask the caller once more, in simpler words."
+        next_agent = await handle_concern(self, kind)
+        return "Noted." if next_agent is None else self.hand_off(next_agent)
+
+    # ------------------------------------------------------------------ global interrupts
+
+    async def _screen(self, message: ChatMessage) -> bool:
+        """Check one caller turn for an interrupt, once. True when the call moved to another state.
+
+        A hit runs its handler in code (flags, tickets, a spoken confirmation) and hands the call to the
+        handler's state on this same turn; the caller's turn is recorded as an outcome intent either way.
+        """
+        state = self.state
+        if message.id in state.screened_messages:
+            return False
+        state.screened_messages.add(message.id)
+        kind = screen_turn(state, message.text_content or "")
+        if kind is None:
+            return False
+        next_agent = await handle_concern(self, kind)
+        if next_agent is None:
+            return False  # stay in this state; the model replies
+        self.session.update_agent(next_agent)
+        return True
+
+    async def on_user_turn_completed(self, turn_ctx: ChatContext, new_message: ChatMessage) -> None:
+        """Check every spoken caller turn for an interrupt *before the model replies* (AGENT-R3).
+
+        On a hit the model's reply for this turn is skipped (`StopResponse`) and the call is already on its
+        way to the handler's state. A turn with no interrupt goes to the model as usual.
+        """
+        if await self._screen(new_message):
+            raise StopResponse()
+
+    async def llm_node(
+        self, chat_ctx: ChatContext, tools: list[Tool], model_settings: ModelSettings
+    ) -> AsyncGenerator[Any, None]:
+        """The text-input twin of `on_user_turn_completed`.
+
+        LiveKit only calls `on_user_turn_completed` for a finished *spoken* turn; a typed turn (the text-mode
+        harness, a chat box in the playground) goes straight to the model. Screening the newest caller message
+        here covers that path; `screened_messages` makes it a no-op for a turn the hook already looked at, and
+        for the later model rounds of the same turn (after tool results).
+        """
+        last = chat_ctx.items[-1] if chat_ctx.items else None
+        if isinstance(last, ChatMessage) and last.role == "user" and await self._screen(last):
+            return  # handed off: this state says nothing more
+        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+            yield chunk
 
 
 # --------------------------------------------------------------------------- the state registry

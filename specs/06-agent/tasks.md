@@ -69,7 +69,7 @@ the bundle version and feeds `observability.versions`. Add `testing.py` with `Fa
 **Files:** `src/supportagent/agent/base.py`, `prompts/registry.py`, `testing.py`, tests above
 
 ### T-AGENT-03 · Global interrupt intents
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #29
 - **Depends on:** T-AGENT-02
@@ -81,15 +81,17 @@ human_requested, dispute, stop_calling, third_party, legal, complaint and hardsh
 in the [plan.md interrupt table](plan.md#approach), and a misunderstanding counter that escalates at 2.
 
 **Acceptance criteria**
-- [ ] ≥ 5 positive and ≥ 3 negative phrasings per kind (for example "I don't want to dispute anything, just pay" must not trigger dispute)
-- [ ] An interrupt mid-state hands off on the same turn and records `intent[]`
-- [ ] Dispute → `dispute_flag=true`; stop_calling → `cease_contact_flag=true` in the outcome
+- [x] ≥ 5 positive and ≥ 3 negative phrasings per kind (for example "I don't want to dispute anything, just pay" must not trigger dispute)
+- [x] An interrupt mid-state hands off on the same turn and records `intent[]`
+- [x] Dispute → `dispute_flag=true`; stop_calling → `cease_contact_flag=true` in the outcome
 
 **Tests**
 - `tests/agent/test_interrupts.py` (unit): the phrase tables (parametrised)
 - `tests/agent/test_interrupt_flow.py` (unit, text mode): "get me a human" during Account → Escalation; "stop calling me" verified → `set_contact_flag(cease_contact)` called on FakeGateway
 
-**Files:** `src/supportagent/agent/interrupts.py`, `base.py`, tests above
+**Files:** `src/supportagent/agent/interrupts.py`, `base.py`, `context.py` (intents, flags and the misunderstanding counter on `CallState`), tests above
+
+*(The hook runs from `on_user_turn_completed` for spoken turns and from `llm_node` for typed turns, because LiveKit 1.8 skips `on_user_turn_completed` for text input; see plan.md "Global interrupts (T-AGENT-03)".)*
 
 ### T-AGENT-04 · Greeting, disclosure and identity verification states
 - **Status:** done
