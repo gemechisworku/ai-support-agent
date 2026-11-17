@@ -143,7 +143,7 @@ escalation. Record `intent[]`. Support switching between policy and account ques
 **Files:** `src/supportagent/agent/states/router.py`, `prompts/router.md`, tests above
 
 ### T-AGENT-06 · Account questions (U3)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #32
 - **Depends on:** T-AGENT-05
@@ -154,8 +154,8 @@ the `get_loan_status` outstanding balance, labelled "estimate" with the policy c
 answered from `speakable` strings. For more than one loan, ask which one by product or last 4.
 
 **Acceptance criteria**
-- [ ] Every number in an answer appears verbatim in a tool result from this call
-- [ ] Multiple loans → a clarifying question, then a `loan_last4`-scoped call
+- [x] Every number in an answer appears verbatim in a tool result from this call
+- [x] Multiple loans → a clarifying question, then a `loan_last4`-scoped call
 
 **Tests**
 - `tests/agent/test_account.py` (unit, text mode): balance, due date, last payment (Priya pending), multi-loan clarification; a number-grounding assertion helper (reused by EVAL-03)

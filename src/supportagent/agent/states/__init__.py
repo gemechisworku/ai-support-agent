@@ -5,6 +5,6 @@ Importing this package imports every state, which registers it for the static al
 names states use to hand off to each other.
 """
 
-from supportagent.agent.states import closing, flow, greeting, policy, router, third_party, verify
+from supportagent.agent.states import account, closing, flow, greeting, policy, router, third_party, verify
 
-__all__ = ["closing", "flow", "greeting", "policy", "router", "third_party", "verify"]
+__all__ = ["account", "closing", "flow", "greeting", "policy", "router", "third_party", "verify"]

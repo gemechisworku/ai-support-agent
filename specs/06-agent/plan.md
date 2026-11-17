@@ -42,7 +42,7 @@ state. The handlers are:
 | `VerifyAgent` | ask for full name, DOB, last 4 | `verify_identity` | campaign state / Router / Escalation (locked) |
 | `ThirdPartyAgent` | neutral message, no details | `record_callback_time`, `end_call` | end |
 | `RouterAgent` (inbound) | "How can I help?" | `route_account_question`, `route_policy_question`, `request_human` | Verify→Account / Policy / Escalation |
-| `AccountAgent` (U3) | — | `get_loan_status`, `get_recent_transactions`, `get_interaction_history`, `finish` | Router / Closing |
+| `AccountAgent` (U3) | answers the question already in the chat history | `get_loan_status`, `get_recent_transactions`, `finish` | Router / Closing |
 | `PolicyAgent` (U4) | — | `search_policy`, `offer_follow_up`, `finish` | Router / Closing |
 | `ReminderAgent` (U1) | `get_loan_status` → speak amount and date | `search_policy`, `record_intent_to_pay`, `finish` | Closing |
 | `CollectionsPurposeAgent` (U2 §7 steps 3–5) | `say(collections disclosure)`; `get_loan_status` → purpose line | `get_recent_transactions`, `set_reason_code`, `mark_payment_in_transit` | Resolve / Closing |
@@ -65,6 +65,7 @@ src/supportagent/agent/
   disclose.py         # speak_disclosure(): registry text verbatim via session.say + disclosures_given tag (T-AGENT-04)
   interrupts.py       # InterruptKind, detect_interrupt(s), is_misunderstanding, screen_turn, handle_concern (handlers) (T-AGENT-03)
   base.py             # BaseStateAgent (prompt loading, report_concern, hand_off), tool allow-list checks, @register_state
+  grounding.py        # numbers_in, ungrounded_numbers, assert_grounded: every figure said is in a tool result (T-AGENT-06)
   states/             # flow.py (state names, post-verification table, end_call) greeting.py verify.py third_party.py
                       # router.py account.py policy.py
                       # reminder.py collections.py callback.py escalation.py closing.py
@@ -303,6 +304,40 @@ tests/agent/          # mirrors the modules above
 - **Tests** (`tests/agent/test_policy.py`): the caller reaches the state through the real router. A `RecordingLLM`
   records each request's `tool_choice` (the scripted LLM ignores it): `[None, "required", "none"]` for a question
   answered from retrieved text.
+
+## Account questions (T-AGENT-06)
+- **`AccountAgent`** (`account`, `flow.ACCOUNT`): entered silently by the router (or after `VerifyAgent` via
+  `after_verification`) with the caller's question already in the chat history; `on_state_enter` calls
+  `session.generate_reply()`. Tools: `get_loan_status(loan_last4?)`, `get_recent_transactions(loan_last4?)`,
+  `finish` (back to the router, which says "Is there anything else I can help you with?"). The plan's earlier
+  `get_interaction_history` is not used: U3 never needs it, and its promise amounts have no `speakable` string.
+- **Figures from code, not the model.** Both data tools return text built in `states/account.py` from the
+  contract's fields. `LoanSummary.speakable` and `TransactionOut.speakable` are used verbatim ("Payments: …",
+  "- …"). The balance and the payoff estimate have no `speakable` in the contract, so the `Decimal` field is rendered
+  as `$1,234.56` (no rounding, no arithmetic); days past due are the contract's integer and appear only when above
+  zero. Every tool text ends with "say amounts and dates exactly as written here".
+- **Payoff estimate** = the outstanding balance, written "about $X" under the label "Payoff estimate", followed by
+  `PAYOFF_CAVEAT` (an estimate, not a quote; interest to the payoff day, unpaid fees and any prepayment fee apply;
+  the formal quote is issued in writing; from `early-repayment-payoff` v1.0).
+- **More than one loan.** `get_loan_status()` without `loan_last4` returns the loan list ("Personal Loan ending
+  4417; Auto Loan ending 3310") and `CLARIFY_LOAN`, with no amount or date, so nothing is said before the caller
+  chooses; the next call is `loan_last4`-scoped and returns only that loan. `get_recent_transactions` has the same
+  rule: payments do not say which loan they belong to, so the loan list is read once (cached on the state) to
+  find out, and the payments are read only when the call is scoped (or the caller has one loan). A last 4 that
+  matches nothing returns the real choices again; a malformed one is asked for again with no gateway call.
+- **Pending payments** (Priya's case) are listed first, as the gateway returns them, with their own wording
+  "(pending, not yet posted)" and a note that a pending payment has not posted yet.
+- **Failure and the guard.** A failed read gives only `UNAVAILABLE_NOTE` (no error detail, no figure; the code is
+  logged); `not_verified` (the agent-side `VerifiedGateway`, which answers before the gateway is reached) gives
+  `NOT_VERIFIED_NOTE`.
+- **Grounding check** (`supportagent.agent.grounding`): a figure is a digit run with optional commas and
+  decimals; tokens are compared whole, so `$200` is not grounded by `$200.72`. `assert_grounded(answer, sources)`
+  is used by `tests/agent/test_account.py` over each spoken line and the tool outputs of the same call, and is
+  what EVAL-03 reuses over whole scenarios. Spelled-out numbers are outside its reach; the prompt tells the model to
+  read the tool text as written and EVAL-03 checks transcripts.
+- **Not enforced at the speech output.** The check is a test and eval, not a runtime filter on what the model
+  says; the code-level guarantees are that the model is only ever given grounded text and that the verification
+  guard stands in front of every account read.
 
 ## Key decisions
 | Decision | Choice | Why |
