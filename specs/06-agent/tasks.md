@@ -92,7 +92,7 @@ in the [plan.md interrupt table](plan.md#approach), and a misunderstanding count
 **Files:** `src/supportagent/agent/interrupts.py`, `base.py`, tests above
 
 ### T-AGENT-04 · Greeting, disclosure and identity verification states
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #30
 - **Depends on:** T-AGENT-02, T-COMP-05
@@ -104,14 +104,20 @@ Implement `GreetingAgent` (verbatim AI and recording disclosure; outbound `looku
 message, asks for a good callback time, no details). Record `contact_result` and `verified`.
 
 **Acceptance criteria**
-- [ ] The first utterance of every call equals the registry text; `disclosures_given` includes `ai_recording@<version>`
-- [ ] The spouse persona's transcript contains no amount, date, product or loan reference
-- [ ] Two failed verifications → `EscalationAgent`; inbound sessions never speak a name before verification
+- [x] The first utterance of every call equals the registry text; `disclosures_given` includes `ai_recording@<version>`
+- [x] The spouse persona's transcript contains no amount, date, product or loan reference
+- [x] Two failed verifications → `EscalationAgent`; inbound sessions never speak a name before verification
 
 **Tests**
 - `tests/agent/test_greeting_verify.py` (unit, text mode): Frank verifies; wrong DOB twice → escalation; spouse → ThirdParty with `contact_result=third_party`; wrong number → `wrong_number`
 
-**Files:** `src/supportagent/agent/states/greeting.py`, `verify.py`, `third_party.py`, `prompts/*.md`
+*(The escalation target, `EscalationAgent`, is T-AGENT-11 and the inbound `RouterAgent` is T-AGENT-05, so the tests
+register stand-ins under their state names (`escalation`, `router`, ...) and check the hand-offs and the
+`reason="verification_failed"` argument. Until those states exist, `VerifyAgent` keeps the call alive with a
+safe message instead of failing. Verification-before-data is also enforced in code by `agent/guard.py`.)*
+
+**Files:** `src/supportagent/agent/states/greeting.py`, `verify.py`, `third_party.py`, `flow.py`, `prompts/*.md`,
+`src/supportagent/agent/guard.py`, `disclose.py`, `context.py`, `tests/agent/test_greeting_verify.py`
 
 ### T-AGENT-05 · Inbound routing and intent detection
 - **Status:** todo

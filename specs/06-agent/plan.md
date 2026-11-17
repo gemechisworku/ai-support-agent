@@ -59,10 +59,13 @@ in U2 leads to `refer_to_human` with reason `hardship`.
 src/supportagent/agent/
   worker.py           # AgentServer entrypoint `support-agent`; setup_call/teardown_call (testable seam)
   context.py          # parse_call_metadata(), CallState (userdata, token never in repr) + OutcomeBuilder (T-AGENT-08)
-  gateway_client.py   # GatewayPort protocol, GatewayClient (typed async methods over MCP), open/close_session; verified-guard (T-AGENT-04)
+  gateway_client.py   # GatewayPort protocol, GatewayClient (typed async methods over MCP), open/close_session
+  guard.py            # VerifiedGateway: refuses account-data tools until CallState.verified (T-AGENT-04)
+  disclose.py         # speak_disclosure(): registry text verbatim via session.say + disclosures_given tag (T-AGENT-04)
   interrupts.py       # InterruptKind, detect_interrupt(), phrase lists
   base.py             # BaseStateAgent (prompt loading, report_concern, hand_off), tool allow-list checks, @register_state
-  states/             # greeting.py verify.py third_party.py router.py account.py policy.py
+  states/             # flow.py (state names, post-verification table, end_call) greeting.py verify.py third_party.py
+                      # router.py account.py policy.py
                       # reminder.py collections.py callback.py escalation.py closing.py
   prompts/            # VERSION, shared.md, <state>.md (front matter {version}); registry.py: PromptRegistry
   transfer.py         # Transferer protocol + TransferResult (TEL-04 implements, tests inject FakeTransferer)
@@ -117,6 +120,40 @@ tests/agent/          # mirrors the modules above
   uncanned tools return `upstream_error`. `FakeTransferer`. `run_text_scenario(persona, turns, *, agent, llm,
   gateway=None, direction, campaign)` runs a text-only `AgentSession` and returns `ScenarioResult{transcript,
   tool_calls, outcome, states, gateway, llm, state}`.
+
+## Greeting, disclosure and verification (T-AGENT-04)
+- **`GreetingAgent`** (`state_name="greeting"`): on entry, in code, `speak_disclosure("ai_recording")` (the first utterance of
+  every call, `ai_recording@<version>` appended to `CallState.disclosures_given`). Outbound: `lookup_by_phone`, then
+  "May I speak with {first_name}?" (or "May I speak with the account holder?" without a match; the name is kept in
+  `CallState.callee_first_name`, not as `first_name`, which only verification sets). Inbound: wait for the disclosure to
+  finish, then hand to the router; no name is spoken. Tools: `confirm_right_party` → `VerifyAgent`,
+  `third_party_answered` → `ThirdPartyAgent`, `wrong_number` → `contact_result=wrong_number` and end the call.
+  `session.update_agent` does nothing while the session is still starting, which is why the inbound hand-off awaits the
+  disclosure first.
+- **`VerifyAgent`** (`verify`): asks for full name, date of birth and loan last 4 (no name spoken); one tool,
+  `verify_identity(full_name, dob: YYYY-MM-DD, loan_last4)`. A malformed date or last 4 is refused in code and costs no
+  attempt. On `verified`: `CallState.verified`, `first_name`, `contact_result=right_party`, then
+  `flow.post_verification_state(direction, campaign)`. Not verified with attempts left: the model is told how many remain,
+  never which detail was wrong. Locked (two failures): `CallState.locked` and `EscalationAgent(reason="verification_failed")`.
+  A gateway error verifies nothing.
+- **`ThirdPartyAgent`** (`third_party`): speaks the registry's `third_party_neutral` text verbatim (tag recorded),
+  tools `record_callback_time(note)` (kept in `CallState.third_party_callback_note`, 200 characters at most) and
+  `end_call`. It has no data tools and nobody is verified, so no amount, date, product or loan reference can reach it.
+- **`flow.py`**: the state names and `post_verification_state` (pre_due → `reminder`, missed_payment → `collections_purpose`,
+  callback → `callback`, any inbound call → `router`). Successors are looked up in `STATE_REGISTRY` at hand-off time
+  (`flow.resolve`), so they can land in later tasks. A state that is escalated to takes the keyword argument `reason`
+  (an `EscalationReason` value): T-AGENT-11's `EscalationAgent.__init__` must accept it. `flow.end_call(context)` calls
+  `session.shutdown(drain=True)` so the model's last line is spoken first; the tool's result tells it to say goodbye.
+- **`VerifiedGateway`** (`guard.py`): `CallState.__post_init__` wraps its gateway so `get_loan_status`,
+  `get_recent_transactions`, `get_interaction_history` and `record_promise_to_pay` return `not_verified` without reaching the
+  gateway until `CallState.verified`. `lookup_by_phone`, `verify_identity`, `search_policy`, `request_callback`, `escalate`,
+  `set_contact_flag` and `record_call_outcome` pass through (the gateway applies its own rules to them). This is defence in
+  depth: the gateway enforces verification-before-data too.
+- **Call state:** `CallState` gains `contact_result`, `disclosures_given`, `disclosures` (the `DisclosureRegistry`, loaded on
+  first use from `data/config/disclosures.yaml`), `callee_first_name` and `third_party_callback_note`;
+  `outcome_so_far()` includes `contact_result` and `disclosures_given`. T-AGENT-08's `OutcomeBuilder` consumes them.
+- **Tests** (`tests/agent/test_greeting_verify.py`): the successor states belong to later tasks, so the tests register
+  stand-ins under the `flow` names and check the hand-offs and arguments.
 
 ## Key decisions
 | Decision | Choice | Why |

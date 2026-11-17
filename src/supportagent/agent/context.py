@@ -13,13 +13,17 @@ import re
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import SecretStr, ValidationError
 
 from supportagent.agent.gateway_client import GatewayPort
+from supportagent.agent.guard import VerifiedGateway
 from supportagent.contracts.call import CallMetadata
-from supportagent.contracts.outcome import Campaign, Direction
+from supportagent.contracts.outcome import Campaign, ContactResult, Direction
+
+if TYPE_CHECKING:
+    from supportagent.compliance.disclosures import DisclosureRegistry
 
 SIP_PHONE_ATTRIBUTE = "sip.phoneNumber"  # LiveKit: the caller's number on an inbound SIP call
 _E164 = re.compile(r"^\+[1-9]\d{6,14}$")
@@ -79,6 +83,17 @@ class CallState:
     first_name: str | None = None
     states_visited: list[str] = field(default_factory=list)  # BaseStateAgent.on_enter appends, in order
     concerns: list[str] = field(default_factory=list)  # kinds raised through `report_concern`
+    # --- identity and disclosures (T-AGENT-04); T-AGENT-08's OutcomeBuilder reads these
+    contact_result: ContactResult | None = None  # who answered: right_party, third_party, wrong_number, ...
+    disclosures_given: list[str] = field(default_factory=list)  # "ai_recording@1.0", spoken verbatim
+    disclosures: DisclosureRegistry | None = field(default=None, repr=False)  # loaded on first use
+    callee_first_name: str | None = None  # outbound: the first name from `lookup_by_phone` (not verified yet)
+    third_party_callback_note: str | None = None  # what a third party said about a good time to call back
+
+    def __post_init__(self) -> None:
+        # Verification-before-data in code (AGENT-R2): account-data tools are refused until `verified`.
+        if not isinstance(self.gateway, VerifiedGateway):
+            self.gateway = VerifiedGateway(self.gateway, lambda: self.verified)
 
     @property
     def call_id(self) -> str:
@@ -94,6 +109,8 @@ class CallState:
             "direction": self.metadata.direction.value,
             "campaign": self.metadata.campaign.value,
             "verified": self.verified,
+            "contact_result": self.contact_result.value if self.contact_result else None,
+            "disclosures_given": list(self.disclosures_given),
             "locked": self.locked,
             "states": list(self.states_visited),
             "concerns": list(self.concerns),
