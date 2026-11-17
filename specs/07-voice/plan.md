@@ -18,11 +18,21 @@ different plugin.
 - **TTS:** Kokoro-FastAPI through `openai.TTS(base_url=TTS_URL/v1, model="kokoro", voice=TTS_VOICE)`.
   The session's sentence tokenizer streams TTS per sentence.
 - **VAD / turns:** `silero.VAD.load()` (prewarmed in the worker's `prewarm`) plus the LiveKit English
-  turn detector model. Interruptions are enabled, with `min_interruption_duration` ≈ 0.4 s and
-  `min_endpointing_delay` ≈ 0.4 s, tuned in T-VOICE-06.
+  turn detector model. Interruptions are enabled. The delays are settings (T-VOICE-03):
+  `INTERRUPTION_MIN_S` (0.4), `ENDPOINTING_MIN_DELAY_S` (0.4) and `ENDPOINTING_MAX_DELAY_S` (3.0), tuned in
+  T-VOICE-06. `session.build_session_options(settings, vad=…, turn_detector=…)` returns the `AgentSession`
+  kwargs (livekit-agents 1.x `turn_handling` form, not the deprecated flat keywords) and sets
+  `user_away_timeout=None`, because caller silence is `SilencePolicy`'s job. TTS is wrapped in
+  `tts.StreamAdapter` with a sentence tokenizer (`MIN_SENTENCE_LEN = 20`) so Kokoro speaks each sentence as soon
+  as the LLM has completed it.
 - **Silence:** a pure `SilencePolicy` state machine (injected clock) driven by session
   `user_state_changed` / `agent_state_changed` events. It emits `reprompt` and `end` actions. The
-  agent supplies the wording.
+  agent supplies the wording. Silence is accumulated quiet time: it counts only while the agent is not
+  speaking or thinking and the caller is not speaking, and it starts when the agent finishes a turn or the
+  caller stops. Caller speech resets it and the re-prompt budget; the agent's own speech (including the
+  re-prompt) neither counts nor resets it, and the agent's reply to a caller turn restarts it, so
+  `SILENCE_END_S` is total caller silence. `attach_silence_policy` polls every 0.25 s and calls
+  `on_reprompt()` / `on_end("silence")` (sync or async; a raising callback is logged and ignored).
 - **Latency:** `LatencyTracker` consumes `metrics_collected` events (EOU, STT, LLM, TTS metrics) and keys
   them by `speech_id` to compute per-turn `e2e = eou_delay + llm_ttft + tts_ttfb`. Percentiles use
   `statistics.quantiles` with the "inclusive" method.
@@ -46,6 +56,7 @@ scripts/dev_token.py      # mint a LiveKit token for the playground
 scripts/bench_latency.py  # local vs hosted benchmark -> docs/reports/
 tests/voice/
   test_providers.py  test_session.py  test_silence.py  test_latency.py  test_health_script.py
+  test_live_barge_in.py   # marker live (VOICE-R4 barge-in < 300 ms, from a session event log)
   test_live_pipeline.py   # marker live
 ```
 
@@ -53,7 +64,7 @@ tests/voice/
 - New settings fields (added to `supportagent.common.settings` by T-VOICE-02): `STT_URL`, `TTS_URL`,
   `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`llamacpp|anthropic`), `LLM_MODEL`, `ANTHROPIC_MODEL` (default `claude-haiku-5-5`),
   `ANTHROPIC_API_KEY` (SecretStr), `STT_MODEL` (default `whisper-1`, the name the OpenAI client sends; whisper-server
-  serves `WHISPER_MODEL` regardless), `STT_LANGUAGE` (`en`), `TTS_MODEL` (`kokoro`), `SILENCE_REPROMPT_S`, `SILENCE_END_S`, `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
+  serves `WHISPER_MODEL` regardless), `STT_LANGUAGE` (`en`), `TTS_MODEL` (`kokoro`), `SILENCE_REPROMPT_S`, `SILENCE_END_S` (must exceed the re-prompt delay), `ENDPOINTING_MIN_DELAY_S`, `ENDPOINTING_MAX_DELAY_S`, `INTERRUPTION_MIN_S`, `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
   `LLM_GGUF` and `EMBED_GGUF` come from T-PLAT-07.
 - `LatencySummary`: `{stage: {"p50": float, "p90": float}}` for stages `eou`, `stt`, `llm_ttft`,
   `tts_ttfb`, `e2e`, in seconds. `to_outcome()` returns `latency_p50` / `latency_p90` as the e2e

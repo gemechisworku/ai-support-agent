@@ -107,6 +107,11 @@ class ModelsSettings(_Group):
     whisper_model: str = "small.en"
     silence_reprompt_s: float = Field(6, gt=0)
     silence_end_s: float = Field(15, gt=0)
+    # Turn taking (VOICE-R4): how long to wait after speech before answering, and how long the caller must
+    # speak over the agent to count as barging in.
+    endpointing_min_delay_s: float = Field(0.4, gt=0)
+    endpointing_max_delay_s: float = Field(3.0, gt=0)
+    interruption_min_s: float = Field(0.4, gt=0)
     tts_url: str = "http://localhost:8880"
     tts_voice: str = "af_heart"
     tts_model: str = "kokoro"
@@ -118,6 +123,14 @@ class ModelsSettings(_Group):
         """The active LLM as `provider/model`, e.g. `llamacpp/llama-3.1-8b-instruct` (VOICE-R3)."""
         model = self.anthropic_model if self.llm_provider == "anthropic" else self.llm_model
         return f"{self.llm_provider}/{model}"
+
+    @model_validator(mode="after")
+    def _turn_and_silence_timings_are_ordered(self) -> Self:
+        if self.endpointing_max_delay_s < self.endpointing_min_delay_s:
+            raise ValueError("ENDPOINTING_MAX_DELAY_S must be >= ENDPOINTING_MIN_DELAY_S")
+        if self.silence_end_s <= self.silence_reprompt_s:
+            raise ValueError("SILENCE_END_S must be greater than SILENCE_REPROMPT_S")
+        return self
 
     @model_validator(mode="after")
     def _hosted_llm_needs_key(self) -> Self:

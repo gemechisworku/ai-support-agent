@@ -98,17 +98,20 @@ Add the pure `silence.SilencePolicy(reprompt_after_s, end_after_s, max_reprompts
 events. The agent (T-AGENT-08) supplies the re-prompt and closing lines.
 
 **Acceptance criteria**
-- [ ] `build_session_options` enables interruptions and model-based turn detection, and passes STT/LLM/TTS from the factory.
-- [ ] TTS is fed sentence by sentence (the first sentence is spoken before the LLM finishes).
-- [ ] Silence: one re-prompt after `SILENCE_REPROMPT_S`; `on_end("silence")` after `SILENCE_END_S`; caller speech resets the timers; agent speech does not count as caller activity.
+- [x] `build_session_options` enables interruptions and model-based turn detection, and passes STT/LLM/TTS from the factory.
+- [x] TTS is fed sentence by sentence (the first sentence is spoken before the LLM finishes).
+- [x] Silence: one re-prompt after `SILENCE_REPROMPT_S`; `on_end("silence")` after `SILENCE_END_S`; caller speech resets the timers; agent speech does not count as caller activity.
 - [ ] Live checklist: barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in logs).
+  *(Needs the running pipeline and a person talking over the agent; not run when this task was committed,
+  which is why the status stays `todo`. `tests/voice/test_live_barge_in.py` measures it from a session event log;
+  tick this and set the status to `done` after the live run.)*
 
 **Tests**
-- `tests/voice/test_session.py` (unit): the options include VAD, turn detection, `allow_interruptions=True` and the configured delays.
-- `tests/voice/test_silence.py` (unit, fake clock): the re-prompt fires once; the end fires at the threshold; speech resets the timers; there is no re-prompt while the agent is speaking.
-- `tests/voice/test_live_pipeline.py::test_barge_in` (live): manual-assisted timing check, documented in the docstring.
+- `tests/voice/test_session.py` (unit): the options include VAD, model-based turn detection, interruptions enabled (`turn_handling.interruption.enabled`; the flat `allow_interruptions` keyword is deprecated in livekit-agents 1.x) and the configured delays; the sentence tokenizer releases the first sentence before the reply is complete; `barge_in_latency_s` on synthetic event logs.
+- `tests/voice/test_silence.py` (unit, fake clock): the re-prompt fires once; the end fires at the threshold; speech resets the timers; there is no re-prompt while the agent is speaking; silence after a reply is counted from the end of the reply; `attach_silence_policy` against a fake session.
+- `tests/voice/test_live_barge_in.py::test_barge_in` (live): manual-assisted timing check from a session event log, documented in the docstring (a separate file from `test_live_pipeline.py`, which T-VOICE-01 owns).
 
-**Files:** `src/supportagent/voice/session.py`, `src/supportagent/voice/silence.py`, `tests/voice/test_session.py`, `tests/voice/test_silence.py`
+**Files:** `src/supportagent/voice/session.py`, `src/supportagent/voice/silence.py`, `src/supportagent/common/settings.py`, `.env.example`, `tests/voice/test_session.py`, `tests/voice/test_silence.py`, `tests/voice/test_live_barge_in.py`
 
 ### T-VOICE-04 · Per-stage latency metrics
 - **Status:** todo
