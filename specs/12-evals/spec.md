@@ -69,7 +69,7 @@ Proves the agent against the PRD §10 acceptance criteria, repeatably, before ev
 
 ## Interfaces
 **Provides:**
-- `evals.harness.run_scenario(scenario, *, mode: "scripted"|"simulated", llm=None, gateway=None) -> RunRecord`
+- `evals.harness.run_scenario(scenario, *, mode: "scripted"|"simulated", llm=None, gateway=None, agent=None) -> RunRecord` (async; `agent` is an entry-state factory)
 - `evals.fakes.FakeGateway`, which implements the agent's gateway client protocol (T-AGENT-01), and `evals.fakes.ScriptedLLM`
 - `evals.scenarios.load_all(dir) -> list[Scenario]`
 - `observability.guardrails.check_*(record) -> CheckResult` and `CallRecord`

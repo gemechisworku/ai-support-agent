@@ -11,16 +11,22 @@
     `RunResult` events (messages, function calls, outputs) into a `RunRecord`.
   - Caller turns come from `caller.script` (scripted) or from the `Simulator` (simulated, until the
     agent closes or `max_turns`).
-- **FakeGateway:** an in-memory port of the gateway semantics, seeded from the scenario fixture:
+- **FakeGateway:** an in-memory port of the gateway semantics, seeded from the scenario fixture
+  (`FakeBankData`, built by hand or with `FakeBankData.for_persona`). It extends `agent.testing.FakeGateway`
+  (T-AGENT-02), so `run_text_scenario` accepts it, and implements every `GatewayPort` method:
   - scope rules: unverified tools only until bound, lock after 2 failures, typed inputs
   - masking
   - promise validation (≤ 14 days, amount ≤ due)
   - contact flags
   - an audit list equivalent to the `audit_log` rows
 
-  A **conformance suite** (`tests/evals/test_gateway_conformance.py`) runs the same cases against
-  `FakeGateway` (unit) and the real MCP gateway (integration, seeded persona DB), so the fake cannot drift.
-- **ScriptedLLM:** an `livekit.agents.llm.LLM` subclass. It replays a per-scenario `agent_script` (list
+  Not modelled: rate limits, session expiry, the bank's HTTP errors, the KB (a scenario gives a `policy`
+  function). A **conformance suite** (`tests/evals/test_gateway_conformance.py`) runs the same cases against
+  `FakeGateway` (unit), the real tool pipeline over the persona seed in `FakeBank` (unit) and the real pipeline
+  over the seeded `bank_test` database (integration), so the fake cannot drift. The real targets call
+  `gateway.tools.run_tool` in process with the arguments `GatewayClient` would send, so only the MCP/HTTP hop
+  is skipped. The audit rows are compared including `args_hash` (same salt, same canonical JSON).
+- **ScriptedLLM:** `evals.fakes.ScriptedLLM` extends `agent.testing.ScriptedLLM` (an `livekit.agents.llm.LLM`). It replays a per-scenario `agent_script` (list
   of `{say: ...}` / `{tool: name, args: {...}}` steps), or defaults to a minimal policy that follows the
   state's expected tool. It can be told to misbehave (`misbehave: call_get_loan_status_first`) to prove
   code guardrails hold regardless of the LLM.
@@ -50,10 +56,11 @@
 ```
 src/supportagent/evals/
   __init__.py  harness.py  fakes.py  scenarios.py  simulator.py  judge.py  report.py  records.py
+  (T-EVAL-01 builds harness, fakes and records; `Scenario` is a dataclass there, T-EVAL-02 adds the YAML loader)
   prompts/simulator.md  prompts/judge_faithfulness.md  prompts/judge_naturalness.md  prompts/VERSION
 src/supportagent/observability/guardrails.py     CallRecord, CheckResult, check_* (owned by T-EVAL-03)
 tests/scenarios/*.yaml   tests/scenarios/schema.json
-tests/evals/ test_harness.py test_gateway_conformance.py test_scenarios_schema.py test_scenarios_scripted.py
+tests/evals/ conftest.py desk.py targets.py test_harness.py test_gateway_conformance.py test_scenarios_schema.py test_scenarios_scripted.py
              test_guardrails.py test_judge.py test_report.py test_eval_llm.py (eval) test_review_sheet.py
 .github/workflows/eval.yml   docs/demo.md   docs/review-sheet.md
 ```
@@ -83,14 +90,15 @@ expect:
 ```
 
 `RunRecord`, which equals `CallRecord` plus metadata, has these fields:
-- `scenario_id`
-- `mode`
-- `turns: list[TranscriptTurn]`
+- `scenario_id`, `mode`, `call_id` (a UUID4 derived from the scenario id)
+- `turns: list[TranscriptTurn]` (timestamps are the frozen clock plus the turn number in seconds)
+- `tool_calls: list[ToolCallLog]`: every gateway request with `ok`, `error_code` and the audit `decision`
+- `model_calls: list[ModelCall]`: what the model asked for, including calls that never reached the gateway
 - `audit: list[AuditRow]`
-- `outcome: CallOutcome`
-- `bank_snapshot`
-- `llm_model`
-- `versions`
+- `outcome: CallOutcome` (the agent's own `record_call_outcome` if it wrote one, else a draft from
+  `FakeGateway.draft_outcome`; T-AGENT-08's builder replaces the draft)
+- `bank_snapshot` (promises, tasks, contact preferences, interactions)
+- `llm_model`, `versions`, `states`
 
 ## Key decisions
 | Decision | Choice | Why |
@@ -123,3 +131,15 @@ expect:
 - Scripted scenarios pass while real-LLM ones fail. That is the intended gap: AC metrics come from
   `make eval`, not CI.
 - Judge bias. Mitigated by the labelled agreement set and by recording the judge model and prompt version.
+
+## Harness notes (T-EVAL-01)
+- `run_scenario(scenario, *, mode="scripted", llm=None, gateway=None, agent=None)`. `agent` is a factory for the
+  entry state; the default looks up the registered `greeting` state and raises `NoEntryState` until T-AGENT-04
+  registers it. `mode="simulated"` raises `NotImplementedError` until T-EVAL-04.
+- The harness freezes the clock at 2026-11-09T14:00Z and derives the call id from the scenario id, so a scripted
+  scenario serialises to the same JSON on every run.
+- `misbehave="call_get_loan_status_first"` makes the model call `get_loan_status` on its first request. When the
+  state offers that tool the gateway denies it as `not_verified`; a state without the tool makes LiveKit reject
+  the call (it never reaches the gateway, and `model_calls` shows it).
+- Unit tests run with sockets blocked (`tests/evals/conftest.py::no_network`).
+- `make eval-scripted` runs `tests/evals` without the integration, eval and live markers.

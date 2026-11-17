@@ -72,6 +72,10 @@ migrate: up ## Upgrade the bank and kb databases to head (Alembic, one env per d
 migrate-test: up ## Upgrade bank_test and kb_test to head
 	BANK_DB=bank_test KB_DB=kb_test $(MAKE) migrate
 
+.PHONY: eval-scripted
+eval-scripted: ## Run the scripted scenarios through the text-mode harness: no model, no network (T-EVAL-01)
+	$(PY) pytest tests/evals -m "not integration and not eval and not live" -q
+
 .PHONY: kb-ingest
 kb-ingest: migrate ## Ingest data/policies into the kb database (ARGS="--embedder fake" or "--dry-run")
 	$(PY) python -m supportagent.kb.ingest $(ARGS)

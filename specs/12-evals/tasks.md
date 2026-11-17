@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-EVAL-01 · Text-mode scenario harness with fake gateway
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #37
 - **Depends on:** T-AGENT-02
@@ -25,18 +25,22 @@ Build `evals.harness.run_scenario()`, `evals.fakes.FakeGateway`, `evals.fakes.Sc
   the full library comes in T-EVAL-02.
 
 **Acceptance criteria**
-- [ ] Two runs of the same scripted scenario produce identical `RunRecord` JSON (ids and timestamps from the frozen clock).
-- [ ] `misbehave: call_get_loan_status_first` → the gateway decision is `denied`, and no amount appears in agent turns.
-- [ ] Two wrong DOBs → `verify_identity` locked, and the outcome is escalated with reason `verification_failed`.
-- [ ] The conformance suite passes against `FakeGateway` in unit mode and against the real gateway under `-m integration`.
-- [ ] No network in unit mode (`socket` blocked by a fixture).
+- [x] Two runs of the same scripted scenario produce identical `RunRecord` JSON (ids and timestamps from the frozen clock).
+- [x] `misbehave: call_get_loan_status_first` → the gateway decision is `denied`, and no amount appears in agent turns.
+- [x] Two wrong DOBs → `verify_identity` locked, and the outcome is escalated with reason `verification_failed`.
+- [x] The conformance suite passes against `FakeGateway` in unit mode and against the real gateway under `-m integration`.
+- [x] No network in unit mode (`socket` blocked by a fixture).
+
+*(Verified 2026-11-17: the conformance cases passed against `fake` and `gateway-fakebank` in unit mode and
+against `gateway-db` under `-m integration` (12 cases each); breaking the fake's lock limit, verified scope
+or promise window made them fail.)*
 
 **Tests**
 - `tests/evals/test_harness.py` (unit): determinism; misbehaving LLM denied; lockout; record contents.
 - `tests/evals/test_gateway_conformance.py` (unit + integration): identical cases for fake and real
   targets (scope, lock, masking, promise window, contact flags, audit rows).
 
-**Files:** `src/supportagent/evals/harness.py`, `src/supportagent/evals/fakes.py`, `src/supportagent/evals/records.py`, `tests/evals/test_harness.py`, `tests/evals/test_gateway_conformance.py`, `tests/evals/conftest.py`, `Makefile`
+**Files:** `src/supportagent/evals/__init__.py`, `src/supportagent/evals/harness.py`, `src/supportagent/evals/fakes.py`, `src/supportagent/evals/records.py`, `tests/evals/test_harness.py`, `tests/evals/test_gateway_conformance.py`, `tests/evals/conftest.py`, `tests/evals/desk.py`, `tests/evals/targets.py`, `Makefile`
 
 ### T-EVAL-02 · Persona scenario library
 - **Status:** todo
