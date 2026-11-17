@@ -107,6 +107,9 @@ class ModelsSettings(_Group):
     whisper_model: str = "small.en"
     silence_reprompt_s: float = Field(6, gt=0)
     silence_end_s: float = Field(15, gt=0)
+    # Development aid (T-VOICE-05): append turn-taking state changes (no speech) to this JSON-lines file,
+    # for the live barge-in check. `make agent-dev` sets it; empty means off.
+    session_event_log: str | None = None
     # Turn taking (VOICE-R4): how long to wait after speech before answering, and how long the caller must
     # speak over the agent to count as barging in.
     endpointing_min_delay_s: float = Field(0.4, gt=0)

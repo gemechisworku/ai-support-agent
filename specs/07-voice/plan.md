@@ -56,15 +56,18 @@ src/supportagent/voice/
   session.py        # build_session_options(settings) -> SessionOptions
   silence.py        # SilencePolicy + attach_silence_policy
   latency.py        # LatencyTracker, LatencySummary
+  event_log.py      # attach_event_log: turn-taking states + times as JSON lines, for the barge-in check (dev)
 scripts/models/
   _env.sh           # sourced: settings from env / .env / defaults, port_of, abs_path
   setup.sh          # brew deps, missing GGUF/GGML downloads (sha256-checked) into ./models, Kokoro (idempotent)
   up.sh / down.sh   # start/stop native servers, pids in var/run, logs in var/log; ports already in use are left alone
   health.py         # probe each endpoint, exit 1 naming any unhealthy one (stdlib only)
-scripts/dev_token.py      # mint a LiveKit token for the playground
+scripts/agent_dev.py      # make agent-dev: preflight (servers, gateway, turn-detector weights once), LiveKit env from settings, worker dev
+scripts/dev_token.py      # make dev-token: a room token for the playground that also dispatches `support-agent`
 scripts/bench_latency.py  # local vs hosted benchmark -> docs/reports/
 tests/voice/
   test_providers.py  test_session.py  test_silence.py  test_latency.py  test_health_script.py
+  test_dev_token.py  test_agent_dev.py  test_event_log.py
   test_live_barge_in.py   # marker live (VOICE-R4 barge-in < 300 ms, from a session event log)
   test_live_pipeline.py   # marker live
 ```
@@ -73,7 +76,7 @@ tests/voice/
 - New settings fields (added to `supportagent.common.settings` by T-VOICE-02): `STT_URL`, `TTS_URL`,
   `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`llamacpp|anthropic`), `LLM_MODEL`, `ANTHROPIC_MODEL` (default `claude-haiku-5-5`),
   `ANTHROPIC_API_KEY` (SecretStr), `STT_MODEL` (default `whisper-1`, the name the OpenAI client sends; whisper-server
-  serves `WHISPER_MODEL` regardless), `STT_LANGUAGE` (`en`), `TTS_MODEL` (`kokoro`), `SILENCE_REPROMPT_S`, `SILENCE_END_S` (must exceed the re-prompt delay), `ENDPOINTING_MIN_DELAY_S`, `ENDPOINTING_MAX_DELAY_S`, `INTERRUPTION_MIN_S`, `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
+  serves `WHISPER_MODEL` regardless), `STT_LANGUAGE` (`en`), `TTS_MODEL` (`kokoro`), `SILENCE_REPROMPT_S`, `SILENCE_END_S` (must exceed the re-prompt delay), `ENDPOINTING_MIN_DELAY_S`, `ENDPOINTING_MAX_DELAY_S`, `INTERRUPTION_MIN_S`, `SESSION_EVENT_LOG` (dev only, empty = off; `make agent-dev` sets `var/log/session_events.jsonl`), `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
   `LLM_GGUF` and `EMBED_GGUF` come from T-PLAT-07.
 - `LatencySummary{turns, stages}`: `stages[name]` is `Percentiles(p50, p90)` in seconds (both `None` with no
   data) for `eou`, `stt`, `llm_ttft`, `tts_ttfb`, `e2e`. `p50_ms` / `p90_ms` are the e2e values in whole
@@ -92,6 +95,9 @@ tests/voice/
 | Model URLs | `127.0.0.1`, never `localhost` | macOS resolves `localhost` to `::1` first; a tunnel on `[::1]:8090` hijacked the LLM URL on the dev Mac (2026-11-09) |
 | Kokoro-FastAPI | clone pinned to `KOKORO_REF` (default `v0.9.2`), started with its `start-gpu_mac.sh` and `HOST=127.0.0.1` | Upstream script handles MPS env; pinned ref keeps setup reproducible |
 | Servers already running | `up.sh` leaves a port that already answers alone; `down.sh` stops only pids it wrote | Hand-started servers keep running |
+| Playground dispatch | the room token carries a `RoomConfiguration` with `RoomAgentDispatch("support-agent")` | The worker registers with an explicit agent name, which turns off automatic dispatch: a plain token joins an empty room |
+| Worker environment | `scripts/agent_dev.py` copies `LIVEKIT_*` from settings into the worker's environment | LiveKit's CLI reads only the process environment; the project reads `.env` through settings |
+| Turn-detector weights | `download-files` once, remembered in `var/run/turn-detector.ok` | The weights cannot load in `prewarm` (T-AGENT-13) and later runs should not need the network |
 
 ## Dependencies
 Runtime: `livekit-agents`, `livekit-plugins-openai`, `livekit-plugins-silero`,

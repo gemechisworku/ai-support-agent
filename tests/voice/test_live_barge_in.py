@@ -1,12 +1,12 @@
-"""Live, manual-assisted barge-in timing check (T-VOICE-03 / VOICE-R4: TTS stops < 300 ms after the caller
-starts talking over it). Marker `live`: never in CI.
+"""Live, manual-assisted barge-in timing check (VOICE-R4: TTS stops < 300 ms after the caller starts talking
+over it; moved here from T-VOICE-03 into T-VOICE-05's acceptance). Marker `live`: never in CI.
 
-How to run it: start the agent with the model servers up (`make models-up`) and log the session's
-`user_state_changed` / `agent_state_changed` events as JSON lines (the browser playground, T-VOICE-05, will do
-this; until then add a two-line `session.on(...)` logger to the worker).
+How to run it: follow the "Talk to the agent" guide (docs/dev-setup.md). `make agent-dev` sets
+`SESSION_EVENT_LOG=var/log/session_events.jsonl`, and the worker then logs the session's
+`user_state_changed` / `agent_state_changed` events there as JSON lines (states and times only, no speech).
 
-1. Let the agent speak a long answer (ask about a late-fee policy) and talk over it mid-sentence.
-   Repeat a few times.
+1. In the playground, ask about a late-fee policy so the agent gives a long answer, and talk over it
+   mid-sentence. Repeat a few times, then hang up.
 2. `BARGE_IN_EVENT_LOG=var/log/session_events.jsonl \\
    uv run pytest -m live tests/voice/test_live_barge_in.py -s`
 

@@ -13,6 +13,10 @@ The worker (`worker.run_call`) uses these in this order:
   - the silence policy (`voice.silence`) re-prompts once, then says the closing line and ends the call. The
     wording is the agent's: `REPROMPT_LINE` and `closing.goodbye_line`. The end reason is kept on
     `CallState.end_reason` and written in the transcript's call-ended marker;
+  - the latency tracker (`voice.latency`) collects per-turn timings; `CallWiring.apply_latency(state)` puts
+    the p50/p90 on the outcome before `finalize` writes it;
+  - with `SESSION_EVENT_LOG` set (dev only), the turn-taking events go to a JSON-lines file for the
+    barge-in check;
   - the sentiment classifier (`finalize.llm_sentiment_classifier`) asks the call's own model, at the end;
   - `on_close` is called when the session closes, so the worker can end the job (the shutdown callback then
     writes the outcome).
@@ -22,7 +26,8 @@ The worker (`worker.run_call`) uses these in this order:
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from livekit.agents import AgentSession
@@ -32,10 +37,13 @@ from livekit.agents import vad as lk_vad
 from supportagent.agent.base import prompt_variables
 from supportagent.agent.context import CallState
 from supportagent.agent.finalize import SentimentClassifier, attach_recorder, llm_sentiment_classifier
+from supportagent.agent.outcome import LatencyFigures
 from supportagent.agent.states.closing import goodbye_line
 from supportagent.agent.states.greeting import GreetingAgent
 from supportagent.common.logging import get_logger
 from supportagent.common.settings import Settings
+from supportagent.voice.event_log import attach_event_log
+from supportagent.voice.latency import LatencyTracker, attach_latency_tracker
 from supportagent.voice.session import build_session_options
 from supportagent.voice.silence import SilenceHandle, SilencePolicy, attach_silence_policy
 
@@ -51,9 +59,18 @@ class CallWiring:
 
     silence: SilenceHandle
     classify: SentimentClassifier | None
+    latency: LatencyTracker = field(default_factory=LatencyTracker)
 
     def stop(self) -> None:
         self.silence.stop()
+
+    def apply_latency(self, state: CallState) -> None:
+        """Put the call's p50/p90 on the outcome (before `finalize`); no completed turn means no figures."""
+        summary = self.latency.summary()
+        if summary.turns:
+            state.outcome.set_latency(
+                LatencyFigures(summary.p50_ms, summary.p90_ms, summary.stage_latencies())
+            )
 
 
 def build_agent_session(
@@ -92,6 +109,10 @@ def wire_call(
     Must run inside the event loop (the silence poller is a task). Call it before `session.start`.
     """
     attach_recorder(session, state)
+    latency = LatencyTracker()
+    attach_latency_tracker(session, latency)
+    if settings.models.session_event_log:  # dev aid for the live barge-in check
+        attach_event_log(session, Path(settings.models.session_event_log))
     bank_name = settings.persona.bank_name
 
     def on_reprompt() -> None:
@@ -115,4 +136,4 @@ def wire_call(
 
     if classify is None and isinstance(getattr(session, "llm", None), lk_llm.LLM):
         classify = llm_sentiment_classifier(session.llm)
-    return CallWiring(silence=silence, classify=classify)
+    return CallWiring(silence=silence, classify=classify, latency=latency)

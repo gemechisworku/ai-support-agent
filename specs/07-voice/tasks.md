@@ -157,18 +157,33 @@ Make the agent reachable with no telephony.
 - A room with no `call_id` metadata is treated as an inbound call with `campaign="playground"` and a
   fresh `call_id`. The worker builds that context in T-AGENT-01; this task wires the dev defaults and
   the docs.
+- The launcher (`scripts/agent_dev.py`, behind `make agent-dev`) checks the model servers and the gateway,
+  fetches the turn-detector weights once, takes the LiveKit connection from settings (LiveKit's CLI reads its
+  environment) and sets `SESSION_EVENT_LOG`. The token carries a room configuration that dispatches
+  `support-agent`: the worker registers with an explicit agent name, so without it no agent joins the room.
+- The worker feeds a `LatencyTracker` (T-VOICE-04) and puts its p50/p90 on the outcome before `finalize`;
+  with `SESSION_EVENT_LOG` set it also writes the turn-taking events (states and times, no speech) for the
+  barge-in check.
 
 **Acceptance criteria**
 - [ ] `make models-up && make agent-dev`, then opening the playground with the printed token, gives a spoken greeting.
-- [ ] The README / `docs/dev-setup.md` has a 5-step "talk to the agent" guide.
+  *(Needs a person at a browser with the whole stack running; not verifiable in an automated run.
+  `tests/voice/test_live_pipeline.py::test_playground_greeting` is the headless version.)*
+- [x] The README / `docs/dev-setup.md` has a 5-step "talk to the agent" guide.
 - [ ] The playground call produces a `CallOutcome` with `campaign="playground"` and latency fields.
+  *(Unit-tested: `tests/agent/test_session_wiring.py` finalizes a playground call with latency figures from
+  synthetic metrics. Still to confirm on a real call: check its outcome in the console.)*
 - [ ] Live checklist (moved from T-VOICE-03): barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in the session event log; run `tests/voice/test_live_barge_in.py` with `BARGE_IN_EVENT_LOG`)
+  *(Needs a person talking over the agent; `make agent-dev` writes the event log the test reads.)*
 
 **Tests**
-- `tests/voice/test_dev_token.py` (unit): the token decodes (PyJWT) with the room name, identity and grants; the dev key and secret come from settings.
+- `tests/voice/test_dev_token.py` (unit): the token decodes (PyJWT) with the room name, identity and grants; the dev key and secret come from settings; the agent dispatch is in the token and its name is the worker's.
+- `tests/voice/test_agent_dev.py` (unit): the worker environment from settings, the gateway check, the one-time download marker.
+- `tests/voice/test_event_log.py` (unit): the JSONL event log, states and times only, readable by `barge_in_latency_s`.
+- `tests/agent/test_session_wiring.py` (unit): a playground call's outcome carries latency figures; no completed turn means none; the event log is attached only when configured.
 - `tests/voice/test_live_pipeline.py::test_playground_greeting` (live): connect a headless participant, assert the agent publishes an audio track within 5 s.
 
-**Files:** `scripts/dev_token.py`, `Makefile`, `docs/dev-setup.md`, `tests/voice/test_dev_token.py`
+**Files:** `scripts/dev_token.py`, `scripts/agent_dev.py`, `Makefile`, `README.md`, `docs/dev-setup.md`, `src/supportagent/voice/event_log.py`, `src/supportagent/agent/session_factory.py`, `src/supportagent/agent/worker.py`, `src/supportagent/common/settings.py`, `.env.example`, tests above
 
 ### T-VOICE-06 · Latency benchmark: local vs hosted
 - **Status:** todo

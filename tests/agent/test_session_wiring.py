@@ -340,3 +340,92 @@ async def test_a_silent_call_ends_as_no_answer_and_the_marker_names_the_reason(
     result = await finalize(state, settings=settings, store=store, versions=VERSIONS, retry_delay_s=0)
     assert result is not None and result.outcome.contact_result is ContactResult.no_answer
     assert store.read(state.call_id)[-1].text.endswith("reason: silence")
+
+
+# ------------------------------------------------------------ latency and the dev event log (T-VOICE-05)
+
+
+def _metrics(speech_id: str, eou_s: float, ttft_s: float, ttfb_s: float) -> list[Any]:
+    from livekit.agents import metrics as lk
+
+    common = {"timestamp": 1.0, "speech_id": speech_id}
+    return [
+        lk.EOUMetrics(
+            end_of_utterance_delay=eou_s, transcription_delay=0.2, on_user_turn_completed_delay=0.0, **common
+        ),
+        lk.LLMMetrics(
+            label="llm",
+            request_id="r",
+            duration=ttft_s + 0.5,
+            ttft=ttft_s,
+            cancelled=False,
+            completion_tokens=10,
+            prompt_tokens=100,
+            prompt_cached_tokens=0,
+            total_tokens=110,
+            tokens_per_second=20.0,
+            **common,
+        ),
+        lk.TTSMetrics(
+            label="tts",
+            request_id="r",
+            ttfb=ttfb_s,
+            duration=ttfb_s + 0.3,
+            audio_duration=1.0,
+            cancelled=False,
+            characters_count=40,
+            streamed=True,
+            **common,
+        ),
+    ]
+
+
+async def test_a_playground_call_outcome_has_latency_figures(settings: Settings, tmp_path: Path) -> None:
+    session = FakeSession()
+    state = _state()
+    wiring = wire_call(session, state, settings, tick_s=0.001)  # type: ignore[arg-type]
+    try:
+        for speech_id, (eou_s, ttft_s, ttfb_s) in {"a": (0.4, 0.5, 0.3), "b": (0.5, 0.7, 0.2)}.items():
+            for metric in _metrics(speech_id, eou_s, ttft_s, ttfb_s):
+                session.emit("metrics_collected", metrics=metric)
+        wiring.apply_latency(state)
+    finally:
+        wiring.stop()
+
+    assert state.outcome.latency is not None and state.outcome.latency.p50_ms == 1300  # (1.2 + 1.4) / 2
+    result = await finalize(
+        state, settings=settings, store=TranscriptStore(tmp_path), versions=VERSIONS, retry_delay_s=0
+    )
+    assert result is not None
+    assert result.outcome.campaign is Campaign.playground
+    assert result.outcome.latency_p50 == 1300 and result.outcome.latency_p90 is not None
+    assert {"eou", "llm_ttft", "tts_ttfb", "e2e"} <= set(result.outcome.latency_stages)
+
+
+async def test_a_call_with_no_completed_turn_has_no_latency_figures(settings: Settings) -> None:
+    session = FakeSession()
+    state = _state()
+    wiring = wire_call(session, state, settings, tick_s=0.001)  # type: ignore[arg-type]
+    try:
+        for metric in _metrics("a", 0.4, 0.5, 0.3)[:2]:  # the reply was never spoken: no TTS metric
+            session.emit("metrics_collected", metrics=metric)
+        wiring.apply_latency(state)
+    finally:
+        wiring.stop()
+    assert state.outcome.latency is None
+
+
+async def test_the_event_log_is_attached_only_when_configured(settings: Settings, tmp_path: Path) -> None:
+    log = tmp_path / "events.jsonl"
+    off = FakeSession()
+    wiring = wire_call(off, _state(), settings, tick_s=0.001)  # type: ignore[arg-type]
+    wiring.stop()
+    off.emit("agent_state_changed", new_state="speaking", created_at=1.0)
+    assert not log.exists()
+
+    models = ModelsSettings(_env_file=None, **{**settings.models.model_dump(), "session_event_log": str(log)})  # type: ignore[arg-type]
+    on = FakeSession()
+    wiring = wire_call(on, _state(), settings.model_copy(update={"models": models}), tick_s=0.001)  # type: ignore[arg-type]
+    wiring.stop()
+    on.emit("agent_state_changed", new_state="speaking", created_at=2.0)
+    assert '"new_state": "speaking"' in log.read_text()

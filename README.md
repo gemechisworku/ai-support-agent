@@ -78,7 +78,36 @@ After changing a console API view model, run `make console-types` to regenerate 
 
 **Stop or reset:** `docker compose stop` (keeps the data), `make down` (stops all services), or
 `make reset-db` (deletes the local databases; then repeat step 3). Stop the model servers with
-Ctrl-C in their tabs.
+`make models-down`.
+
+## Talk to the agent (browser playground, no phone line)
+Needs the data loaded (steps 1–3 above). Five steps; the voice servers and the agent run natively on the Mac.
+```bash
+# 1. The native servers: LLM, speech-to-text, text-to-speech, LiveKit (run `make models-setup` once before)
+make models-up && make models-health        # want: all healthy
+
+# 2. The gateway (the agent's only door to the bank data), if it is not already running
+docker compose up -d --wait postgres bank-api gateway
+
+# 3. The agent worker. Leave it running; it checks steps 1-2 first and stops with a one-line hint if one is missing.
+make agent-dev                              # the first run downloads the turn-detector weights (needs the network once)
+
+# 4. In another terminal: a room token, then open https://agents-playground.livekit.io
+make dev-token                              # prints the LiveKit URL and a token; use the playground's manual connection
+
+# 5. Connect in the browser, allow the microphone, and talk.
+```
+The agent speaks the recording disclosure first. You are an unverified inbound caller, so ask "what's my balance?"
+and verify with a persona from the console's **Test personas** page (name, date of birth, last 4 of the loan).
+Say "I want to speak to a person" to hear an escalation, or ask about late fees for a policy answer.
+After you hang up, the call's outcome is written once (`campaign="playground"`, with latency figures), the redacted
+transcript is in `var/transcripts/<call_id>.jsonl` (the call id is in the `agent-dev` log), and the console's
+**Audit trail** shows the tool calls for that id.
+
+To check barge-in (the agent must stop speaking within 300 ms of you talking over it), ask a question with a long
+answer and interrupt a few times, hang up, then run
+`BARGE_IN_EVENT_LOG=var/log/session_events.jsonl uv run pytest -m live tests/voice/test_live_barge_in.py -s`.
+Use `127.0.0.1`, not `localhost`, in the model URLs (see [docs/dev-setup.md](docs/dev-setup.md)).
 
 ## Workflow in one line
 Pick a ready task, write its tests, implement, mark it `done` in `tasks.md`, and commit it to the

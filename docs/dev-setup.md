@@ -94,6 +94,35 @@ request instead of the server bound to 127.0.0.1. `.env.example` and the setting
 (add ~4.9 GB if not, ~2 GB for Kokoro's Python environment). `make models-setup ARGS=--dry-run` prints
 the exact amount. If Docker's disk is full, `docker builder prune` frees the build cache.
 
+### Talk to the agent (browser playground, from T-VOICE-05)
+
+The agent is reachable from a browser with no telephony. The worker registers with LiveKit as
+`support-agent`; a room token that asks for that agent joins a room, and a room with no call metadata is an
+inbound `campaign="playground"` call.
+
+1. **Servers.** `make models-up && make models-health` (run `make models-setup` once first).
+2. **Gateway and data.** `docker compose up -d --wait postgres bank-api gateway`, with the bank seeded and the
+   policies ingested (README, "Run it locally", steps 2–3).
+3. **Worker.** `make agent-dev`. It checks the servers and the gateway first and stops with a one-line hint if
+   one is missing. On the first run it also downloads the turn-detector weights
+   (`python -m supportagent.agent.worker download-files`, which needs the network once) and records that in
+   `var/run/turn-detector.ok`. It passes `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` from `.env`
+   to LiveKit's CLI (which reads its environment), so nothing has to be exported in the shell, and sets
+   `SESSION_EVENT_LOG=var/log/session_events.jsonl` for the barge-in check.
+4. **Token.** In a second terminal, `make dev-token` (`ARGS="--room my-room --json"` for options). It prints the
+   LiveKit URL and a one-hour token signed with the dev key. Open <https://agents-playground.livekit.io>,
+   choose its manual connection, and paste the URL and the token. The token also dispatches the agent into the
+   room: without that, an explicitly named worker is never sent to a room.
+5. **Talk.** Allow the microphone. The agent says the recording disclosure first. Verify with a persona from the
+   console's **Test personas** page, then ask about the balance or a policy.
+
+Afterwards the outcome (with latency figures) is written once, the redacted transcript is in
+`var/transcripts/<call_id>.jsonl`, and the console's **Audit trail** shows the tool calls for the call id (logged
+by `agent-dev`). For the barge-in check, interrupt a long answer a few times, hang up, and run
+`BARGE_IN_EVENT_LOG=var/log/session_events.jsonl uv run pytest -m live tests/voice/test_live_barge_in.py -s`.
+A headless version of step 5 is `uv run pytest -m live tests/voice/test_live_pipeline.py::test_playground_greeting`
+(with steps 1–3 running): it joins a room and expects the agent's audio within 5 s.
+
 ## 3. Memory budget (from the architecture)
 
 Everything running at once uses about 13 GB, which fits in 16 GB. Start Langfuse only when you need
@@ -125,3 +154,7 @@ against the local model. The data is synthetic, but never put a real key in a co
 | Model server ✗ but it is running | check the port in `.env` (`LLM_URL`, `EMBED_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`); `make models-health` names the failing probe |
 | `HTTP 403` (or another unexpected server) on a model URL | something else listens on `[::1]` at that port: use `127.0.0.1` in the URL (see §2); `lsof -nP -iTCP:<port> -sTCP:LISTEN` shows who |
 | `make models-up` says a server exited | read `var/log/<name>.log`; a missing model file means `make models-setup` |
+| `make agent-dev` stops with "the gateway is not reachable" | `docker compose up -d --wait postgres bank-api gateway`, then `curl localhost:8002/healthz` |
+| `make agent-dev`: the turn-detector download failed | it needs the network once; re-run `make agent-dev` (it only records success in `var/run/turn-detector.ok`) |
+| The playground connects but no agent joins | `make agent-dev` must be running, and the token must come from `make dev-token` (it carries the agent dispatch); check the worker log for `registered worker` |
+| The agent joins but is silent for several seconds the first time | the worker loads Silero and Kokoro's first request is slow; the second call is faster |

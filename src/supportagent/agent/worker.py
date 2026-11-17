@@ -123,6 +123,7 @@ async def run_call(
 
     async def _finish() -> None:
         wiring.stop()
+        wiring.apply_latency(state)
         await finish_call(settings, state, gateway, classify=wiring.classify)
 
     ctx.add_shutdown_callback(_finish)
