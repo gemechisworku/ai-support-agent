@@ -67,7 +67,7 @@ before the prompt registry or corpus exist. The agent calls it once per call at 
 **Files:** `src/supportagent/observability/versions.py`, `tests/observability/test_versions.py`
 
 ### T-OBS-03 · Redacted transcript store
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #40
 - **Depends on:** T-OBS-01
@@ -81,10 +81,10 @@ line to `{base_dir}/{call_id}.jsonl`. `known_pii` is never persisted. `uri()` re
 settings (`TRANSCRIPTS_DIR`, default `var/transcripts`).
 
 **Acceptance criteria**
-- [ ] A raw turn with a phone number and the persona's name is stored with placeholders only.
-- [ ] `read()` returns `TranscriptTurn`s ordered by `seq`. Two interleaved writers produce gapless, unique `seq`s.
-- [ ] An invalid `call_id` (path separators, `..`) is rejected.
-- [ ] No public method writes un-redacted text.
+- [x] A raw turn with a phone number and the persona's name is stored with placeholders only.
+- [x] `read()` returns `TranscriptTurn`s ordered by `seq`. Two interleaved writers produce gapless, unique `seq`s.
+- [x] An invalid `call_id` (path separators, `..`) is rejected.
+- [x] No public method writes un-redacted text.
 
 **Tests**
 - `tests/observability/test_transcripts.py` (unit): redaction applied, `known_pii` not persisted, ordering,

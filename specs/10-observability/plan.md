@@ -31,6 +31,14 @@
 - **Transcripts:** `TranscriptStore.append()` takes a `RawTurn`, calls `redact()` internally and appends
   one JSON line under a per-file lock (`fcntl.flock`). No public method accepts pre-redacted text, so
   redaction cannot be skipped.
+  - `seq` is the next line number (starts at 1), counted and written under an exclusive `flock` and
+    `fsync`ed, so threads and processes get gapless, unique numbers.
+  - `call_id` must match `[A-Za-z0-9][A-Za-z0-9_-]{0,127}` (UUIDs and slugs: no separators, dots or
+    spaces), checked by `append`, `read` and `uri` before any path is built.
+  - Tool `args` go through `redact_mapping` with the turn's `known_pii`; `RedactionInfo` (entities,
+    `fallback`) describes the turn's text only. `known_pii` is dropped before writing.
+  - `append` accepts only a `RawTurn` (a stored `TranscriptTurn` is rejected), and the public surface is
+    `append`, `read`, `uri` and `base_dir`.
 - **Tracing:** OpenTelemetry SDK.
   - LiveKit Agents emits OTel spans when given a tracer provider
     (`livekit.agents.telemetry.set_tracer_provider`).
