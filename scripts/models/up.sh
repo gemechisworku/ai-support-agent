@@ -93,7 +93,7 @@ for name in $WANT; do
     whisper)
       need_file "$WHISPER_BIN" whisper || { FAILED=1; continue; }
       start whisper "$STT_PORT" whisper-server -m "$WHISPER_BIN" --host 127.0.0.1 --port "$STT_PORT" \
-        --inference-path /v1/audio/transcriptions ;;
+        --inference-path /v1/audio/transcriptions --suppress-nst ;;
     kokoro)
       need_file "$KOKORO_DIR/start-gpu_mac.sh" kokoro || { FAILED=1; continue; }
       start kokoro "$TTS_PORT" env -u VIRTUAL_ENV HOST=127.0.0.1 PORT="$TTS_PORT" \
