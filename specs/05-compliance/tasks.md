@@ -52,7 +52,7 @@ returns `unknown_timezone` for a missing or invalid zone, and rejects naive date
 **Files:** `src/supportagent/compliance/rules.py`, `tests/compliance/test_window.py`
 
 ### T-COMP-03 · Frequency cap (7-in-7 and post-conversation cool-off)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #51
 - **Depends on:** T-COMP-01
@@ -63,8 +63,11 @@ returns `unknown_timezone` for a missing or invalid zone, and rejects naive date
 cool_off_days_after_conversation`. Both limits come from config.
 
 **Acceptance criteria**
-- [ ] Spec acceptance criteria for COMP-R3 hold (6 vs 7 attempts; 6d23h vs 7d1h)
-- [ ] Changing YAML limits changes behaviour without code changes (test with a custom `ContactRules`)
+- [x] Spec acceptance criteria for COMP-R3 hold (6 vs 7 attempts; 6d23h vs 7d1h)
+- [x] Changing YAML limits changes behaviour without code changes (test with a custom `ContactRules`)
+  *(The cool-off boundary is exact: 7 days ago is allowed, one second less is denied. A `last_conversation_at`
+  in the future counts as recent, so clock skew cannot open the gate. `window_days` is applied by the bank when
+  it counts `attempts_last_7d`; this check compares only the count.)*
 
 **Tests**
 - `tests/compliance/test_frequency.py` (unit): boundaries, custom limits, `last_conversation_at=None`
