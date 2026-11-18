@@ -42,6 +42,7 @@ from livekit.agents.types import NOT_GIVEN
 from supportagent.agent.context import CallState
 from supportagent.agent.interrupts import handle_concern, note_misunderstanding, screen_turn
 from supportagent.agent.prompts.registry import PromptRegistry
+from supportagent.agent.toolcall_guard import guard_tool_json
 from supportagent.common.logging import get_logger
 from supportagent.common.settings import Settings
 
@@ -227,7 +228,10 @@ class BaseStateAgent(Agent):
         last = chat_ctx.items[-1] if chat_ctx.items else None
         if isinstance(last, ChatMessage) and last.role == "user" and await self._screen(last):
             return  # handed off: this state says nothing more
-        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+        offered = set(get_fnc_tool_names(tools))
+        # A tool call the model wrote as plain text is run as a tool call or dropped, never spoken.
+        stream = Agent.default.llm_node(self, chat_ctx, tools, model_settings)
+        async for chunk in guard_tool_json(stream, offered):
             yield chunk
 
 
