@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-OBS-01 · PII redaction with Presidio
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #38
 - **Depends on:** T-PLAT-02
@@ -25,12 +25,13 @@ names. Engines are lazy singletons, and `warmup()` loads them. On any Presidio e
 regex-only result with `fallback=True` and log a warning (without the text).
 
 **Acceptance criteria**
-- [ ] `redact()` replaces every entity in `fixtures/pii_samples.yaml` with the right placeholder.
-- [ ] Amounts (`$412.50`, "four hundred twelve dollars") and due dates stay unchanged.
-- [ ] `known=[...]` values are always redacted, case-insensitively, including possessives ("Frank's").
-- [ ] `redact_mapping()` redacts nested dict and list string values and leaves non-strings untouched.
-- [ ] A Presidio failure produces `fallback=True` with no raw structured PII.
-- [ ] The en_core_web_sm wheel is pinned in `pyproject.toml`, and `uv sync` installs it in CI and Docker.
+- [x] `redact()` replaces every entity in `fixtures/pii_samples.yaml` with the right placeholder.
+- [x] Amounts (`$412.50`, "four hundred twelve dollars") and due dates stay unchanged.
+- [x] `known=[...]` values are always redacted, case-insensitively, including possessives ("Frank's").
+- [x] `redact_mapping()` redacts nested dict and list string values and leaves non-strings untouched.
+- [x] A Presidio failure produces `fallback=True` with no raw structured PII.
+- [x] The en_core_web_sm wheel is pinned in `pyproject.toml`, and `uv sync` installs it in CI and Docker.
+  *(Measured p95 2.2 ms over the 200-turn benchmark on the M4.)*
 
 **Tests**
 - `tests/observability/test_redaction.py` (unit): the parametrised sample table, with positive and
@@ -42,7 +43,7 @@ regex-only result with `fallback=True` and log a warning (without the text).
 **Files:** `src/supportagent/observability/redaction.py`, `src/supportagent/observability/recognizers.py`, `tests/observability/test_redaction.py`, `tests/observability/test_redaction_perf.py`, `tests/observability/fixtures/pii_samples.yaml`, `pyproject.toml`
 
 ### T-OBS-02 · Version stamping for prompts, policies and models
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #39
 - **Depends on:** T-PLAT-04
@@ -54,11 +55,11 @@ those. Missing inputs give explicit `"none"` components, never an exception, so 
 before the prompt registry or corpus exist. The agent calls it once per call at session start (T-AGENT-02).
 
 **Acceptance criteria**
-- [ ] Identical inputs give identical `Versions` across processes (no reliance on mtime or dict order).
-- [ ] Changing one prompt file changes only `prompt`.
-- [ ] Bumping one policy doc's front-matter `version` changes only `policy`.
-- [ ] Changing `LLM_PROVIDER` or `LLM_MODEL` changes only `model`.
-- [ ] Missing `prompts/VERSION` or `data/config/*.yaml` yields a `none` component.
+- [x] Identical inputs give identical `Versions` across processes (no reliance on mtime or dict order).
+- [x] Changing one prompt file changes only `prompt`.
+- [x] Bumping one policy doc's front-matter `version` changes only `policy`.
+- [x] Changing `LLM_PROVIDER` or `LLM_MODEL` changes only `model`.
+- [x] Missing `prompts/VERSION` or `data/config/*.yaml` yields a `none` component.
 
 **Tests**
 - `tests/observability/test_versions.py` (unit): tmp-dir fixtures for each change type; determinism; missing inputs.
@@ -66,7 +67,7 @@ before the prompt registry or corpus exist. The agent calls it once per call at 
 **Files:** `src/supportagent/observability/versions.py`, `tests/observability/test_versions.py`
 
 ### T-OBS-03 · Redacted transcript store
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #40
 - **Depends on:** T-OBS-01
@@ -80,10 +81,10 @@ line to `{base_dir}/{call_id}.jsonl`. `known_pii` is never persisted. `uri()` re
 settings (`TRANSCRIPTS_DIR`, default `var/transcripts`).
 
 **Acceptance criteria**
-- [ ] A raw turn with a phone number and the persona's name is stored with placeholders only.
-- [ ] `read()` returns `TranscriptTurn`s ordered by `seq`. Two interleaved writers produce gapless, unique `seq`s.
-- [ ] An invalid `call_id` (path separators, `..`) is rejected.
-- [ ] No public method writes un-redacted text.
+- [x] A raw turn with a phone number and the persona's name is stored with placeholders only.
+- [x] `read()` returns `TranscriptTurn`s ordered by `seq`. Two interleaved writers produce gapless, unique `seq`s.
+- [x] An invalid `call_id` (path separators, `..`) is rejected.
+- [x] No public method writes un-redacted text.
 
 **Tests**
 - `tests/observability/test_transcripts.py` (unit): redaction applied, `known_pii` not persisted, ordering,

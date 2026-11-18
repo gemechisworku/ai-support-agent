@@ -15,10 +15,30 @@
     survive for accuracy audits (NFR-ACC).
   - DOBs are caught only by the context-aware recognizer ("born", "birthday", "date of birth", "DOB")
     or by `known` values.
+  - Pre-pass order (`recognizers.ORDERED`): `known` values (longest first; a name also matches each of
+    its words, an ISO date also matches "March 14, 1985", "14 March 1985", "03/14/1985"; a trailing
+    "'s" is kept), email, national id (`123-45-6789`), DOB-with-context, street address, loan and
+    account numbers after the words "loan" / "account" (the keyword stays readable), phone, spoken
+    digits (4+ digit words), then any other run of 4+ digits as `<NUMBER>` unless it sits inside money
+    (`$1,250.00`, "500 dollars") or a calendar date. A bare year with no month ("since 2019") is
+    therefore redacted; that over-redaction is accepted.
+  - The custom recognizers are `EntityRecognizer`s that report only the PII group of the same compiled
+    patterns, so Presidio never swallows the keyword. NER results that overlap an existing placeholder
+    or match the allow-list (`BANK_NAME`, `AGENT_NAME`, product names) are dropped. Presidio's
+    `LOCATION` becomes `<LOCATION>`.
+  - Redaction reads only the persona settings group, so it works in processes without database settings.
 - **Versions:** pure functions hashing file contents in a stable (sorted-path) order. See the formula below.
 - **Transcripts:** `TranscriptStore.append()` takes a `RawTurn`, calls `redact()` internally and appends
   one JSON line under a per-file lock (`fcntl.flock`). No public method accepts pre-redacted text, so
   redaction cannot be skipped.
+  - `seq` is the next line number (starts at 1), counted and written under an exclusive `flock` and
+    `fsync`ed, so threads and processes get gapless, unique numbers.
+  - `call_id` must match `[A-Za-z0-9][A-Za-z0-9_-]{0,127}` (UUIDs and slugs: no separators, dots or
+    spaces), checked by `append`, `read` and `uri` before any path is built.
+  - Tool `args` go through `redact_mapping` with the turn's `known_pii`; `RedactionInfo` (entities,
+    `fallback`) describes the turn's text only. `known_pii` is dropped before writing.
+  - `append` accepts only a `RawTurn` (a stored `TranscriptTurn` is rejected), and the public surface is
+    `append`, `read`, `uri` and `base_dir`.
 - **Tracing:** OpenTelemetry SDK.
   - LiveKit Agents emits OTel spans when given a tracer provider
     (`livekit.agents.telemetry.set_tracer_provider`).
@@ -74,12 +94,18 @@ class TranscriptTurn(BaseModel):    # what is stored
 ```
 
 **Version formula** (`sha8` = first 8 hex chars of sha256 over sorted `relpath + "\0" + bytes`):
-- `prompt` = `f"{registry_version}+{sha8(prompts_dir/**.md|*.yaml)}"`, where `registry_version` is read
-  from `prompts/VERSION` (owned by AGENT).
+- `prompt` = `f"{registry_version}+{sha8(prompts_dir/**/*.md|*.yaml|*.yml)}"`, where `registry_version` is
+  the stripped text of `prompts/VERSION` (owned by AGENT). Hidden paths and `__pycache__` are skipped;
+  each file contributes `relpath \0 bytes \0` in sorted POSIX relative-path order.
 - `policy` = `f"kb:{sha8(sorted doc_id@version lines from policy front-matter)};rules:{contact_rules.version};disc:{disclosures.version}"`.
   The rules and disclosures versions are read from the `version:` key of
-  `data/config/contact_rules.yaml` and `data/config/disclosures.yaml`.
-- `model` = `f"llm:{provider}/{model};stt:{stt_model};tts:{tts_voice};embed:{embed_model}"`, from `Settings`.
+  `data/config/contact_rules.yaml` and `data/config/disclosures.yaml`. The KB part follows front-matter
+  `doc_id@version` only (a policy change must bump its version); a doc without front matter counts as
+  `<file stem>@unversioned`.
+- `model` = `f"llm:{provider}/{model};stt:{whisper_model};tts:{tts_voice};embed:{embed_model}"`, from `Settings.models`.
+- Any missing or malformed input yields the component `none` (`none+none`, `kb:none;rules:none;disc:none`);
+  `compute_versions()` never raises. Directory arguments default to the repo's `agent/prompts`,
+  `data/policies` and `data/config`; `prompt_version`, `policy_version` and `model_version` are public too.
 
 ## Key decisions
 | Decision | Choice | Why |
@@ -94,6 +120,9 @@ class TranscriptTurn(BaseModel):    # what is stored
 ## Dependencies
 - Runtime: `presidio-analyzer`, `presidio-anonymizer`, and `en-core-web-sm` as a direct-URL wheel pinned
   in `pyproject.toml` (`https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl`).
+  The URL is pinned through `[tool.uv.sources]` and its sha256 is in `uv.lock`; CI and Docker install it
+  with `uv sync --frozen`. A non-frozen `uv run` revalidates the URL against GitHub, so during a GitHub
+  outage use `UV_FROZEN=1`.
 - Tracing: `opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-http`, `httpx` (report).
 - Services: Langfuse v3 stack (compose profile `observability`).
 

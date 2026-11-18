@@ -1,0 +1,21 @@
+# Disclosure scripts, versioned with the code (constitution VII). Loaded by
+# supportagent.compliance.disclosures. The same texts are in data/policies/required-disclosures.md;
+# a test keeps them identical (COMP-R8). The agent speaks the rendered text verbatim and records each
+# one in the call outcome as `key@version` (e.g. "collections@1.0").
+#
+# required:
+#   all: true                       → every call where someone answered
+#   campaigns: [...]                → calls of these campaigns
+#   after_verification: true        → owed only once the customer is verified (before any amount)
+version: "1.0"
+
+disclosures:
+  ai_recording:
+    text: "Hello, this is {agent_name}, the virtual assistant from {bank_name}. This call is recorded."
+    required: { all: true }
+  collections:
+    text: "This is an attempt to collect a debt, and any information obtained will be used for that purpose."
+    required: { campaigns: [missed_payment], after_verification: true }
+  third_party_neutral:
+    text: "This is {bank_name} calling for {first_name}. Please ask them to call us back at their convenience. Thank you."
+    required: {}

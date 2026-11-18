@@ -1,0 +1,21 @@
+{
+  "name": "overview",
+  "method": "GET",
+  "path": "/api/overview",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": {
+    "customers": 12,
+    "loans": 12,
+    "loans_by_bucket": {
+      "current": 2,
+      "1-30": 10,
+      "31-60": 0,
+      "61-90": 0,
+      "90+": 0
+    },
+    "kb_documents": 3,
+    "personas": 12
+  }
+}

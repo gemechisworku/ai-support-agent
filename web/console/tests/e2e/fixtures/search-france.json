@@ -1,0 +1,15 @@
+{
+  "name": "search-france",
+  "method": "POST",
+  "path": "/api/policies/search",
+  "query": {},
+  "body": {
+    "query": "capital of France"
+  },
+  "status": 200,
+  "response": {
+    "chunks": [],
+    "confident": false,
+    "best_similarity": 0.05
+  }
+}

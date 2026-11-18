@@ -1,0 +1,48 @@
+# Synthetic sentences for the redaction tests (T-OBS-01, OBS-R1). Every name, number and date here is
+# made up; phones use the 555-01xx fictional range.
+#
+# `redact`: input text → the exact expected output.
+# `keep`:   input text that must come back unchanged (amounts, due dates, bank and product names).
+redact:
+  - text: "Hi, I'm Frank Miller, born March 14 1985, loan 4401 2287 3310, call me on 555-010-0302"
+    expected: "Hi, I'm <PERSON>, born <DOB>, loan <LOAN_NUMBER>, call me on <PHONE>"
+  - text: "my last four are four five two one"
+    expected: "my last four are <NUMBER>"
+  - text: "You can reach me at +15550100307 after six."
+    expected: "You can reach me at <PHONE> after six."
+  - text: "My number is (555) 010-0311."
+    expected: "My number is <PHONE>."
+  - text: "Send it to grace.okafor@example.com please."
+    expected: "Send it to <EMAIL> please."
+  - text: "The loan number is 5520264417."
+    expected: "The loan number is <LOAN_NUMBER>."
+  - text: "It's the loan ending in 4417."
+    expected: "It's the loan ending in <LOAN_NUMBER>."
+  - text: "My account number is 390000009002."
+    expected: "My account number is <ACCOUNT_NUMBER>."
+  - text: "my date of birth is 03/14/1985"
+    expected: "my date of birth is <DOB>"
+  - text: "DOB 1985-03-14."
+    expected: "DOB <DOB>."
+  - text: "I was born on the 2nd of July, 1990."
+    expected: "I was born on <DOB>."
+  - text: "My social is 123-45-6789."
+    expected: "My social is <NATIONAL_ID>."
+  - text: "I live at 42 Harbour View Road now."
+    expected: "I live at <ADDRESS> now."
+  - text: "the code they gave me was 8 3 1 9 2 0"
+    expected: "the code they gave me was <NUMBER>"
+  - text: "it's oh five five five, zero one zero, zero three zero two"
+    expected: "it's <NUMBER>"
+  - text: "This is Priya Raman speaking."
+    expected: "This is <PERSON> speaking."
+
+keep:
+  - "Your payment of $412.50 due on November 12 is late."
+  - "That is four hundred twelve dollars and fifty cents."
+  - "Your next installment of $1,250.00 is due on 2026-12-01."
+  - "The payment due on December 1, 2026 is $200.72."
+  - "Hello, this is Ava, the virtual assistant from Meridian Bank. This call is recorded."
+  - "Your Personal Loan has a ten day grace period; the Auto Loan has fifteen."
+  - "A late fee of $25 applies after 10 days."
+  - "You are 5 days past due."

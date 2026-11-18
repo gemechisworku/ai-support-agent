@@ -20,6 +20,31 @@ setup: ## Install deps, create .env, start Postgres
 doctor: ## Check local prerequisites; model servers optional until M2 (ARGS=--strict to require them)
 	@bash scripts/doctor.sh $(ARGS)
 
+# Native Metal model servers (T-VOICE-01). They run on the Mac, never in Docker.
+.PHONY: models-setup models-up models-down models-health
+models-setup: ## Install model servers + download missing models (ARGS="--with-fallbacks --with-large-stt --dry-run")
+	@bash scripts/models/setup.sh $(ARGS)
+
+models-up: ## Start llama.cpp (LLM, embeddings), whisper.cpp, Kokoro, LiveKit on 127.0.0.1 (ARGS="llm embed" for a subset)
+	@bash scripts/models/up.sh $(ARGS)
+
+models-down: ## Stop the model servers models-up started
+	@bash scripts/models/down.sh
+
+models-health: ## Probe each model server; exit 1 naming any that is unhealthy
+	@python3 scripts/models/health.py $(ARGS)
+
+# Talk to the agent from a browser, with no telephony (T-VOICE-05). Needs `make models-up` and the gateway.
+.PHONY: agent-dev dev-token playground
+agent-dev: ## Run the agent worker in dev mode against the local LiveKit server (checks servers and gateway first)
+	@$(PY) python scripts/agent_dev.py
+
+dev-token: ## Mint a room token for the browser playground (ARGS="--room my-room --json")
+	@$(PY) python scripts/dev_token.py $(ARGS)
+
+playground: ## Run LiveKit's open-source Agents Playground locally on http://127.0.0.1:3100 (first run clones + npm install)
+	@bash scripts/playground.sh $(ARGS)
+
 up: ## Start Linux services (Postgres) and wait until healthy
 	docker compose up -d --wait postgres
 
@@ -58,11 +83,37 @@ migrate: up ## Upgrade the bank and kb databases to head (Alembic, one env per d
 migrate-test: up ## Upgrade bank_test and kb_test to head
 	BANK_DB=bank_test KB_DB=kb_test $(MAKE) migrate
 
+.PHONY: eval-scripted
+eval-scripted: ## Run the scripted scenarios through the text-mode harness: no model, no network (T-EVAL-01)
+	$(PY) pytest tests/evals -m "not integration and not eval and not live" -q
+
 .PHONY: kb-ingest
 kb-ingest: migrate ## Ingest data/policies into the kb database (ARGS="--embedder fake" or "--dry-run")
 	$(PY) python -m supportagent.kb.ingest $(ARGS)
 
-check: lint typecheck boundaries tasks-validate test-all ## Everything CI runs
+.PHONY: console console-setup console-dev console-types console-check
+CONSOLE_DIR := web/console
+# Value of KEY from .env without its inline comment (for the Next.js dev server).
+env_value = $$(sed -n 's/^$(1)=\([^ \#]*\).*/\1/p' .env 2>/dev/null)
+
+console: ## Start the Next.js console + console API (and what they read) → http://localhost:8501
+	docker compose up -d --build --wait postgres bank-api gateway console-api console
+	@echo "console: http://localhost:8501  (seed + ingest first: see README 'Run it locally')"
+
+console-setup: ## Install the console's npm packages and Playwright's Chromium (once per machine)
+	cd $(CONSOLE_DIR) && npm ci && npx playwright install chromium
+
+console-dev: ## Next.js console with hot reload on :8501 (needs the console API running on :8004)
+	CONSOLE_API_URL="$(call env_value,CONSOLE_API_URL)" CONSOLE_API_TOKEN="$(call env_value,CONSOLE_API_TOKEN)" \
+		sh -c 'cd $(CONSOLE_DIR) && npx next dev -p 8501'
+
+console-types: ## Regenerate the console API's OpenAPI document and the web app's TypeScript types
+	$(PY) python scripts/export_console_openapi.py && cd $(CONSOLE_DIR) && npm run types
+
+console-check: ## Next.js console: lint, typecheck, types drift, unit tests, build, bundle check, e2e
+	cd $(CONSOLE_DIR) && npm run check
+
+check: lint typecheck boundaries tasks-validate test-all console-check ## Everything CI runs
 
 docker-build: ## Build the runtime image
 	docker build -f docker/app.Dockerfile --target runtime -t supportagent-app:dev .

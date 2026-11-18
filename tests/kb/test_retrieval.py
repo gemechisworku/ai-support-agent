@@ -63,7 +63,7 @@ def test_off_topic_is_not_confident(corpus: Session) -> None:
 
 
 def test_default_threshold_comes_from_settings(corpus: Session, settings: object) -> None:
-    # KB_MIN_SIMILARITY defaults to 0.55 (tuned for nomic-embed-text); the lexical HashEmbedder never
+    # KB_MIN_SIMILARITY defaults to 0.58 (tuned for nomic-embed-text); the lexical HashEmbedder never
     # reaches it, so with the default threshold even a good match is reported as not confident.
     result = search(
         PolicyQuery(query="How much is the late fee on my auto loan?"), session=corpus, embedder=EMBEDDER

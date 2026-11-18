@@ -48,3 +48,41 @@ class PolicySearchResult(_Contract):
     chunks: list[PolicyChunk]
     confident: bool  # False → the agent offers a follow-up instead of answering (KB-R7)
     best_similarity: float
+
+
+# --------------------------------------------------------------------------- browse (T-GW-12, console)
+
+
+class KbDocumentVersion(_Contract):
+    version: str
+    effective_date: dt.date
+    chunk_count: int = Field(ge=0)
+
+
+class KbDocumentSummary(_Contract):
+    """One policy document with every ingested version (newest effective date first)."""
+
+    doc_id: str
+    title: str  # title of the newest version
+    product: ProductCode | Literal["all"]
+    audience: Audience
+    versions: list[KbDocumentVersion]
+
+
+class KbChunkView(_Contract):
+    ord: int = Field(ge=0)
+    section: str
+    text: str
+    token_count: int = Field(ge=0)
+
+
+class KbDocumentDetail(_Contract):
+    """One document version and its chunks in reading order."""
+
+    doc_id: str
+    version: str
+    title: str
+    product: ProductCode | Literal["all"]
+    audience: Audience
+    effective_date: dt.date
+    chunks: list[KbChunkView]

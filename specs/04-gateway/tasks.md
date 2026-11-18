@@ -243,7 +243,7 @@ request is audited with `call_id` (or `service` when there is no call).
 **Files:** `src/supportagent/gateway/service.py`, tests above
 
 ### T-GW-11 · Verify inbound callers from unregistered numbers
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #94
 - **Depends on:** T-GW-05, T-BANK-08
@@ -254,9 +254,9 @@ Closes the open question in spec.md: add `BankClient.match_customers(dob, loan_l
 has none. The 2-failure lock, the name check and the "never reveal why it failed" rule stay as they are.
 
 **Acceptance criteria**
-- [ ] An inbound session from an unknown number verifies Frank with his name, DOB and loan last 4
-- [ ] A wrong DOB from an unknown number still counts as a failed attempt, and two lock the session
-- [ ] A DOB + last-4 match with a different name does not verify (the name check still applies)
+- [x] An inbound session from an unknown number verifies Frank with his name, DOB and loan last 4
+- [x] A wrong DOB from an unknown number still counts as a failed attempt, and two lock the session
+- [x] A DOB + last-4 match with a different name does not verify (the name check still applies)
 
 **Tests**
 - `tests/gateway/test_identity.py` (unit, FakeBank): the three cases above
@@ -265,7 +265,7 @@ has none. The 2-failure lock, the name check and the "never reveal why it failed
 **Files:** `src/supportagent/gateway/bank_client.py`, `src/supportagent/gateway/identity.py`, `specs/04-gateway/spec.md` (remove the open question), tests above
 
 ### T-GW-12 · Knowledge-base browse endpoints for the console
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #99
 - **Depends on:** T-GW-09
@@ -277,9 +277,9 @@ Add the read-only `/service/kb/*` routes listed under Interfaces, authenticated 
 exactly what the agent would get. Every request writes an audit row with `call_id="service"`.
 
 **Acceptance criteria**
-- [ ] The GW-R12 acceptance criterion in spec.md holds
-- [ ] Contracts `KbDocumentSummary` and `KbDocumentDetail` live in `contracts/kb.py`
-- [ ] The routes read only the `kb` database; no bank call is made
+- [x] The GW-R12 acceptance criterion in spec.md holds
+- [x] Contracts `KbDocumentSummary` and `KbDocumentDetail` live in `contracts/kb.py`
+- [x] The routes read only the `kb` database; no bank call is made
 
 **Tests**
 - `tests/gateway/test_kb_browse.py` (unit with a fake KB reader): routes, auth matrix, audit rows

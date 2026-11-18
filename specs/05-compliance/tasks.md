@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-COMP-01 · Versioned contact-rules config and loader
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #35
 - **Depends on:** T-PLAT-04
@@ -19,10 +19,10 @@ Create `data/config/contact_rules.yaml` (values from [plan.md](plan.md#config-fi
 YAML values match the KB doc `contact-calling-rules`.
 
 **Acceptance criteria**
-- [ ] `load_rules()` returns a validated model; `rules.version_tag == "contact_rules@1.0"`
-- [ ] Invalid files (end ≤ start, negative counts, unknown keys) raise `ValueError` naming the field
-- [ ] Path overridable via settings `CONTACT_RULES_PATH`
-- [ ] KB consistency test passes (skipped with a reason if `data/policies/contact-calling-rules.md` is absent)
+- [x] `load_rules()` returns a validated model; `rules.version_tag == "contact_rules@1.0"`
+- [x] Invalid files (end ≤ start, negative counts, unknown keys) raise `ValueError` naming the field
+- [x] Path overridable via settings `CONTACT_RULES_PATH`
+- [x] KB consistency test passes (skipped with a reason if `data/policies/contact-calling-rules.md` is absent)
 
 **Tests**
 - `tests/compliance/test_config.py` (unit): load ok; each invalid case; version tag
@@ -94,7 +94,7 @@ scheduler uses (T-SCHED-01, T-SCHED-04).
 **Files:** `src/supportagent/compliance/rules.py`, `tests/compliance/test_gate.py`
 
 ### T-COMP-05 · Disclosure registry and required-disclosure checker
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #36
 - **Depends on:** T-COMP-01
@@ -106,10 +106,10 @@ Create `data/config/disclosures.yaml`, a `DisclosureRegistry` (`render`, `requir
 rendered texts and records `disclosures_given` as `key@version`. Evals (T-EVAL-03) use the checker.
 
 **Acceptance criteria**
-- [ ] Spec acceptance criteria for COMP-R5 and COMP-R6 hold
-- [ ] `render` fails on unknown placeholders; `RenderedDisclosure` carries `key`, `version`, `text`
-- [ ] Disclosure texts match the KB doc `required-disclosures` (consistency test, skipped if the doc is absent)
-- [ ] Branch coverage of `supportagent.compliance.disclosures` is 100%
+- [x] Spec acceptance criteria for COMP-R5 and COMP-R6 hold
+- [x] `render` fails on unknown placeholders; `RenderedDisclosure` carries `key`, `version`, `text`
+- [x] Disclosure texts match the KB doc `required-disclosures` (consistency test, skipped if the doc is absent)
+- [x] Branch coverage of `supportagent.compliance.disclosures` is 100%
 
 **Tests**
 - `tests/compliance/test_disclosures.py` (unit): load, render, `required_for` per direction/campaign

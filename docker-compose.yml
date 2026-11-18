@@ -2,8 +2,8 @@
 #   make up                                    -> postgres (bank + kb databases, pgvector)
 #   docker compose --profile telephony up -d   -> + redis (Asterisk / LiveKit SIP are added by T-TEL tasks)
 #   make docker-test                           -> unit + integration tests inside a container
-# Application services (bank-api, gateway, scheduler, console) are added by their module tasks and
-# reuse the `x-app` anchor below.
+# Application services (bank-api, gateway, scheduler, console-api) are added by their module tasks and
+# reuse the `x-app` anchor below; the Next.js `console` has its own image (docker/console.Dockerfile).
 name: supportagent
 
 x-app: &app
@@ -70,13 +70,58 @@ services:
       AUDIT_HASH_SALT: ${AUDIT_HASH_SALT:-change-me-local-only}
       SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-change-me-local-only}
       BANK_API_URL: http://bank-api:8001
-      OLLAMA_URL: http://host.docker.internal:11434  # native Ollama on the Mac (embeddings)
+      EMBED_URL: http://host.docker.internal:8082/v1  # native llama.cpp embeddings server on the Mac
     depends_on:
       postgres: { condition: service_healthy }
       bank-api: { condition: service_healthy }
     ports: ["8002:8002"]
+    # Docker Desktop doesn't always resolve host.docker.internal on project networks; map it explicitly.
+    extra_hosts: ["host.docker.internal:host-gateway"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  console:
+    # Operations console and data explorer (specs/11-console, T-CON-10): the Next.js app in web/console.
+    # It talks only to console-api, server-side. Bound to localhost on the host (CON-R7).
+    # Open http://localhost:8501
+    build: { context: ., dockerfile: docker/console.Dockerfile }
+    image: supportagent-console:dev
+    environment:
+      CONSOLE_API_URL: http://console-api:8004
+      CONSOLE_API_TOKEN: ${CONSOLE_API_TOKEN:-change-me-local-only}
+    depends_on:
+      console-api: { condition: service_healthy }
+    ports: ["127.0.0.1:8501:8501"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8501/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  console-api:
+    <<: *app
+    # Console API (specs/11-console, T-CON-09): the Next.js console's backend. HTTP clients only (no DB).
+    # Bound to localhost on the host (CON-R7). OpenAPI at http://localhost:8004/openapi.json
+    command: ["uvicorn", "--factory", "supportagent.console.api:create_app", "--host", "0.0.0.0", "--port", "8004"]
+    environment:
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-change-me-local-only}
+      GATEWAY_WORKER_TOKEN: ${GATEWAY_WORKER_TOKEN:-change-me-local-only}
+      AUDIT_HASH_SALT: ${AUDIT_HASH_SALT:-change-me-local-only}
+      SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-change-me-local-only}
+      CONSOLE_API_TOKEN: ${CONSOLE_API_TOKEN:-change-me-local-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}  # settings require it; unused here
+      BANK_API_URL: http://bank-api:8001
+      GATEWAY_URL: http://gateway:8002/mcp
+    depends_on:
+      bank-api: { condition: service_healthy }
+      gateway: { condition: service_healthy }
+    ports: ["127.0.0.1:8004:8004"]
+    volumes: ["./var:/app/var:ro"]  # redacted transcripts (M4)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/healthz')"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -91,6 +136,7 @@ services:
     build: { context: ., dockerfile: docker/app.Dockerfile, target: test }
     image: supportagent-test:dev
     profiles: [test]
+    extra_hosts: ["host.docker.internal:host-gateway"]  # reach the native model servers (eval tests)
 
 volumes:
   pgdata:

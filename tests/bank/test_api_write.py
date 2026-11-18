@@ -43,7 +43,7 @@ def _outcome(call_id: str, summary: str = "Promised to pay on 12 Nov.") -> dict[
         "promise_to_pay": {"date": "2026-11-12", "amount": "200.72"},
         "summary": summary,
         "kb_sources": ["late-fees-penalty-interest@1.0#late-fees-by-product"],
-        "versions": {"prompt": "p1", "policy": "k1", "model": "ollama/qwen3:8b"},
+        "versions": {"prompt": "p1", "policy": "k1", "model": "llamacpp/llama-3.1-8b-instruct"},
         "transcript_uri": f"file:///var/transcripts/{call_id}.jsonl",
     }
 
@@ -74,7 +74,7 @@ def test_attempt_then_outcome_upserts_one_row(api: TestClient, bank_db: Session)
     assert row.contact_result == "right_party"
     assert row.started_at == NOW  # first write wins
     assert row.outcome is not None and row.outcome.reason_code == "forgot"
-    assert row.versions is not None and row.versions.model == "ollama/qwen3:8b"
+    assert row.versions is not None and row.versions.model == "llamacpp/llama-3.1-8b-instruct"
     assert row.transcript_uri == f"file:///var/transcripts/{call_id}.jsonl"
     # A later attempt-style write without an outcome does not erase it
     again = c.Interaction.model_validate(api.post("/interactions", json=_attempt(call_id)).json())
