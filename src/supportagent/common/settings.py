@@ -65,6 +65,7 @@ class DataSettings(_Group):
     kb_embedder: Literal["llamacpp", "fake"] = "llamacpp"
     kb_min_similarity: float = Field(0.58, ge=0.0, le=1.0)
     contact_rules_path: Path = Path("data/config/contact_rules.yaml")
+    campaigns_path: Path = Path("data/config/campaigns.yaml")  # scheduler campaigns (T-SCHED-01)
     promise_max_days: int = Field(14, ge=1)
     transcripts_dir: Path = Path("var/transcripts")
 

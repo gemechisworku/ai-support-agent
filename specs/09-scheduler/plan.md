@@ -49,15 +49,19 @@ tests/scheduler/
 
 ## Data model / contracts
 - `CampaignName = Literal["pre_due", "missed_payment", "callback"]`.
-- `Candidate`: `customer_id`, `loan_id`, `phone`, `timezone`, `contact_prefs`, `attempts_7d`,
-  `last_conversation_at`, `context` (for example `promise_id`, `callback_id`).
+- `Candidate`: not a scheduler type: it is `contracts.gateway.Candidate`, the gateway's service-scope response
+  (`customer_id`, `loan_id`, `phone`, `timezone`, `campaign`, `due_date`, `amount_due`, `days_past_due`, `contact`,
+  `attempts_last_7d`, `last_conversation_at`, `task_id`).
 - `CallJob`: `job_id`, `call_id` (UUID4, created at queue time), `campaign`, `customer_id`, `loan_id`,
   `not_before`, `attempt_no`, `status`, `reasons[]`.
 - `JobStatus`: `queued | dialing | in_call | completed | retry_scheduled | cancelled_by_gate | failed`.
-- `Exclusion`: `customer_id`, `loan_id`, `campaign`, `reasons: list[str]` (compliance reason codes), `at`.
+- `Exclusion`: `customer_id`, `loan_id`, `campaign`, `reasons: list[str]` (compliance reason codes, every failing
+  rule in the gate's fixed order), `at`.
+- `RunReport`: `campaign`, `dry_run`, `run_at`, `campaigns_version`, `rules_version`, `selected`, `not_selected`,
+  `queued: list[CallJob]`, `exclusions`, `already_open`. A dry run lists the jobs it would queue and queues none.
 - `campaigns.yaml` (versioned): per campaign `enabled`, `run_every_min`, `selector` (`due_in_days: [0,3]`
   or `dpd: [1,30]`), and `retry` (`no_answer: {delay_min: 120, max: 2}`, `busy: {delay_min: 30, max: 2}`,
-  `voicemail: {delay_min: 1440, max: 1}`, `wrong_number: {max: 0}`).
+  `voicemail: {delay_min: 240, max: 1}`, `wrong_number: {max: 0}`).
 
 ## Key decisions
 | Decision | Choice | Why |
@@ -93,3 +97,18 @@ tests/scheduler/
   polling as the fallback.
 - Cap counting depends on the bank recording attempts by `call_id`. Interactions must be upserted by
   `call_id`, so the agent's outcome and the scheduler's attempt do not double count.
+
+## Built in T-SCHED-01
+- **Selection** (`campaigns.select_candidates`): `pre_due` takes `days_past_due == 0` with the due date 0..3 days from
+  today (UTC date); `missed_payment` takes 1..30 DPD; `callback` merges due callback tasks with broken promises, one
+  candidate per loan (the one carrying the callback task wins). The gateway already filters by campaign; the
+  scheduler filters again so a wider answer (45 DPD) never reaches the call list.
+- **Gate** (`gate.admit`): `compliance.evaluate` at `now`; allowed becomes a `queued` job (`attempt_no=1`,
+  `not_before=now`, fresh `job_id` and UUID4 `call_id`), refused becomes an `Exclusion`.
+- **Queue** (`queue.JobQueue`): in-process; open means not `completed`, `failed` or `cancelled_by_gate`; transitions
+  are checked (`queued -> dialing -> in_call -> completed`, `retry_scheduled -> dialing`, and so on).
+- **Config**: `CAMPAIGNS_PATH` (default `data/config/campaigns.yaml`); `version_tag` is `campaigns@1.0` and is logged
+  with every run next to the rules version. The voicemail retry is 240 minutes, matching `contact_rules.yaml`
+  (this plan said 1440 before; the compliance file is the source of truth and a test keeps them equal).
+- **Logging**: one `campaign run` event (versions and counts) and one `candidate excluded` event per exclusion
+  (loan id and reason codes only; no phone, name or other contact data).

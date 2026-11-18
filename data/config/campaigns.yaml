@@ -1,0 +1,29 @@
+# Outbound campaigns, versioned with the code (constitution VII). Loaded by supportagent.scheduler.config.
+# The selector ranges and retry delays are also stated in contact_rules.yaml (campaigns, retries); a test keeps
+# the two files in agreement. Change both together and bump the version. The version is logged with each run.
+version: "1.0"
+
+campaigns:
+  pre_due:                           # an instalment due in 0..3 days, not yet past due
+    enabled: true
+    run_every_min: 60
+    selector:
+      due_in_days: [0, 3]
+    retry: &retry
+      no_answer: {delay_min: 120, max: 2}
+      busy: {delay_min: 30, max: 2}
+      voicemail: {delay_min: 240, max: 1}
+      wrong_number: {max: 0}
+
+  missed_payment:                    # 1..30 days past due
+    enabled: true
+    run_every_min: 60
+    selector:
+      dpd: [1, 30]
+    retry: *retry
+
+  callback:                          # callback tasks that are due, and broken promises
+    enabled: true
+    run_every_min: 15
+    selector: {}
+    retry: *retry

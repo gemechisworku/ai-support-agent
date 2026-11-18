@@ -7,7 +7,7 @@
 ## Tasks
 
 ### T-SCHED-01 · Campaign definitions and candidate queue
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #54
 - **Depends on:** T-COMP-04, T-GW-10
@@ -19,10 +19,15 @@ campaign candidate sources, the compliance-gate adapter and the de-duplicating `
 of queued jobs and exclusions (with reason codes) and does not dial.
 
 **Acceptance criteria**
-- [ ] `pre_due` selects instalments due in 0–3 days, `missed_payment` selects 1–30 DPD, and `callback` merges callbacks due with broken promises.
-- [ ] Every candidate goes through the compliance gate; an exclusion records every failing rule, not just the first.
-- [ ] Re-running a campaign does not duplicate a job that is still open for the same customer, loan and campaign.
-- [ ] `campaigns.yaml` carries a `version` that is logged with each run.
+- [x] `pre_due` selects instalments due in 0–3 days, `missed_payment` selects 1–30 DPD, and `callback` merges callbacks due with broken promises.
+- [x] Every candidate goes through the compliance gate; an exclusion records every failing rule, not just the first.
+- [x] Re-running a campaign does not duplicate a job that is still open for the same customer, loan and campaign.
+- [x] `campaigns.yaml` carries a `version` that is logged with each run.
+
+*(Also added: `tests/scheduler/test_config.py` (the file's validation, and that its selector ranges and retry delays
+agree with `contact_rules.yaml`) and `tests/scheduler/test_gateway_client.py` (`httpx.MockTransport`: the bearer
+token, contract parsing, and errors that never carry the token). The client also has `contact_preferences` and
+`record_attempt`, which the dialer (T-SCHED-02) uses. `RunReport` also reports `not_selected` and `already_open`.)*
 
 **Tests**
 - `tests/scheduler/test_campaigns.py` (unit, FakeGateway): persona fixtures give the expected candidate sets per campaign; out-of-range DPD is excluded.
