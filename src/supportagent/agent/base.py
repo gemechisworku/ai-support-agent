@@ -41,6 +41,7 @@ from livekit.agents.types import NOT_GIVEN
 
 from supportagent.agent.context import CallState
 from supportagent.agent.interrupts import handle_concern, note_misunderstanding, screen_turn
+from supportagent.agent.phrases import is_empty_turn
 from supportagent.agent.prompts.registry import PromptRegistry
 from supportagent.agent.toolcall_guard import guard_tool_json
 from supportagent.common.logging import get_logger
@@ -188,7 +189,10 @@ class BaseStateAgent(Agent):
     # ------------------------------------------------------------------ global interrupts
 
     async def _screen(self, message: ChatMessage) -> bool:
-        """Check one caller turn for an interrupt, once. True when the call moved to another state.
+        """Check one caller turn for an interrupt, once. True when it is handled and the model must not reply.
+
+        An empty turn (noise, a filtered non-speech tag) is handled by being ignored. Otherwise True means the
+        call moved to another state.
 
         A hit runs its handler in code (flags, tickets, a spoken confirmation) and hands the call to the
         handler's state on this same turn; the caller's turn is recorded as an outcome intent either way.
@@ -197,7 +201,11 @@ class BaseStateAgent(Agent):
         if message.id in state.screened_messages:
             return False
         state.screened_messages.add(message.id)
-        kind = screen_turn(state, message.text_content or "")
+        text = message.text_content or ""
+        if is_empty_turn(text):
+            return True  # noise or a filtered non-speech tag: no reply, no clarifier, no misunderstanding
+        state.last_caller_text = text
+        kind = screen_turn(state, text)
         if kind is None:
             return False
         next_agent = await handle_concern(self, kind)

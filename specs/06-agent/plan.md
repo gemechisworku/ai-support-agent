@@ -499,6 +499,29 @@ tests/agent/          # mirrors the modules above
   on a fake clock and fake session, the close hook, the sentiment classifier) and additions to `test_worker.py`
   (`prewarm`, `run_call` order and one `finish_call`).
 
+## Fixes from the third playground call (T-AGENT-05 / T-AGENT-07 / T-AGENT-06, 2026-11-18)
+The caller asked what the agent could do. Five things went wrong, each now a code path with a test
+(`tests/agent/test_third_call_shape.py`, `test_toolcall_guard.py`):
+- **Empty turns are ignored.** `BaseStateAgent._screen` returns "handled" for a turn with no words in it (noise, a
+  filtered non-speech tag): no reply, no clarifier, no `unclear_turns`, and it never replaces
+  `CallState.last_caller_text` (the latest turn with words, which the `finish` guards read).
+- **"What can you do?" is answered in code** (`phrases.is_capabilities_question`, `flow.speak_capabilities`,
+  router and policy): `flow.CAPABILITIES_LINE` lists only what this build does (policy questions, own-loan questions
+  after verification, a callback request). It does not offer a transfer to a person (T-AGENT-11 is not built).
+- **A question is never dropped silently.** The policy `finish` tool used to hand the call back to the router, which
+  asked "anything else?", even when nothing had been answered. Now `finish` hands back only when the question was
+  answered this turn, the callback was offered (the turn after an offer counts), the turn was an acknowledgement
+  with nothing new to answer (`phrases.is_question_like`), or the caller said they are done. Otherwise the state
+  says `LOW_CONFIDENCE_OFFER` itself (the callback is booked only if the caller says yes). The account state's
+  `finish` sends a how-it-works question to the policy state instead of the router.
+- **`finish_call` is guarded** (router): it closes the call only when the caller's latest turn is a farewell or a
+  looser "we're finished" (`flow.caller_is_done`); otherwise the tool returns `flow.NOT_DONE` (an instruction to the
+  model, never spoken) and the call stays open. "Mm-hmm." gets the clarifying question in code. The reminder,
+  collections and callback states (M3) need the same guard on any finish tool they expose.
+- **No mimicable prompt examples.** `prompts/router.md` (version 3) no longer quotes "that's all" / "no thanks" or the
+  clarifying question; `toolcall_guard.drop_recited_fragments` drops a router reply that is exactly such a fragment
+  and the clarifying question is said instead.
+
 ## Key decisions
 | Decision | Choice | Why |
 |---|---|---|

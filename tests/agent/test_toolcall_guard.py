@@ -14,7 +14,7 @@ import pytest
 from livekit.agents import llm
 
 from supportagent.agent.testing import say
-from supportagent.agent.toolcall_guard import guard_tool_json, parse_tool_json
+from supportagent.agent.toolcall_guard import drop_recited_fragments, guard_tool_json, parse_tool_json
 from tests.agent.test_router import _agent_lines, _run, prompts, stand_ins  # noqa: F401  (fixtures)
 
 ALLOWED = {"finish", "route_policy_question"}
@@ -133,3 +133,46 @@ async def test_a_text_tool_call_for_a_tool_the_state_lacks_is_neither_said_nor_r
     said = " ".join(_agent_lines(result))
     assert "{" not in said and "get_loan_status" not in said
     assert "get_loan_status" not in result.tool_names
+
+
+# ------------------------------------------------------------------ recited prompt examples (third real call)
+
+FRAGMENTS = ("that's all", "no thanks")
+
+
+async def _drop(items: Sequence[Any]) -> tuple[list[Any], list[str]]:
+    dropped: list[str] = []
+    out = [c async for c in drop_recited_fragments(_stream(items), FRAGMENTS, lambda: dropped.append("x"))]
+    return out, dropped
+
+
+@pytest.mark.parametrize(
+    "pieces", [["That's all."], ["That", "'s ", "all", "."], ["no thanks"], [" No thanks! "]]
+)
+async def test_a_reply_that_is_exactly_a_quoted_example_is_dropped(pieces: list[str]) -> None:
+    out, dropped = await _drop([_text(p) for p in pieces])
+    assert _contents(out) == ""
+    assert dropped == ["x"]
+
+
+@pytest.mark.parametrize(
+    "pieces",
+    [
+        ["That's all I can say about fees."],
+        ["Is there anything else?"],
+        ["That", "'s a good question."],
+        ["No", " thanks are needed, the late fee is $25."],
+    ],
+)
+async def test_a_longer_reply_that_starts_like_an_example_is_released_unchanged(pieces: list[str]) -> None:
+    out, dropped = await _drop([_text(p) for p in pieces])
+    assert _contents(out) == "".join(pieces)
+    assert dropped == []
+
+
+async def test_a_tool_call_releases_what_was_held() -> None:
+    call = _call("finish")
+    out, dropped = await _drop([_text("That"), call])
+    assert _contents(out) == "That"
+    assert out[-1] is call
+    assert dropped == []

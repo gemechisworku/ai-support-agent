@@ -18,7 +18,12 @@ from livekit.agents.llm import ChatMessage
 
 from supportagent.agent.base import STATE_REGISTRY, BaseStateAgent
 from supportagent.agent.context import CallState
-from supportagent.agent.phrases import is_account_question, is_farewell
+from supportagent.agent.phrases import (
+    is_account_question,
+    is_capabilities_question,
+    is_farewell,
+    says_done_loosely,
+)
 from supportagent.agent.summary import format_callback
 from supportagent.common import clock
 from supportagent.common.logging import get_logger
@@ -150,3 +155,38 @@ async def route_on_phrases(
         return False
     agent.session.update_agent(next_agent)
     return True
+
+
+# ------------------------------------------------------------------ what can you do? / are they done?
+
+# Spoken in code when the caller asks what the agent can do. It lists only what this build really does:
+# escalation to a person is not built (T-AGENT-11), so a person is not offered, only a callback request.
+CAPABILITIES_LINE = (
+    "I can answer questions about how things work, such as fees, grace periods and paying early. "
+    "Once I've checked who you are, I can also look up your own loan, like a balance, a due date or your "
+    "recent payments. And I can ask a colleague to call you back. What would you like to do?"
+)
+
+# What the model is told (it is not spoken) when it calls a finish tool but the caller has not said goodbye.
+NOT_DONE = (
+    "The caller has not said they are finished, so do not end the call. Ask in one short sentence what "
+    "else you can help with."
+)
+
+
+async def speak_capabilities(agent: BaseStateAgent, message: ChatMessage) -> bool:
+    """Answer "what can you do?" in code with `CAPABILITIES_LINE`. True when it did (the model is silent)."""
+    if not is_capabilities_question(message.text_content or ""):
+        return False
+    agent.state.unclear_turns = 0
+    agent.session.say(CAPABILITIES_LINE)
+    return True
+
+
+def caller_is_done(agent: BaseStateAgent, *, asked_anything_else: bool = False) -> bool:
+    """Did the caller's most recent turn say goodbye or that they need nothing more? (The `finish` guard.)
+
+    A farewell, or a looser "we're finished here". Filler ("mm-hmm"), a pause or an unclear answer is not.
+    """
+    text = agent.state.last_caller_text
+    return is_farewell(text, asked_anything_else=asked_anything_else) or says_done_loosely(text)
