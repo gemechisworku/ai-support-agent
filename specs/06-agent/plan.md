@@ -46,7 +46,7 @@ state. The handlers are:
 | `ReminderAgent` (U1) | `get_loan_status` → speak amount and date (code); channels from `search_policy` | `search_policy`, `record_intent_to_pay`, `offer_callback`, `finish` | Closing |
 | `CollectionsPurposeAgent` (U2 §7 steps 3–5) | `say(collections disclosure)` (after verification, before any figure); `get_loan_status` → purpose line | `get_recent_transactions`, `set_reason_code`, `mark_payment_in_transit` | Resolve / Closing / Escalation |
 | `CollectionsResolveAgent` (U2 §7 steps 6–7) | `search_policy` (consequences) → model relays; code asks for a date and names the amount | `search_policy`, `record_promise_to_pay`, `offer_callback`, `refer_to_human` | Closing / Escalation |
-| `CallbackAgent` (U5) | `get_interaction_history` → context line | `get_loan_status`, `record_promise_to_pay`, `request_callback`, `finish` | Closing |
+| `CallbackAgent` (U5) | `get_interaction_history` + `get_loan_status` → context line and new-date question (code) | `record_promise_to_pay`, `offer_callback`, `refer_to_human`, `finish` | Closing / Escalation |
 | `EscalationAgent` (U6) | compose summary | `escalate_and_transfer`, `create_callback_ticket` | end |
 | `ClosingAgent` | read back commitments; payment channels | `end_call`, `offer_callback` | end |
 
@@ -426,6 +426,34 @@ tests/agent/          # mirrors the modules above
 - **Tests.** `tests/agent/test_collections.py`: Frank (forgot, promise at today+3), Priya (pending payment), Hana
   (hardship) and Dawit (dispute), the window and amount rejections, the callback refusals, the unverified caller, and the
   greeting → verify → collections path with the disclosure before the first amount.
+
+## Callback with context (T-AGENT-12)
+- **`states/callback.py`, `prompts/callback.md`** (v1). `CallbackAgent` (`callback`, campaign `callback`; `flow.py`
+  already sent verified callback calls here) subclasses the collections states' shared base (`_CollectionsState`:
+  interrupts, the honest hardship/dispute referral, the policy-free helpers). `on_state_enter`, in code:
+  - not verified: one neutral line (`NOT_VERIFIED_LINE`), `VerifyAgent` next; nothing is read or said about money;
+  - read `get_interaction_history` and `get_loan_status`; a failed read says `UNAVAILABLE_LINE` (no figure) and goes
+    to `closing`;
+  - no loan with an overdue amount (`collections.overdue_loan`): `NOTHING_OPEN_LINE`, no figure, `closing`. This also
+    covers a broken promise that has been paid up since, so a settled caller is not chased;
+  - otherwise the call is about arrears, so the **collections disclosure** is spoken first (`speak_disclosure`,
+    verbatim, uninterruptible), then the context line, then the question for a date naming the amount. The context
+    line is `context_line(broken_promise(history.open_promises))`: "You'd planned to pay $X on D, and we haven't seen
+    that payment yet", with amount and date from the history only (the latest promise with `status="broken"`; an open
+    promise is not a broken one). With no broken promise the collections `purpose_line` (overdue amount and oldest
+    unpaid date from the loan status) is said instead. The amount in the question and in the promise is the loan
+    status's `overdue_amount`; the model never says an amount or a date.
+- **Tools** (the allow-list is four): `record_promise_to_pay(promise_date)`, `offer_callback`, `refer_to_human`,
+  `finish`. The promise logic matches `CollectionsResolveAgent`: the gateway decides, a rejection is rendered from its
+  `max_date` / `amount_due`, after `MAX_REJECTIONS` a callback is offered, a failed call promises nothing, and a
+  callback is only promised once `request_callback` created it. `get_loan_status` is read by the code, not offered to
+  the model, and `search_policy` is not offered (a callback call has no policy step).
+- **Hardship and dispute** use the collections path: the interrupt detector in code, or `refer_to_human`, with the
+  honest `unavailable_line` (a real callback, or no promise) until escalation exists (T-AGENT-11).
+- **Tests:** `tests/agent/test_callback.py` (15): the pure lines, the allow-list, Frank's broken promise and a new
+  promise (disclosure before any figure, the code's amount and last 4 sent), a window rejection, a failed call, nothing
+  outstanding, paid up since, an open promise that is not chased as broken, the unverified caller, a failed read, a
+  refused callback, a stated hardship, and the whole greeting → verify → callback path.
 
 ## Session wiring (T-AGENT-13)
 - **Flow of a call.** `entrypoint` connects, parses the call context, opens the gateway session (`setup_call`), then

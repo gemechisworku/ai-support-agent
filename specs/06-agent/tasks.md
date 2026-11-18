@@ -292,7 +292,7 @@ expected callback time. Record `escalated{reason, target}`.
 **Files:** `src/supportagent/agent/states/escalation.py`, `prompts/escalation.md`, tests above
 
 ### T-AGENT-12 · Callback flow with context (U5)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #49
 - **Depends on:** T-AGENT-10
@@ -303,8 +303,8 @@ Implement `CallbackAgent` for `campaign=callback`: after verification, load
 it yet"). Then capture a new promise or a callback, or hand to collections or escalation.
 
 **Acceptance criteria**
-- [ ] The context line uses only history and loan-status values
-- [ ] A broken promise → new promise flow; a requested callback with no open balance → close politely
+- [x] The context line uses only history and loan-status values
+- [x] A broken promise → new promise flow; a requested callback with no open balance → close politely
 
 **Tests**
 - `tests/agent/test_callback.py` (unit, text mode): broken-promise follow-up for Frank; a callback with nothing due
