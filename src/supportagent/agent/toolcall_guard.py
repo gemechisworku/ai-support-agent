@@ -14,8 +14,9 @@ is logged. Any other text, including text that merely begins with a brace, is re
 from __future__ import annotations
 
 import json
+import re
 import uuid
-from collections.abc import AsyncIterable, AsyncIterator, Collection
+from collections.abc import AsyncIterable, AsyncIterator, Callable, Collection
 from typing import Any
 
 from livekit.agents import llm
@@ -101,3 +102,54 @@ async def guard_tool_json(stream: AsyncIterable[Any], allowed_tools: Collection[
             tool_calls=[llm.FunctionToolCall(name=name, arguments=json.dumps(args), call_id=call_id)],
         ),
     )
+
+
+# --------------------------------------------------------------------------- recited prompt examples
+
+
+def _normalise(text: str) -> str:
+    return " ".join(re.sub(r"[^a-z0-9 ]+", "", text.lower().replace("'", "")).split())
+
+
+async def drop_recited_fragments(
+    stream: AsyncIterable[Any], fragments: Collection[str], on_drop: Callable[[], object] | None = None
+) -> AsyncIterator[Any]:
+    """Never speak a reply that is exactly one of `fragments` (a phrase the prompt quoted as an example).
+
+    The 8B model answered the router with "That's all." because the prompt quoted it as something a *caller*
+    says (found on the third playground call). Text that could still become one of the fragments is held
+    back; as soon as it cannot, or a tool call arrives, it is released unchanged. A message that ends as
+    exactly a fragment is dropped (punctuation and case ignored) and `on_drop` is called, so the state can
+    say something useful in code instead.
+    """
+    banned = {_normalise(f) for f in fragments}
+    held: list[Any] = []
+    text = ""
+    async for chunk in stream:
+        piece = _text_of(chunk)
+        if piece is None:
+            for h in held:
+                yield h
+            held, text = [], ""
+            yield chunk
+            continue
+        held.append(chunk)
+        text += piece
+        norm = _normalise(text)
+        if norm and not any(b.startswith(norm) for b in banned):
+            for h in held:
+                yield h
+            held, text = [], ""
+            # Once released, later chunks of this message pass straight through (the prefix cannot recover).
+            async for rest in stream:
+                yield rest
+            return
+    if not held:
+        return
+    if _normalise(text) in banned:
+        log.warning("dropped a reply that recited a prompt example")
+        if on_drop is not None:
+            on_drop()
+        return
+    for h in held:
+        yield h

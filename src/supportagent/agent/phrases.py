@@ -99,6 +99,46 @@ def is_account_question(text: str) -> bool:
     return bool(text) and _ACCOUNT.search(text.replace(_CURLY_APOSTROPHE, "'")) is not None
 
 
+_CAPABILITIES: Final = re.compile(
+    r"\bcapabilit(y|ies)\b|\bwho\s+are\s+you\b|\bwhat\s+are\s+you\b(?!\s+(doing|going|saying|talking))|"
+    r"\bwhat\s+(can|could)\s+you\s+(do|help)\b(?!.*\b(about|with\s+my|on\s+my)\b)|"
+    r"\bwhat\s+are\s+you\s+(able|capable)\b|\bhow\s+(can|could)\s+you\s+help\b|"
+    r"\bwhat\s+(do\s+)?you\s+know\s*[.?!]*\s*$|^\s*(please\s+)?help(\s+me)?\s*[.?!]*\s*$",
+    re.IGNORECASE,
+)
+
+
+MAX_ACK_WORDS: Final = 5  # a turn this short with no intent is an acknowledgement, not a question
+
+
+def says_done_loosely(text: str) -> bool:
+    """True for a looser "I'm done" ("we're finished here", "nothing else"). Enough for the model's own
+    `finish_call` to close the call, not for the code to do it unprompted."""
+    return _DONE_LOOSE.search((text or "").replace(_CURLY_APOSTROPHE, "'")) is not None
+
+
+def is_empty_turn(text: str | None) -> bool:
+    """True when a caller turn has no words in it: whitespace, punctuation, what noise leaves behind."""
+    return re.search(r"\w", text or "") is None
+
+
+def is_question_like(text: str) -> bool:
+    """True when a turn asks for something: a question mark, a longer statement, or a recognised intent.
+
+    A short acknowledgement ("okay, I see", "mm-hmm") is not: there is nothing new to answer.
+    """
+    cleaned = (text or "").strip()
+    if is_empty_turn(cleaned):
+        return False
+    return "?" in cleaned or len(_words(cleaned)) > MAX_ACK_WORDS or has_router_intent(cleaned)
+
+
+def is_capabilities_question(text: str) -> bool:
+    """True when the caller asks what the agent can do or who it is ("what can you do", "capabilities")."""
+    cleaned = (text or "").replace(_CURLY_APOSTROPHE, "'")
+    return bool(cleaned.strip()) and _CAPABILITIES.search(cleaned) is not None
+
+
 def is_policy_question(text: str) -> bool:
     """True when the turn mentions something policy answers: fees, grace periods, paying early, options."""
     return bool(text) and _POLICY.search(text.replace(_CURLY_APOSTROPHE, "'")) is not None
@@ -118,6 +158,7 @@ def has_router_intent(text: str) -> bool:
     return bool(
         is_account_question(cleaned)
         or is_policy_question(cleaned)
+        or is_capabilities_question(cleaned)
         or _ACCOUNT_LOOSE.search(cleaned)
         or _DONE_LOOSE.search(cleaned)
         or _HUMAN.search(cleaned)

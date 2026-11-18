@@ -39,6 +39,7 @@ from livekit.agents.llm.chat_context import ChatItem
 
 from supportagent.agent.base import BaseStateAgent, register_state
 from supportagent.agent.context import CallState
+from supportagent.agent.phrases import is_question_like
 from supportagent.agent.states import flow
 from supportagent.common import clock
 from supportagent.common.logging import get_logger
@@ -105,13 +106,25 @@ def tool_choice_for(items: Sequence[ChatItem]) -> ToolChoiceValue:
 class PolicyAgent(BaseStateAgent):
     state_name = flow.POLICY
 
+    # Has the caller's latest question been answered, or the callback offered? `finish` hands the call back to
+    # the router (which asks "anything else?") only then; `_offer_open` makes the turn after an offer count.
+    _answered: bool = False
+    _offer_open: bool = False
+
     async def on_state_enter(self) -> None:
         # The router's hand-off is silent and the caller's question is already in the chat history.
         self.session.generate_reply()
 
     async def _screen(self, message: ChatMessage) -> bool:
         """Interrupts first (AGENT-R3), then an account question or a farewell in code (before the model)."""
+        if message.id not in self.state.screened_messages:  # a new caller turn
+            if is_question_like(message.text_content or ""):  # it needs a fresh answer (or a callback offer)
+                self._answered, self._offer_open = self._offer_open, False
+            else:  # "okay, I see": nothing new to answer, so the last answer (or offer) still stands
+                self._answered, self._offer_open = self._answered or self._offer_open, False
         if await super()._screen(message):
+            return True
+        if await flow.speak_capabilities(self, message):
             return True
         return await flow.route_on_phrases(self, message, farewell=True, account=True)
 
@@ -150,6 +163,7 @@ class PolicyAgent(BaseStateAgent):
             return await self._say_and_stop(LOW_CONFIDENCE_OFFER)
         for chunk in found.chunks:
             state.add_kb_source(chunk.citation)
+        self._answered = True
         log.info(
             "policy search answered",
             extra={"state": self.state_name, "sources": [c.citation for c in found.chunks]},
@@ -172,6 +186,7 @@ class PolicyAgent(BaseStateAgent):
             log.warning("follow-up callback failed", extra={"state": self.state_name, "error_code": code})
             return CALLBACK_FAILED
         state.record_intent(Intent.callback_request)
+        self._answered = True
         return CALLBACK_BOOKED
 
     @function_tool
@@ -191,6 +206,10 @@ class PolicyAgent(BaseStateAgent):
 
         Use it when they say they are done, or ask for a person. Account questions use `route_to_account`.
         """
+        if not self._answered and not flow.caller_is_done(self):
+            # Neither answered nor offered a callback: never drop the question silently (third real call,
+            # where the model's `finish` sent "what are your capabilities?" back with "anything else?").
+            return await self._say_and_stop(LOW_CONFIDENCE_OFFER)
         router = flow.resolve(flow.ROUTER)
         if router is None:  # the router always exists on an inbound call; keep the call alive regardless
             return "Ask whether there is anything else you can help with."
@@ -200,5 +219,7 @@ class PolicyAgent(BaseStateAgent):
 
     async def _say_and_stop(self, line: str) -> str:
         """Speak `line` ourselves and skip the model's next reply, so it cannot add a policy claim."""
+        self._answered = True  # the caller has been told what we can and cannot do
+        self._offer_open = True  # the next turn answers the offer, so it may hand back
         self.session.say(line)  # queued, not awaited: this runs inside the reply being generated
         raise StopResponse()

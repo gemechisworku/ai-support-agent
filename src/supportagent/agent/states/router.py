@@ -8,9 +8,15 @@ the account or policy state). The model listens to the answer and calls exactly 
   with `CallState.after_verification = "account"`, so the caller lands in the account state once verified.
   A caller who has verified once is never asked again in the same call (`flow.account_route`).
 - `request_human` → `EscalationAgent(reason="human_requested")`, with no verification.
-- `finish_call` → `ClosingAgent(farewell=True)`: the caller is done. The same hand-off happens in code, before
-  the model replies, when a short caller turn is a farewell (`phrases.is_farewell`); right after "Is there
-  anything else I can help you with?" a bare "no" or "thanks" counts too.
+- `finish_call` → `ClosingAgent(farewell=True)`: the caller is done. It runs only when the caller's latest
+  turn really is a farewell (`flow.caller_is_done`); otherwise the model is told to ask what else they need.
+  The same hand-off happens in code, before the model replies, when a short caller turn is a farewell
+  (`phrases.is_farewell`); right after "Is there anything else I can help you with?" a bare "no" or "thanks"
+  counts too.
+- A turn that asks what the agent can do ("what are your capabilities") is answered in code
+  (`flow.CAPABILITIES_LINE`), and an empty turn (noise) is ignored by every state (`BaseStateAgent._screen`).
+- A reply that is exactly a phrase the prompt once quoted as a caller's words ("that's all", "no thanks") is
+  never spoken (`toolcall_guard.drop_recited_fragments`); the clarifying question is said instead.
 
 Each route records its intent in `CallState.intents` (once each, in order). The router has no data tools: it
 cannot read an account, search policy or verify anyone itself. Account and policy states hand back here
@@ -26,13 +32,17 @@ returned; if that fails, the line says plainly that it cannot be done on this ca
 
 from __future__ import annotations
 
-from livekit.agents import Agent, RunContext, function_tool
-from livekit.agents.llm import ChatMessage, StopResponse
+from collections.abc import AsyncGenerator
+from typing import Any
+
+from livekit.agents import Agent, ModelSettings, RunContext, function_tool
+from livekit.agents.llm import ChatContext, ChatMessage, StopResponse, Tool
 
 from supportagent.agent.base import BaseStateAgent, register_state
 from supportagent.agent.context import CallState
 from supportagent.agent.phrases import has_router_intent
 from supportagent.agent.states import flow
+from supportagent.agent.toolcall_guard import drop_recited_fragments
 from supportagent.common.logging import get_logger
 from supportagent.contracts.outcome import Intent
 
@@ -42,6 +52,8 @@ HOW_CAN_I_HELP = "How can I help?"
 CLARIFY = "I'm sorry, I didn't catch that. Is it about your own account, or about how something works?"
 MAX_CLARIFICATIONS = 2  # after this many unclear turns in a row the model takes over
 ANYTHING_ELSE = "Is there anything else I can help you with?"
+# What a caller says, never what the router says: the model must not speak them as a reply (third real call).
+RECITED = ("that's all", "that is all", "that's it", "no thanks", "no thank you")
 
 
 @register_state
@@ -62,7 +74,16 @@ class RouterAgent(BaseStateAgent):
             return True
         if await flow.route_on_phrases(self, message, farewell=True, asked_anything_else=self._returning):
             return True
+        if await flow.speak_capabilities(self, message):  # "what can you do?": answered in code
+            return True
         return self._clarify(message)
+
+    async def llm_node(
+        self, chat_ctx: ChatContext, tools: list[Tool], model_settings: ModelSettings
+    ) -> AsyncGenerator[Any, None]:
+        stream = super().llm_node(chat_ctx, tools, model_settings)
+        async for chunk in drop_recited_fragments(stream, RECITED, lambda: self.session.say(CLARIFY)):
+            yield chunk
 
     def _clarify(self, message: ChatMessage) -> bool:
         """A turn that says nothing about what the caller wants gets a fixed question, not a model guess.
@@ -105,6 +126,8 @@ class RouterAgent(BaseStateAgent):
     @function_tool
     async def finish_call(self, context: RunContext[CallState]) -> str | Agent:
         """The caller says goodbye or that they need nothing more."""
+        if not flow.caller_is_done(self, asked_anything_else=self._returning):
+            return flow.NOT_DONE  # guarded in code: "Mm-hmm." once hung up on a caller
         return await self._go(flow.CLOSING, "caller is done", farewell=True)
 
     # ------------------------------------------------------------------ code-driven exit

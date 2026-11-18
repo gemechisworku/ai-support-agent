@@ -30,6 +30,7 @@ from livekit.agents import Agent, RunContext, function_tool
 
 from supportagent.agent.base import BaseStateAgent, register_state
 from supportagent.agent.context import CallState
+from supportagent.agent.phrases import is_policy_question
 from supportagent.agent.states import flow
 from supportagent.agent.states.router import RouterAgent
 from supportagent.common.logging import get_logger
@@ -176,6 +177,10 @@ class AccountAgent(BaseStateAgent):
     @function_tool
     async def finish(self, context: RunContext[CallState]) -> str | Agent:
         """The caller has what they need, or asks something that is not about their own account."""
+        if is_policy_question(context.userdata.last_caller_text):  # a how-it-works question is not dropped
+            policy = flow.resolve(flow.POLICY)
+            if policy is not None:
+                return self.hand_off(self.next_state(policy))  # type: ignore[return-value]
         return self.hand_off(self.next_state(RouterAgent))  # type: ignore[return-value]
 
     # ------------------------------------------------------------------ helpers
