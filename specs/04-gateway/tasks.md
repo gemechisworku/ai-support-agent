@@ -232,9 +232,13 @@ promises), `GET /service/contact-preferences/{customer_id}` and `POST /service/a
 request is audited with `call_id` (or `service` when there is no call).
 
 **Acceptance criteria**
-- [ ] The candidate payload carries every field the compliance gate needs (contact prefs, timezone, attempts_last_7d, last_conversation_at)
-- [ ] Worker and session tokens → 403; the service token cannot call MCP tools
-- [ ] An attempt with `contact_result` in the PRD §8 enum creates an interaction row
+- [x] The candidate payload carries every field the compliance gate needs (contact prefs, timezone, attempts_last_7d, last_conversation_at)
+- [x] Worker and session tokens → 403; the service token cannot call MCP tools
+- [x] An attempt with `contact_result` in the PRD §8 enum creates an interaction row
+
+*(Status stays `todo` until `tests/gateway/test_service_api_db.py` has run: it needs Postgres, which was not running
+when this was committed. The three criteria above are verified by `test_service_api.py` over `FakeBank`. Set the status
+to `done` once the integration test is green in CI.)*
 
 **Tests**
 - `tests/gateway/test_service_api.py` (unit, FakeBank): each campaign filter; auth matrix; attempt validation

@@ -5,6 +5,8 @@
 - `POST /sessions`, `DELETE /sessions/{call_id}` — called by the agent worker's code with
   `Authorization: Bearer $GATEWAY_WORKER_TOKEN`; the returned session token authorises MCP calls.
 - `/mcp` — MCP streamable HTTP (stateless, JSON responses), `Authorization: Bearer <session_token>`.
+- `/service/candidates`, `/service/contact-preferences/{id}`, `/service/attempts` — the scheduler's API
+  (T-GW-10), service token, see `service.py`.
 - `/service/kb/*` — read-only knowledge-base browse and search for the console (T-GW-12),
   `Authorization: Bearer $GATEWAY_SERVICE_TOKEN` (shared service dependency in `auth.py`).
 - `/healthz`.
@@ -27,6 +29,7 @@ from supportagent.gateway.kb_browse import SqlKbBrowser
 from supportagent.gateway.kb_browse import router as kb_browse_router
 from supportagent.gateway.mcp_server import build_mcp_server
 from supportagent.gateway.retriever import KbRetriever
+from supportagent.gateway.service import router as service_router
 from supportagent.gateway.tools import Gateway
 from supportagent.kb.embed import get_embedder
 
@@ -99,5 +102,6 @@ def create_app(gateway: Gateway | None = None) -> FastAPI:
         return Response(status_code=204)
 
     app.include_router(kb_browse_router)
+    app.include_router(service_router)
     app.mount("/", mcp_app)  # after the routes above, so /healthz and /sessions match first
     return app

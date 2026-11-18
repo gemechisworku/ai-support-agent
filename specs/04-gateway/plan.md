@@ -124,3 +124,20 @@ Settings: `GATEWAY_WORKER_TOKEN`, `GATEWAY_SERVICE_TOKEN`, `AUDIT_HASH_SALT`, `P
 - The MCP SDK's header access API may differ between versions (it did: 1.x `FastMCP` → 2.x `MCPServer`).
   It is isolated in `mcp_server.py` (`_session_token(ctx)`); `test_mcp_server.py` exercises it over real HTTP.
 - Fuzzy name matching could accept the wrong person. Distance ≤ 1 applies per token **and** DOB and last 4 must match exactly.
+
+## Scheduler service API notes (T-GW-10)
+- **Candidates are facts, not decisions.** `pre_due` and `missed_payment` come from the bank's
+  `GET /collections/eligible` (`due_within=3`, `bucket=1-30`); the gateway only reshapes `EligibleLoan` into
+  `Candidate` (`next_due_date`→`due_date`, `prefs`→`ContactPrefs`). A customer with `cease_contact`, `dnc` or no consent
+  is still listed: COMP applies the rules in the scheduler.
+- **`callback`** is built from the bank's open `callback` tasks whose `due_at` has passed, plus `broken` promises. The
+  facts for each come from the customer, `loan_status`, contact preferences and the loan's recent interactions
+  (`attempts_last_7d` = outbound in the last 7 days, `last_conversation_at` = latest `right_party`). A task without a
+  loan uses the customer's lowest-id open loan; a broken promise carries its `promised_date` and `amount`.
+- **Auth before validation.** The query and the attempt body are validated inside `service_call`, after the credential
+  check, so a wrong or missing token is always 401/403 (and audited), never a 422 that describes the schema.
+- **`POST /attempts`** writes an outbound interaction (`contact_result`, `campaign`, `started_at`) keyed by `call_id`
+  through the bank's upsert; the worker completes the row with the outcome later. The loan must exist (404) and belong to
+  `customer_id` (422). Audit rows are `tool="service.candidates" | "service.contact_preferences" | "service.record_attempt"`,
+  `call_id="service"`, with a hash of the arguments.
+- **Bank client additions:** `eligible_loans`, `contact_preferences`, `list_tasks`, `list_promises` (paged internally).

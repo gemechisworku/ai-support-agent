@@ -142,3 +142,74 @@ async def test_fake_bank_matches_ledger() -> None:
     bank = FakeBank()
     status = await bank.loan_status(FRANK.loan_id)
     assert status is not None and status.days_past_due == 5 and status.number_last4 == FRANK.loan_last4
+
+
+# --------------------------------------------------------------------------- scheduler reads (T-GW-10)
+
+
+async def test_eligible_loans_sends_exactly_one_selector_and_parses_rows() -> None:
+    seen: list[dict[str, str]] = []
+    rows = await FakeBank().eligible_loans(bucket="1-30")
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert req.url.path == "/collections/eligible"
+        seen.append(dict(req.url.params))
+        return _json(rows)
+
+    client = _client(handler)
+    assert [r.loan_id for r in await client.eligible_loans(bucket="1-30")] == [r.loan_id for r in rows]
+    await client.eligible_loans(due_within=3)
+    assert seen == [{"bucket": "1-30"}, {"due_within": "3"}]
+
+
+async def test_contact_preferences_parse_and_404_is_none() -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == f"/customers/{FRANK.customer_id}/contact-preferences":
+            return _json(BANK.prefs[FRANK.customer_id])
+        return httpx.Response(404)
+
+    client = _client(handler)
+    prefs = await client.contact_preferences(FRANK.customer_id)
+    assert prefs is not None and prefs.customer_id == FRANK.customer_id
+    assert await client.contact_preferences(424242) is None
+
+
+async def test_tasks_are_read_page_by_page_with_their_filters() -> None:
+    when = dt.datetime(2026, 11, 9, tzinfo=dt.UTC)
+    task = c.Task(
+        id=1,
+        call_id=None,
+        customer_id=FRANK.customer_id,
+        loan_id=None,
+        type="callback",
+        reason="r",
+        summary="",
+        due_at=when,
+        owner=None,
+        status="open",
+        created_at=when,
+    )
+    seen: list[dict[str, str]] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append(dict(req.url.params))
+        offset = int(req.url.params["offset"])
+        items = [task.model_copy(update={"id": offset + 1})] if offset < 2 else []
+        return _json(c.Page[c.Task](items=items, total=2, limit=200, offset=offset))
+
+    tasks = await _client(handler).list_tasks(status="open", task_type="callback")
+    assert [t.id for t in tasks] == [1, 2]
+    assert seen[0] == {"status": "open", "type": "callback", "limit": "200", "offset": "0"}
+    assert seen[1]["offset"] == "1"
+
+
+async def test_promises_filter_by_status() -> None:
+    seen: list[dict[str, str]] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert req.url.path == "/promises"
+        seen.append(dict(req.url.params))
+        return _json(c.Page[c.Promise](items=[], total=0, limit=200, offset=0))
+
+    assert await _client(handler).list_promises(status="broken") == []
+    assert seen[0]["status"] == "broken"

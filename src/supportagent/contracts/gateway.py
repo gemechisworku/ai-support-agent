@@ -320,6 +320,10 @@ class Candidate(_Contract):
     task_id: int | None = None
 
 
+class AttemptRecorded(_Contract):
+    interaction_id: str  # the call_id the interaction row is keyed by
+
+
 class CallAttempt(_Contract):
     call_id: CallId
     customer_id: int
