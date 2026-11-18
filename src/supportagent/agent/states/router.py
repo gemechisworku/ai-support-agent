@@ -66,13 +66,18 @@ class RouterAgent(BaseStateAgent):
         return self.state.states_visited.count(self.state_name) > 1
 
     async def on_state_enter(self) -> None:
-        self.session.say(ANYTHING_ELSE if self._returning else HOW_CAN_I_HELP)
+        asking = self._returning
+        self.state.asked_anything_else = asking  # set only when the question is really said
+        self.session.say(ANYTHING_ELSE if asking else HOW_CAN_I_HELP)
 
     async def _screen(self, message: ChatMessage) -> bool:
         """Interrupts first (AGENT-R3), then a farewell in code: the call closes without a model reply."""
         if await super()._screen(message):
             return True
-        if await flow.route_on_phrases(self, message, farewell=True, asked_anything_else=self._returning):
+        # Consumed by this turn: a bare "thanks" ends the call only as the answer to "anything else?".
+        asked = self.__dict__["_answering_anything_else"] = self.state.asked_anything_else
+        self.state.asked_anything_else = False
+        if await flow.route_on_phrases(self, message, farewell=True, asked_anything_else=asked):
             return True
         if await flow.speak_capabilities(self, message):  # "what can you do?": answered in code
             return True
@@ -126,7 +131,12 @@ class RouterAgent(BaseStateAgent):
     @function_tool
     async def finish_call(self, context: RunContext[CallState]) -> str | Agent:
         """The caller says goodbye or that they need nothing more."""
-        if not flow.caller_is_done(self, asked_anything_else=self._returning):
+        asked = bool(self.__dict__.get("_answering_anything_else", False))
+        done = flow.caller_is_done(self, asked_anything_else=asked)
+        log.info(
+            "finish_call", extra={"allowed": done, "asked_anything_else": asked, **flow.turn_facts(self)}
+        )
+        if not done:
             return flow.NOT_DONE  # guarded in code: "Mm-hmm." once hung up on a caller
         return await self._go(flow.CLOSING, "caller is done", farewell=True)
 

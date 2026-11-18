@@ -461,3 +461,14 @@ because the bearer header is set on it; T-AGENT-01). Settings: `GATEWAY_URL`, `G
 ## Risks
 - The ScriptedLLM may not fit a given LiveKit Agents version's `llm.LLM` interface. If so, pin the version and adapt, or test the wrappers and transitions directly and leave full flows to `eval`.
 - Llama 3.1 8B may skip tool calls. Mitigations: on-enter actions in code, a small tool set, and `tool_choice` set to required in states that must act.
+
+- **Bare thanks never closes a call (fourth real call, 2026-11-18).** The caller "asked a question"; the transcript
+  holds only "Thank you.", "Thanks. / All right." and "Thank you.", and the call closed with `caller_goodbye`.
+  whisper.cpp writes "Thank you." for noise (a 3 s clip of low-level noise returns exactly that with
+  `no_speech_prob` 0.93; see the STT note in specs/07-voice/plan.md). The hang-up could not be reproduced in text
+  mode with the router as built (8 of 8 runs against the real Llama 3.1 8B kept the call open), so the exact path
+  of that call is unknown. What is now in code: `CallState.asked_anything_else` is set only when the router really
+  says "Is there anything else I can help you with?" and is consumed by the caller's next turn with words (before,
+  "we are back at the router" stood in for "the question was asked"); the farewell checks and `finish_call` use
+  that flag. Every close through the router now logs which path took it (`farewell by phrase` or `finish_call`,
+  with the turn's size and the router's counters, never its words), so the next occurrence names itself.

@@ -91,6 +91,9 @@ class CallState:
     unclear_turns: int = 0  # consecutive router turns that said nothing about what the caller wants
     screened_messages: set[str] = field(default_factory=set)  # caller messages already checked (by id)
     last_caller_text: str = ""  # the latest caller turn that had words in it (guards `finish` tools)
+    # True from the moment the router has actually SAID "anything else?" until the caller's next turn with
+    # words. Only then may a bare "no" / "thanks" mean goodbye ("we came back to the router" is not enough).
+    asked_anything_else: bool = False
 
     # --- identity and disclosures (T-AGENT-04); T-AGENT-08's OutcomeBuilder reads these
     contact_result: ContactResult | None = None  # who answered: right_party, third_party, wrong_number, ...

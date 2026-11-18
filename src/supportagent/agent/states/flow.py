@@ -152,6 +152,11 @@ async def route_on_phrases(
         next_agent = account_route(agent)
     if next_agent is None:
         return False
+    if farewell and is_farewell(text, asked_anything_else=asked_anything_else):
+        log.info(
+            "farewell by phrase",
+            extra={"asked_anything_else": asked_anything_else, **turn_facts(agent, text)},
+        )
     agent.session.update_agent(next_agent)
     return True
 
@@ -180,6 +185,18 @@ async def speak_capabilities(agent: BaseStateAgent, message: ChatMessage) -> boo
     agent.state.unclear_turns = 0
     agent.session.say(CAPABILITIES_LINE)
     return True
+
+
+def turn_facts(agent: BaseStateAgent, text: str | None = None) -> dict[str, object]:
+    """What a log line may say about a caller turn: its size and the router's counters, never its words."""
+    said = agent.state.last_caller_text if text is None else text
+    return {
+        "state": agent.state_name,
+        "turn_chars": len(said),
+        "turn_words": len(said.split()),
+        "unclear_turns": agent.state.unclear_turns,
+        "states_visited": len(agent.state.states_visited),
+    }
 
 
 def caller_is_done(agent: BaseStateAgent, *, asked_anything_else: bool = False) -> bool:
