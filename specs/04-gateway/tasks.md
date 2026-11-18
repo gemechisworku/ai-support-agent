@@ -220,7 +220,7 @@ exit demo) and an integration test that does the same through a real MCP client.
 **Files:** `src/supportagent/gateway/mcp_server.py`, `src/supportagent/gateway/app.py`, `docker-compose.yml` (gateway service), `scripts/demo_m1.py`, tests above
 
 ### T-GW-10 · Service-scope eligibility endpoint for the scheduler
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #53
 - **Depends on:** T-GW-09, T-BANK-05
@@ -236,9 +236,7 @@ request is audited with `call_id` (or `service` when there is no call).
 - [x] Worker and session tokens → 403; the service token cannot call MCP tools
 - [x] An attempt with `contact_result` in the PRD §8 enum creates an interaction row
 
-*(Status stays `todo` until `tests/gateway/test_service_api_db.py` has run: it needs Postgres, which was not running
-when this was committed. The three criteria above are verified by `test_service_api.py` over `FakeBank`. Set the status
-to `done` once the integration test is green in CI.)*
+*(The integration test could not run locally (no Postgres) when this was committed; `test_service_api_db.py` ran green in CI on the M3 PR (6 passed, 2026-11-18), so the status is `done`.)*
 
 **Tests**
 - `tests/gateway/test_service_api.py` (unit, FakeBank): each campaign filter; auth matrix; attempt validation
