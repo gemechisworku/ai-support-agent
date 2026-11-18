@@ -31,6 +31,7 @@ from livekit.agents.llm import ChatMessage, StopResponse
 
 from supportagent.agent.base import BaseStateAgent, register_state
 from supportagent.agent.context import CallState
+from supportagent.agent.phrases import has_router_intent
 from supportagent.agent.states import flow
 from supportagent.common.logging import get_logger
 from supportagent.contracts.outcome import Intent
@@ -38,6 +39,8 @@ from supportagent.contracts.outcome import Intent
 log = get_logger(__name__)
 
 HOW_CAN_I_HELP = "How can I help?"
+CLARIFY = "I'm sorry, I didn't catch that. Is it about your own account, or about how something works?"
+MAX_CLARIFICATIONS = 2  # after this many unclear turns in a row the model takes over
 ANYTHING_ELSE = "Is there anything else I can help you with?"
 
 
@@ -57,7 +60,26 @@ class RouterAgent(BaseStateAgent):
         """Interrupts first (AGENT-R3), then a farewell in code: the call closes without a model reply."""
         if await super()._screen(message):
             return True
-        return await flow.route_on_phrases(self, message, farewell=True, asked_anything_else=self._returning)
+        if await flow.route_on_phrases(self, message, farewell=True, asked_anything_else=self._returning):
+            return True
+        return self._clarify(message)
+
+    def _clarify(self, message: ChatMessage) -> bool:
+        """A turn that says nothing about what the caller wants gets a fixed question, not a model guess.
+
+        The model used to route "Yeah, I'm going to see." to the policy state. True when the question was
+        asked (the model's reply for this turn is skipped); after `MAX_CLARIFICATIONS` in a row the model
+        decides.
+        """
+        state = self.state
+        if has_router_intent(message.text_content or ""):
+            state.unclear_turns = 0
+            return False
+        if state.unclear_turns >= MAX_CLARIFICATIONS:
+            return False
+        state.unclear_turns += 1
+        self.session.say(CLARIFY)
+        return True
 
     @function_tool
     async def route_policy_question(self, context: RunContext[CallState]) -> str | Agent:

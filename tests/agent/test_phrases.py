@@ -89,3 +89,64 @@ def test_a_long_turn_is_never_a_farewell() -> None:
     long_turn = " ".join(["well"] * MAX_WORDS) + " goodbye"
     assert len(long_turn.split()) > MAX_WORDS
     assert is_farewell(long_turn) is False
+
+
+# --- the router's "does this turn say what the caller wants?" check (second real call, 2026-11-18)
+
+from supportagent.agent.phrases import has_router_intent, is_policy_question  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "what are the fees or the late fees on personal loans?",
+        "What's the late fee on a personal loan?",
+        "Can I pay early?",
+        "how long is the grace period",
+        "what happens if I miss a payment",
+        "what payment options do you have",
+        "How do I pay my instalment online?",
+        "can I pay off my loan early without a penalty",
+        "what is the interest rate",
+    ],
+)
+def test_policy_questions(text: str) -> None:
+    assert is_policy_question(text) is True
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Yeah, I'm going to see.",
+        "Hi, how are you going to get to me, please?",
+        "Hi, I need to know how you can help me",
+        "hello",
+        "uh-huh",
+        "Okay, sure.",
+        "",
+    ],
+)
+def test_filler_and_greetings_are_not_policy_questions(text: str) -> None:
+    assert is_policy_question(text) is False
+    assert has_router_intent(text) is False
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "What's my balance?",  # account
+        "Can I pay early?",  # policy
+        "I want to speak to a person",  # human
+        "Can I talk to someone?",
+        "I'd like to speak with a colleague",
+        "I want to dispute a charge",  # an interrupt kind: handled by its own path, not "unclear"
+        "stop calling me",
+        "goodbye",  # a farewell
+        "Tell me about my payments, I am confused",  # their own loan, but not a strict account question
+        "I'm behind on my loan",
+        "I think I owe something",
+        "I think we are finished here then",
+    ],
+)
+def test_turns_that_say_what_the_caller_wants_have_router_intent(text: str) -> None:
+    assert has_router_intent(text) is True

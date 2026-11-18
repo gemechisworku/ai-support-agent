@@ -7,6 +7,10 @@ move the call, so each pattern is narrow.
   date due, whether a payment arrived. Asked inside the policy state, this must go to the router/verification,
   never be answered from policy. A policy question that merely mentions a loan ("what is the late fee on my
   personal loan") is not one.
+- `is_policy_question(text)` and `has_router_intent(text)`: does a caller turn say what they want at all (a
+  policy question, an account question, a request for a person, a farewell, or one of the global interrupts)?
+  A greeting or filler ("Yeah, I'm going to see.") does not, and the router asks a clarifying question in code
+  instead of letting the model guess a route (second real call, 2026-11-18).
 - `is_farewell(text, asked_anything_else=...)`: the caller is done. Short turns only (at most `MAX_WORDS`), no
   question mark, and a farewell word. A bare "no" / "thanks" counts only right after "Is there anything else I
   can help you with?".
@@ -33,6 +37,35 @@ _ACCOUNT: Final = re.compile(
     r"|my\s+(last|latest|recent)\s+(payment|payments|transaction|transactions)"
     r"|how\s+much\s+(have|had)\s+i\s+(paid|repaid)"
     r")\b",
+    re.IGNORECASE,
+)
+
+_POLICY: Final = re.compile(
+    r"\b("
+    r"fees?|late\s+charges?|charges?|penalt(y|ies)|grace(\s+period)?|interest|apr|rates?|"
+    r"pay(ing)?\s+(it\s+|my\s+\w+\s+|the\s+\w+\s+)?(early|off|online|by\s+\w+)|early\s+(repayment|payment|payoff)|"
+    r"prepay(ment)?|pay\s*off|payoff|"
+    r"payment\s+(options?|methods?|ways?|channels?|plans?|deadlines?)|ways?\s+to\s+pay|how\s+(do|can)\s+i\s+pay|"
+    r"what\s+happens\s+(if|when)|miss(ed|ing)?\s+(a\s+|an\s+|my\s+)?(payment|instal+ments?)|"
+    r"policy|policies|rules?|extensions?|defer(ral|ment)?|reschedul\w*|refinanc\w*|credit\s+(score|report)|"
+    r"auto\s*-?pay|direct\s+debit|how\s+does\s+\w+(\s+\w+)?\s+work"
+    r")\b",
+    re.IGNORECASE,
+)
+# Looser than `_ACCOUNT` (which moves the call): enough to know the caller is talking about their own loan, so
+# the router lets the model pick the route instead of asking again.
+_ACCOUNT_LOOSE: Final = re.compile(
+    r"\bmy\s+(\w+\s+)?(loan|loans|account|payments?|instal+ments?|balance|statement|bill|debt|due|overdue|arrears|"
+    r"credit\s+card|mortgage)\b|\b(owe|owed|overdue|past\s+due|behind\s+on)\b",
+    re.IGNORECASE,
+)
+# A looser "I'm done" than `_DONE_PHRASES`: enough to see the caller said something, not to end the call.
+_DONE_LOOSE: Final = re.compile(
+    r"\b(finished|we'?re\s+through|all\s+good|all\s+sorted|nothing\s+(else|more)|no\s+more)\b", re.IGNORECASE
+)
+_HUMAN: Final = re.compile(
+    r"\b(speak|talk|transfer|connect|put)\b.{0,25}\b(person|human|someone|somebody|agent|representative|"
+    r"colleague|staff|manager|supervisor|operator|member\s+of\s+staff)\b",
     re.IGNORECASE,
 )
 
@@ -64,6 +97,33 @@ def _words(text: str) -> list[str]:
 def is_account_question(text: str) -> bool:
     """True when the caller asks about their own balance, amount owed, due date or payments."""
     return bool(text) and _ACCOUNT.search(text.replace(_CURLY_APOSTROPHE, "'")) is not None
+
+
+def is_policy_question(text: str) -> bool:
+    """True when the turn mentions something policy answers: fees, grace periods, paying early, options."""
+    return bool(text) and _POLICY.search(text.replace(_CURLY_APOSTROPHE, "'")) is not None
+
+
+def has_router_intent(text: str) -> bool:
+    """True when the turn says what the caller wants: policy, account, a person, a farewell or an interrupt.
+
+    False for a greeting or filler. The router then asks a clarifying question in code. The interrupt
+    detector is imported here, not at module level, so this module stays free of the agent states.
+    """
+    from supportagent.agent.interrupts import detect_interrupts
+
+    cleaned = (text or "").replace(_CURLY_APOSTROPHE, "'")
+    if not cleaned.strip():
+        return False
+    return bool(
+        is_account_question(cleaned)
+        or is_policy_question(cleaned)
+        or _ACCOUNT_LOOSE.search(cleaned)
+        or _DONE_LOOSE.search(cleaned)
+        or _HUMAN.search(cleaned)
+        or is_farewell(cleaned)
+        or detect_interrupts(cleaned)
+    )
 
 
 def is_farewell(text: str, *, asked_anything_else: bool = False) -> bool:
