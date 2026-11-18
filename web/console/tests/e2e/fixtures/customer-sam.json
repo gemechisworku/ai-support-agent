@@ -1,0 +1,688 @@
+{
+  "name": "customer-sam",
+  "method": "GET",
+  "path": "/api/customers/9007",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": {
+    "profile": {
+      "customer_id": 9007,
+      "full_name": "Sam Carter",
+      "phone": "•••• 0307",
+      "email": "sam.carter@example.com",
+      "address": "307 Persona Lane, Springfield, NY 10001",
+      "timezone": "America/New_York",
+      "segment": "retail",
+      "kyc_status": "verified",
+      "preferred_language": "en"
+    },
+    "preferences": {
+      "consent_voice_ai": true,
+      "dnc": false,
+      "cease_contact": false,
+      "dispute_open": false,
+      "preferred_window": null,
+      "updated_at": "2026-08-11T00:00:00Z"
+    },
+    "loans": [
+      {
+        "loan_id": 9007,
+        "customer_id": 9007,
+        "number": "•••• 8842",
+        "product_code": "PERSONAL",
+        "product_name": "Personal Loan",
+        "status": "active",
+        "as_of": "2026-11-09",
+        "outstanding_balance": "9641.11",
+        "overdue_amount": "332.45",
+        "oldest_unpaid_due_date": "2026-10-25",
+        "next_due_date": "2026-11-25",
+        "next_due_amount": "332.45",
+        "days_past_due": 15,
+        "bucket": "1-30",
+        "fees_accrued": "0.00",
+        "headline": "•••• 8842 · Personal Loan · 15 DPD · $332.45 overdue since 25 October 2026",
+        "installments": [
+          {
+            "seq": 1,
+            "due_date": "2025-03-25",
+            "principal_due": "184.95",
+            "interest_due": "147.50",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-03-23",
+            "status": "paid"
+          },
+          {
+            "seq": 2,
+            "due_date": "2025-04-25",
+            "principal_due": "187.22",
+            "interest_due": "145.23",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-04-24",
+            "status": "paid"
+          },
+          {
+            "seq": 3,
+            "due_date": "2025-05-25",
+            "principal_due": "189.52",
+            "interest_due": "142.93",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-05-21",
+            "status": "paid"
+          },
+          {
+            "seq": 4,
+            "due_date": "2025-06-25",
+            "principal_due": "191.85",
+            "interest_due": "140.60",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-06-25",
+            "status": "paid"
+          },
+          {
+            "seq": 5,
+            "due_date": "2025-07-25",
+            "principal_due": "194.21",
+            "interest_due": "138.24",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-07-22",
+            "status": "paid"
+          },
+          {
+            "seq": 6,
+            "due_date": "2025-08-25",
+            "principal_due": "196.60",
+            "interest_due": "135.85",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-08-21",
+            "status": "paid"
+          },
+          {
+            "seq": 7,
+            "due_date": "2025-09-25",
+            "principal_due": "199.02",
+            "interest_due": "133.43",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-09-22",
+            "status": "paid"
+          },
+          {
+            "seq": 8,
+            "due_date": "2025-10-25",
+            "principal_due": "201.46",
+            "interest_due": "130.99",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-10-23",
+            "status": "paid"
+          },
+          {
+            "seq": 9,
+            "due_date": "2025-11-25",
+            "principal_due": "203.94",
+            "interest_due": "128.51",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-11-22",
+            "status": "paid"
+          },
+          {
+            "seq": 10,
+            "due_date": "2025-12-25",
+            "principal_due": "206.45",
+            "interest_due": "126.00",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2025-12-23",
+            "status": "paid"
+          },
+          {
+            "seq": 11,
+            "due_date": "2026-01-25",
+            "principal_due": "208.98",
+            "interest_due": "123.47",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-01-21",
+            "status": "paid"
+          },
+          {
+            "seq": 12,
+            "due_date": "2026-02-25",
+            "principal_due": "211.55",
+            "interest_due": "120.90",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-02-23",
+            "status": "paid"
+          },
+          {
+            "seq": 13,
+            "due_date": "2026-03-25",
+            "principal_due": "214.15",
+            "interest_due": "118.30",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-03-20",
+            "status": "paid"
+          },
+          {
+            "seq": 14,
+            "due_date": "2026-04-25",
+            "principal_due": "216.78",
+            "interest_due": "115.67",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-04-24",
+            "status": "paid"
+          },
+          {
+            "seq": 15,
+            "due_date": "2026-05-25",
+            "principal_due": "219.45",
+            "interest_due": "113.00",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-05-23",
+            "status": "paid"
+          },
+          {
+            "seq": 16,
+            "due_date": "2026-06-25",
+            "principal_due": "222.15",
+            "interest_due": "110.30",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-06-24",
+            "status": "paid"
+          },
+          {
+            "seq": 17,
+            "due_date": "2026-07-25",
+            "principal_due": "224.88",
+            "interest_due": "107.57",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-07-20",
+            "status": "paid"
+          },
+          {
+            "seq": 18,
+            "due_date": "2026-08-25",
+            "principal_due": "227.64",
+            "interest_due": "104.81",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-08-24",
+            "status": "paid"
+          },
+          {
+            "seq": 19,
+            "due_date": "2026-09-25",
+            "principal_due": "230.44",
+            "interest_due": "102.01",
+            "fee_due": "0.00",
+            "paid_amount": "332.45",
+            "paid_date": "2026-09-22",
+            "status": "paid"
+          },
+          {
+            "seq": 20,
+            "due_date": "2026-10-25",
+            "principal_due": "233.27",
+            "interest_due": "99.18",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "missed"
+          },
+          {
+            "seq": 21,
+            "due_date": "2026-11-25",
+            "principal_due": "236.14",
+            "interest_due": "96.31",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 22,
+            "due_date": "2026-12-25",
+            "principal_due": "239.04",
+            "interest_due": "93.41",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 23,
+            "due_date": "2027-01-25",
+            "principal_due": "241.98",
+            "interest_due": "90.47",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 24,
+            "due_date": "2027-02-25",
+            "principal_due": "244.95",
+            "interest_due": "87.50",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 25,
+            "due_date": "2027-03-25",
+            "principal_due": "247.96",
+            "interest_due": "84.49",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 26,
+            "due_date": "2027-04-25",
+            "principal_due": "251.01",
+            "interest_due": "81.44",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 27,
+            "due_date": "2027-05-25",
+            "principal_due": "254.10",
+            "interest_due": "78.35",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 28,
+            "due_date": "2027-06-25",
+            "principal_due": "257.22",
+            "interest_due": "75.23",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 29,
+            "due_date": "2027-07-25",
+            "principal_due": "260.38",
+            "interest_due": "72.07",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 30,
+            "due_date": "2027-08-25",
+            "principal_due": "263.58",
+            "interest_due": "68.87",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 31,
+            "due_date": "2027-09-25",
+            "principal_due": "266.82",
+            "interest_due": "65.63",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 32,
+            "due_date": "2027-10-25",
+            "principal_due": "270.10",
+            "interest_due": "62.35",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 33,
+            "due_date": "2027-11-25",
+            "principal_due": "273.42",
+            "interest_due": "59.03",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 34,
+            "due_date": "2027-12-25",
+            "principal_due": "276.78",
+            "interest_due": "55.67",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 35,
+            "due_date": "2028-01-25",
+            "principal_due": "280.19",
+            "interest_due": "52.26",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 36,
+            "due_date": "2028-02-25",
+            "principal_due": "283.63",
+            "interest_due": "48.82",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 37,
+            "due_date": "2028-03-25",
+            "principal_due": "287.12",
+            "interest_due": "45.33",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 38,
+            "due_date": "2028-04-25",
+            "principal_due": "290.65",
+            "interest_due": "41.80",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 39,
+            "due_date": "2028-05-25",
+            "principal_due": "294.22",
+            "interest_due": "38.23",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 40,
+            "due_date": "2028-06-25",
+            "principal_due": "297.83",
+            "interest_due": "34.62",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 41,
+            "due_date": "2028-07-25",
+            "principal_due": "301.50",
+            "interest_due": "30.95",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 42,
+            "due_date": "2028-08-25",
+            "principal_due": "305.20",
+            "interest_due": "27.25",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 43,
+            "due_date": "2028-09-25",
+            "principal_due": "308.95",
+            "interest_due": "23.50",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 44,
+            "due_date": "2028-10-25",
+            "principal_due": "312.75",
+            "interest_due": "19.70",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 45,
+            "due_date": "2028-11-25",
+            "principal_due": "316.59",
+            "interest_due": "15.86",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 46,
+            "due_date": "2028-12-25",
+            "principal_due": "320.49",
+            "interest_due": "11.96",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 47,
+            "due_date": "2029-01-25",
+            "principal_due": "324.42",
+            "interest_due": "8.03",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          },
+          {
+            "seq": 48,
+            "due_date": "2029-02-25",
+            "principal_due": "328.47",
+            "interest_due": "4.04",
+            "fee_due": "0.00",
+            "paid_amount": "0.00",
+            "paid_date": null,
+            "status": "scheduled"
+          }
+        ],
+        "transactions": [
+          {
+            "id": 9000131,
+            "ts": "2026-09-22T18:31:00Z",
+            "amount": "332.45",
+            "channel": "branch",
+            "status": "posted",
+            "reference": "PMT-••••8842-019"
+          },
+          {
+            "id": 9000130,
+            "ts": "2026-08-24T14:39:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-018"
+          },
+          {
+            "id": 9000129,
+            "ts": "2026-07-20T12:32:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-017"
+          },
+          {
+            "id": 9000128,
+            "ts": "2026-06-24T08:46:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-016"
+          },
+          {
+            "id": 9000127,
+            "ts": "2026-05-23T12:46:00Z",
+            "amount": "332.45",
+            "channel": "transfer",
+            "status": "posted",
+            "reference": "PMT-••••8842-015"
+          },
+          {
+            "id": 9000126,
+            "ts": "2026-04-24T16:32:00Z",
+            "amount": "332.45",
+            "channel": "transfer",
+            "status": "posted",
+            "reference": "PMT-••••8842-014"
+          },
+          {
+            "id": 9000125,
+            "ts": "2026-03-20T08:48:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-013"
+          },
+          {
+            "id": 9000124,
+            "ts": "2026-02-23T09:38:00Z",
+            "amount": "332.45",
+            "channel": "transfer",
+            "status": "posted",
+            "reference": "PMT-••••8842-012"
+          },
+          {
+            "id": 9000123,
+            "ts": "2026-01-21T13:31:00Z",
+            "amount": "332.45",
+            "channel": "branch",
+            "status": "posted",
+            "reference": "PMT-••••8842-011"
+          },
+          {
+            "id": 9000122,
+            "ts": "2025-12-23T17:11:00Z",
+            "amount": "332.45",
+            "channel": "transfer",
+            "status": "posted",
+            "reference": "PMT-••••8842-010"
+          },
+          {
+            "id": 9000121,
+            "ts": "2025-11-22T17:20:00Z",
+            "amount": "332.45",
+            "channel": "transfer",
+            "status": "posted",
+            "reference": "PMT-••••8842-009"
+          },
+          {
+            "id": 9000120,
+            "ts": "2025-10-23T12:27:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-008"
+          },
+          {
+            "id": 9000119,
+            "ts": "2025-09-22T09:07:00Z",
+            "amount": "332.45",
+            "channel": "transfer",
+            "status": "posted",
+            "reference": "PMT-••••8842-007"
+          },
+          {
+            "id": 9000118,
+            "ts": "2025-08-21T09:08:00Z",
+            "amount": "332.45",
+            "channel": "branch",
+            "status": "posted",
+            "reference": "PMT-••••8842-006"
+          },
+          {
+            "id": 9000117,
+            "ts": "2025-07-22T09:12:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-005"
+          },
+          {
+            "id": 9000116,
+            "ts": "2025-06-25T15:03:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-004"
+          },
+          {
+            "id": 9000115,
+            "ts": "2025-05-21T18:57:00Z",
+            "amount": "332.45",
+            "channel": "branch",
+            "status": "posted",
+            "reference": "PMT-••••8842-003"
+          },
+          {
+            "id": 9000114,
+            "ts": "2025-04-24T08:29:00Z",
+            "amount": "332.45",
+            "channel": "mobile",
+            "status": "posted",
+            "reference": "PMT-••••8842-002"
+          },
+          {
+            "id": 9000113,
+            "ts": "2025-03-23T09:45:00Z",
+            "amount": "332.45",
+            "channel": "branch",
+            "status": "posted",
+            "reference": "PMT-••••8842-001"
+          }
+        ]
+      }
+    ],
+    "interactions": [],
+    "open_promises": [],
+    "open_tasks": []
+  }
+}

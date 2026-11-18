@@ -1,0 +1,54 @@
+{
+  "name": "policies",
+  "method": "GET",
+  "path": "/api/policies",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": [
+    {
+      "doc_id": "fees-schedule",
+      "title": "Schedule of Loan Fees",
+      "product": "all",
+      "audience": "customer",
+      "versions": [
+        {
+          "version": "1.0",
+          "effective_date": "2026-01-01",
+          "chunk_count": 1
+        }
+      ]
+    },
+    {
+      "doc_id": "late-fees-penalty-interest",
+      "title": "Grace Periods, Late Fees and Penalty Interest",
+      "product": "all",
+      "audience": "customer",
+      "versions": [
+        {
+          "version": "1.1",
+          "effective_date": "2027-01-01",
+          "chunk_count": 2
+        },
+        {
+          "version": "1.0",
+          "effective_date": "2026-01-01",
+          "chunk_count": 2
+        }
+      ]
+    },
+    {
+      "doc_id": "contact-calling-rules",
+      "title": "Contact and Calling Rules",
+      "product": "all",
+      "audience": "internal",
+      "versions": [
+        {
+          "version": "1.0",
+          "effective_date": "2026-01-01",
+          "chunk_count": 1
+        }
+      ]
+    }
+  ]
+}

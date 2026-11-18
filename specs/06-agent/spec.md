@@ -59,7 +59,7 @@ agent name `support-agent`); `supportagent.agent.testing` with `FakeGateway`, `S
 
 ## Non-functional
 - Agent-side processing per turn (interrupt detection, state logic) stays under 20 ms. The latency budget belongs to VOICE.
-- Each state prompt is ≤ 250 words, so it fits small local models (risk: Qwen3 8B tool calling).
+- Each state prompt is ≤ 250 words, so it fits small local models (risk: Llama 3.1 8B tool calling).
 - No PII appears in logs. Transcripts go through OBS redaction before storage.
 
 ## Open questions

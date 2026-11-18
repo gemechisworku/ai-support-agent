@@ -1,0 +1,11 @@
+{
+  "name": "customer-missing",
+  "method": "GET",
+  "path": "/api/customers/424242",
+  "query": {},
+  "body": null,
+  "status": 404,
+  "response": {
+    "detail": "GET /customers/424242 failed: HTTP 404 (nope)"
+  }
+}

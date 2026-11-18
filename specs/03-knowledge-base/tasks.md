@@ -87,6 +87,9 @@ The `Embedder` protocol (`dim`, `embed_documents(texts)`, `embed_query(text)`). 
 `HashEmbedder` is offline and deterministic. `get_embedder(settings)` selects by `KB_EMBEDDER=ollama|fake`.
 
 **Acceptance criteria**
+> Ollama was replaced by llama.cpp on 2026-11-07. T-PLAT-07 swaps `OllamaEmbedder` for
+> `OpenAICompatEmbedder`; the text below records what this task built.
+
 - [x] Both return unit-norm 768-d `list[float]`; `OllamaEmbedder` raises a clear error on dimension mismatch or connection failure
 - [x] `HashEmbedder` gives identical vectors across runs and similar vectors for texts sharing words
 - [x] Prefixes `search_document: ` / `search_query: ` applied by the Ollama embedder only

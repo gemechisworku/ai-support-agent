@@ -1,6 +1,6 @@
 # Golden retrieval set (KB-R8). A question passes when any of `expected_doc_ids` is in the top 4.
 # `must_pass_ci: true` questions must pass with the offline HashEmbedder (integration, CI);
-# the full set is the quality bar with Ollama embeddings (`pytest -m eval tests/kb/test_golden.py`).
+# the full set is the quality bar with the real nomic embeddings (llama.cpp) (`pytest -m eval tests/kb/test_golden.py`).
 # `product` is the product the caller has (or null when unknown); `audience` defaults to customer.
 
 - question: What happens if I pay late?

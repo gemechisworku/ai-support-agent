@@ -307,3 +307,81 @@ class Page[T](BaseModel):
     total: int = Field(ge=0)
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
+
+
+# --------------------------------------------------------------------------- operations read API (T-BANK-07)
+
+
+class AuditRow(_Contract):
+    """One stored audit-log row (the `AuditIn` written by the gateway, plus its id)."""
+
+    id: int
+    ts: AwareDatetime
+    call_id: str
+    tool: str
+    args_hash: str
+    customer_id: int | None
+    decision: Literal["allow", "deny", "error"]
+    latency_ms: int
+
+
+class CallDetail(_Contract):
+    """`GET /interactions/{call_id}`: everything recorded for one call, for the console's call view."""
+
+    interaction: Interaction
+    customer_timezone: str | None  # for calling-window checks in the customer's local time
+    promises: list[Promise]
+    tasks: list[Task]
+    audit: list[AuditRow]  # time order
+    outbox: list[OutboxMessage]
+
+
+class CustomerSummary(_Contract):
+    """One row of the console's customer search (T-BANK-09)."""
+
+    customer_id: int
+    full_name: str
+    phone: Phone
+    segment: str
+    loan_count: int = Field(ge=0)
+    worst_bucket: Bucket | None  # the most delinquent loan's bucket at the bank's as_of; None = no loans
+
+
+class PersonaCard(_Contract):
+    """A scripted persona for role-play testing (T-BANK-09).
+
+    These are **synthetic test identities**: the name, DOB and loan last 4 a tester gives when playing
+    the persona on a softphone. They are fake and exist only in the mock bank's seed.
+    """
+
+    customer_id: int
+    full_name: str
+    phone: Phone
+    extension: str
+    dob: dt.date
+    loan_id: int
+    loan_last4: str = Field(min_length=4, max_length=4)
+    product_code: ProductCode
+    situation: str
+    expected_outcome: str
+
+
+class CustomerMatch(_Contract):
+    """`GET /customers/match`: a loan whose customer has the given DOB and whose number ends in the
+    given 4 digits (T-BANK-08). Ids only — the gateway checks the name itself."""
+
+    customer_id: int
+    loan_id: int
+
+
+class TaskPatch(_Contract):
+    """`PATCH /tasks/{id}`: the console's follow-up queue marks tasks done or assigns them."""
+
+    status: Literal["open", "done", "cancelled"] | None = None
+    owner: str | None = None
+
+    @model_validator(mode="after")
+    def _not_empty(self) -> Self:
+        if not self.model_fields_set:
+            raise ValueError("set at least one field")
+        return self

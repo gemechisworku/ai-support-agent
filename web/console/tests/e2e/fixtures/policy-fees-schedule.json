@@ -1,0 +1,24 @@
+{
+  "name": "policy-fees-schedule",
+  "method": "GET",
+  "path": "/api/policies/fees-schedule",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": {
+    "doc_id": "fees-schedule",
+    "version": "1.0",
+    "title": "Schedule of Loan Fees",
+    "product": "all",
+    "audience": "customer",
+    "effective_date": "2026-01-01",
+    "chunks": [
+      {
+        "ord": 0,
+        "section": "Schedule of Loan Fees",
+        "text": "## Late fees\n\n| Product | Late fee |\n|---|---|\n| Personal Loan | $25 flat |",
+        "token_count": 20
+      }
+    ]
+  }
+}

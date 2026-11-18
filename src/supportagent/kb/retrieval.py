@@ -18,8 +18,8 @@
    and the lexical guard can. The guard stops a vector-only near miss ("what's the weather in
    Paris") from being presented as policy.
 
-Similarity scales differ by embedder: `KB_MIN_SIMILARITY=0.55` is the starting value for
-nomic-embed-text; the offline `HashEmbedder` scores relevant chunks at roughly 0.13-0.46, so tests that
+Similarity scales differ by embedder: `KB_MIN_SIMILARITY=0.58` is tuned for nomic-embed-text v1.5
+(T-VOICE-01); the offline `HashEmbedder` scores relevant chunks at roughly 0.13-0.46, so tests that
 use it pass `min_similarity=HASH_MIN_SIMILARITY`.
 """
 

@@ -7,38 +7,47 @@
 ## Tasks
 
 ### T-VOICE-01 · Native model servers: setup scripts and health check
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #41
-- **Depends on:** T-PLAT-06
+- **Depends on:** T-PLAT-06, T-PLAT-07
 - **Requirements:** VOICE-R1, KB-R8
 
 Write idempotent shell scripts that install and run the native (Metal) model servers described in
 [plan.md](plan.md#file-layout), plus a stdlib health probe. `make doctor` (T-PLAT-06) checks the
 prerequisites; this task installs and runs the servers.
 
-- `setup.sh`: `brew install ollama whisper-cpp livekit livekit-cli`; `ollama pull qwen3:8b nomic-embed-text`
-  (and `qwen3:4b` with `--with-fallbacks`); download `ggml-large-v3-turbo.bin` and `ggml-small.en.bin`
-  into `models/whisper/` (skip if the checksum matches); clone Kokoro-FastAPI into `vendor/`.
-- `up.sh`: start `ollama serve` (if not running), `whisper-server -m models/whisper/ggml-$WHISPER_MODEL.bin
-  --host 127.0.0.1 --port 8178 --inference-path /v1/audio/transcriptions`, Kokoro-FastAPI on :8880, and
-  `livekit-server --dev --bind 127.0.0.1` on :7880. Pids go to `var/run/`, logs to `var/log/`.
+- `setup.sh`: `brew install llama.cpp whisper-cpp livekit livekit-cli` (skips what is installed).
+  Downloads a GGUF only when the file at `LLM_GGUF` / `EMBED_GGUF` is missing, so an existing GGUF
+  is reused: Llama 3.1 8B Instruct Q4_K_M and nomic-embed-text v1.5 Q8_0 into `models/llm/` and
+  `models/embed/` (Llama 3.2 3B too with `--with-fallbacks`). Downloads `ggml-small.en.bin` into
+  `models/whisper/` (`ggml-large-v3-turbo.bin` too with `--with-large-stt`), skipping files whose
+  checksum matches. Clones Kokoro-FastAPI into `vendor/`. Prints the disk it will use before downloading.
+- `up.sh` starts:
+  - `llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja -c 8192 -ngl 99` on the port of `LLM_URL`
+  - `llama-server -m $EMBED_GGUF --alias $EMBED_MODEL --embedding --pooling mean -c 2048 -ngl 99` on the
+    port of `EMBED_URL`
+  - `whisper-server -m models/whisper/ggml-$WHISPER_MODEL.bin --port 8178 --inference-path
+    /v1/audio/transcriptions`
+  - Kokoro-FastAPI on :8880 and `livekit-server --dev` on :7880
+
+  Every server binds to 127.0.0.1. Pids go to `var/run/`, logs to `var/log/`.
 - `down.sh` stops what `up.sh` started.
 - `health.py` probes each server:
-  - Ollama: `GET /api/tags` lists both models.
+  - LLM and embeddings: `GET /v1/models` lists `LLM_MODEL` / `EMBED_MODEL`, and `GET /health` is ok.
   - whisper: `GET /`.
   - Kokoro: `GET /v1/models`.
   - LiveKit: `GET /` on :7880.
 
 **Acceptance criteria**
-- [ ] `make models-setup` is idempotent; a second run downloads nothing.
-- [ ] `make models-up` then `make models-health` reports four healthy servers; `make models-down` stops them.
-- [ ] All servers bind to 127.0.0.1; URLs and ports come from `.env` (`OLLAMA_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`).
-- [ ] The memory footprint of each server is listed in `docs/dev-setup.md` (link from AGENTS.md "native services").
-- [ ] `models/`, `vendor/` and `var/` are git-ignored.
-- [ ] With Ollama up, `uv run pytest -m eval tests/kb/test_golden.py` reports hit@4 ≥ 0.90 (KB-R8), and
-  `KB_MIN_SIMILARITY`'s default is tuned for nomic-embed-text and recorded in specs/03-knowledge-base/plan.md
-  (moved here from T-KB-06, which had no Ollama available).
+- [x] `make models-setup` is idempotent; a second run downloads nothing.
+- [x] `make models-up` then `make models-health` reports five healthy servers; `make models-down` stops them.
+- [x] All servers bind to 127.0.0.1; URLs and ports come from `.env` (`LLM_URL`, `EMBED_URL`, `STT_URL`, `TTS_URL`, `LIVEKIT_URL`).
+- [x] The memory footprint of each server is listed in `docs/dev-setup.md` (link from AGENTS.md "native services").
+- [x] `models/`, `vendor/` and `var/` are git-ignored.
+- [x] With the embeddings server up, `uv run pytest -m eval tests/kb/test_golden.py` reports hit@4 ≥ 0.90
+  (KB-R8), and `KB_MIN_SIMILARITY`'s default is tuned for nomic-embed-text and recorded in
+  specs/03-knowledge-base/plan.md (moved here from T-KB-06, which had no embeddings server available).
 
 **Tests**
 - `tests/voice/test_health_script.py` (unit): runs `health.py` against stub `http.server` endpoints and asserts exit code 0 when all are healthy, and 1 with a named failure when one is down or a model is missing.
@@ -46,33 +55,40 @@ prerequisites; this task installs and runs the servers.
 
 **Files:** `scripts/models/setup.sh`, `scripts/models/up.sh`, `scripts/models/down.sh`, `scripts/models/health.py`, `Makefile`, `docs/dev-setup.md`, `.gitignore`, `tests/voice/test_health_script.py`
 
+*(Verified on the dev Mac on 2026-11-17: the second `make models-setup` ran in 1.4 s and downloaded nothing;
+`make models-up` then `make models-health` reported 5/5 healthy; `tests/voice/test_live_pipeline.py::test_servers_healthy`
+passed; `make models-down` closed all five ports. The golden eval (hit@4 1.000, MRR 0.971) ran on 2026-11-09 with the
+embeddings server up and is recorded in specs/03-knowledge-base/plan.md. Kokoro runs in its own Python 3.12 environment
+in `vendor/kokoro-fastapi/.venv`: setup and up clear `VIRTUAL_ENV` so an activated project venv never receives
+Kokoro's torch and spaCy.)*
+
 ### T-VOICE-02 · Provider factory with local default and hosted switch
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #42
-- **Depends on:** T-PLAT-02
+- **Depends on:** T-PLAT-02, T-PLAT-07
 - **Requirements:** VOICE-R2, VOICE-R3
 
 Add `supportagent.voice.providers` with `build_stt`, `build_llm`, `build_tts`, `build_vad`,
 `build_turn_detector` and `model_version`, all driven by `Settings` (new fields listed in
 [plan.md](plan.md#data-model--contracts)). The local defaults are whisper.cpp through
-`openai.STT` + `StreamAdapter`, Ollama `qwen3:8b` with thinking disabled, and Kokoro through
+`openai.STT` + `StreamAdapter`, Llama 3.1 8B on llama.cpp through `openai.LLM(base_url=LLM_URL)`, and Kokoro through
 `openai.TTS`. `LLM_PROVIDER=anthropic` selects `anthropic.LLM(model="claude-haiku-5-5")`.
 
 **Acceptance criteria**
-- [ ] No URL, model name or voice is hard-coded outside `Settings` defaults.
-- [ ] Every Ollama LLM request carries the thinking-off option.
-- [ ] `LLM_PROVIDER=anthropic` without `ANTHROPIC_API_KEY` fails at settings validation with a clear message.
-- [ ] `model_version(settings)` returns `"<provider>/<model>"` and is used by OBS version stamping.
-- [ ] New settings are documented in `.env.example`.
+- [x] No URL, model name or voice is hard-coded outside `Settings` defaults.
+- [x] The local LLM uses the plain OpenAI plugin pointed at `LLM_URL` with model `LLM_MODEL`; no Ollama-specific helper.
+- [x] `LLM_PROVIDER=anthropic` without `ANTHROPIC_API_KEY` fails at settings validation with a clear message.
+- [x] `model_version(settings)` returns `"<provider>/<model>"` and is used by OBS version stamping.
+- [x] New settings are documented in `.env.example`.
 
 **Tests**
-- `tests/voice/test_providers.py` (unit): default settings build the OpenAI-compatible STT/LLM/TTS with the expected base URLs and model ids; the Ollama LLM has thinking disabled; the anthropic switch returns the Anthropic LLM; the missing key raises; `model_version` covers both providers. No network: construct objects only.
+- `tests/voice/test_providers.py` (unit): default settings build the OpenAI-compatible STT/LLM/TTS with the expected base URLs and model ids; the local LLM points at `LLM_URL`; the anthropic switch returns the Anthropic LLM; the missing key raises; `model_version` covers both providers. No network: construct objects only.
 
 **Files:** `src/supportagent/voice/providers.py`, `src/supportagent/common/settings.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/voice/test_providers.py`
 
 ### T-VOICE-03 · Pipeline tuning: VAD, turn detection, barge-in, streaming TTS, silence policy
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #43
 - **Depends on:** T-VOICE-02
@@ -89,20 +105,24 @@ Add the pure `silence.SilencePolicy(reprompt_after_s, end_after_s, max_reprompts
 events. The agent (T-AGENT-08) supplies the re-prompt and closing lines.
 
 **Acceptance criteria**
-- [ ] `build_session_options` enables interruptions and model-based turn detection, and passes STT/LLM/TTS from the factory.
-- [ ] TTS is fed sentence by sentence (the first sentence is spoken before the LLM finishes).
-- [ ] Silence: one re-prompt after `SILENCE_REPROMPT_S`; `on_end("silence")` after `SILENCE_END_S`; caller speech resets the timers; agent speech does not count as caller activity.
-- [ ] Live checklist: barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in logs).
+- [x] `build_session_options` enables interruptions and model-based turn detection, and passes STT/LLM/TTS from the factory.
+- [x] TTS is fed sentence by sentence (the first sentence is spoken before the LLM finishes).
+- [x] Silence: one re-prompt after `SILENCE_REPROMPT_S`; `on_end("silence")` after `SILENCE_END_S`; caller speech resets the timers; agent speech does not count as caller activity.
+- [x] Barge-in latency is measured by `barge_in_latency_s` from the session's `agent_state_changed` events.
+  *(Re-scoped on 2026-11-17: the live check, barge-in stops TTS in < 300 ms with a person talking over the agent,
+  needs a running conversation. That only exists after T-AGENT-13 and T-VOICE-05, which depend on this task, so
+  the live criterion moved to T-VOICE-05. Here the criterion is the measurement code, covered by
+  `tests/voice/test_session.py` on synthetic event logs.)*
 
 **Tests**
-- `tests/voice/test_session.py` (unit): the options include VAD, turn detection, `allow_interruptions=True` and the configured delays.
-- `tests/voice/test_silence.py` (unit, fake clock): the re-prompt fires once; the end fires at the threshold; speech resets the timers; there is no re-prompt while the agent is speaking.
-- `tests/voice/test_live_pipeline.py::test_barge_in` (live): manual-assisted timing check, documented in the docstring.
+- `tests/voice/test_session.py` (unit): the options include VAD, model-based turn detection, interruptions enabled (`turn_handling.interruption.enabled`; the flat `allow_interruptions` keyword is deprecated in livekit-agents 1.x) and the configured delays; the sentence tokenizer releases the first sentence before the reply is complete; `barge_in_latency_s` on synthetic event logs.
+- `tests/voice/test_silence.py` (unit, fake clock): the re-prompt fires once; the end fires at the threshold; speech resets the timers; there is no re-prompt while the agent is speaking; silence after a reply is counted from the end of the reply; `attach_silence_policy` against a fake session.
+- `tests/voice/test_live_barge_in.py::test_barge_in` (live): manual-assisted timing check from a session event log, documented in the docstring (a separate file from `test_live_pipeline.py`, which T-VOICE-01 owns).
 
-**Files:** `src/supportagent/voice/session.py`, `src/supportagent/voice/silence.py`, `tests/voice/test_session.py`, `tests/voice/test_silence.py`
+**Files:** `src/supportagent/voice/session.py`, `src/supportagent/voice/silence.py`, `src/supportagent/common/settings.py`, `.env.example`, `tests/voice/test_session.py`, `tests/voice/test_silence.py`, `tests/voice/test_live_barge_in.py`
 
 ### T-VOICE-04 · Per-stage latency metrics
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M2
 - **Issue:** #44
 - **Depends on:** T-VOICE-03
@@ -114,9 +134,9 @@ Add `latency.LatencyTracker`. It subscribes to `metrics_collected`, groups EOU/S
 `latency_stages` for traces (OBS).
 
 **Acceptance criteria**
-- [ ] Turns with missing stages (e.g. a tool-only turn) are skipped, not counted as zero.
-- [ ] Percentiles are correct for 1, 2 and 10 turns; an empty tracker returns `None` values, not an error.
-- [ ] The tracker emits a structured log line per turn (no transcript text, so no PII).
+- [x] Turns with missing stages (e.g. a tool-only turn) are skipped, not counted as zero.
+- [x] Percentiles are correct for 1, 2 and 10 turns; an empty tracker returns `None` values, not an error.
+- [x] The tracker emits a structured log line per turn (no transcript text, so no PII).
 
 **Tests**
 - `tests/voice/test_latency.py` (unit): synthetic metric events give the known p50/p90; out-of-order events are matched by `speech_id`; incomplete turns are skipped; `to_outcome()` output validates against the `CallOutcome` model.
@@ -127,27 +147,50 @@ Add `latency.LatencyTracker`. It subscribes to `metrics_collected`, groups EOU/S
 - **Status:** todo
 - **Milestone:** M2
 - **Issue:** #45
-- **Depends on:** T-VOICE-03, T-AGENT-01
-- **Requirements:** VOICE-R7
+- **Depends on:** T-VOICE-03, T-AGENT-01, T-AGENT-13
+- **Requirements:** VOICE-R4, VOICE-R7
 
 Make the agent reachable with no telephony.
 - `make agent-dev` runs the worker (`python -m supportagent.agent.worker dev`) against the dev
   LiveKit server.
 - `scripts/dev_token.py` mints a room token for the LiveKit Agents playground or `lk room join`.
+- `make playground` runs LiveKit's open-source Agents Playground locally (`scripts/playground.sh`: pinned clone into the
+  git-ignored `vendor/agents-playground`, `.env.local` from `.env`, `npm install`, bound to 127.0.0.1:3100). Added on
+  2026-11-17: LiveKit is retiring the hosted playground (agents-playground.livekit.io redirects to a 404) and keeps
+  the open-source one "for self-hosted use". With the LiveKit URL in its `.env.local` it mints its own token, and the
+  page's `#agent=support-agent` hash presets the explicit dispatch, so no token has to be pasted.
 - A room with no `call_id` metadata is treated as an inbound call with `campaign="playground"` and a
   fresh `call_id`. The worker builds that context in T-AGENT-01; this task wires the dev defaults and
   the docs.
+- The launcher (`scripts/agent_dev.py`, behind `make agent-dev`) checks the model servers and the gateway,
+  fetches the end-of-turn model once (`python -m supportagent.voice.turn_files`, verified in the cache on every start), takes the LiveKit connection from settings (LiveKit's CLI reads its
+  environment) and sets `SESSION_EVENT_LOG`. The token carries a room configuration that dispatches
+  `support-agent`: the worker registers with an explicit agent name, so without it no agent joins the room.
+- The worker feeds a `LatencyTracker` (T-VOICE-04) and puts its p50/p90 on the outcome before `finalize`;
+  with `SESSION_EVENT_LOG` set it also writes the turn-taking events (states and times, no speech) for the
+  barge-in check.
 
 **Acceptance criteria**
-- [ ] `make models-up && make agent-dev`, then opening the playground with the printed token, gives a spoken greeting.
-- [ ] The README / `docs/dev-setup.md` has a 5-step "talk to the agent" guide.
-- [ ] The playground call produces a `CallOutcome` with `campaign="playground"` and latency fields.
+- [x] `make models-up && make agent-dev`, then opening the playground, gives a spoken greeting.
+  *(Confirmed by a person on 2026-11-18: the recording disclosure was heard and the caller's words were transcribed nearly accurately.)*
+  *(Needs a person at a browser with the whole stack running; not verifiable in an automated run.
+  `tests/voice/test_live_pipeline.py::test_playground_greeting` is the headless version.)*
+- [x] The README / `docs/dev-setup.md` has a 5-step "talk to the agent" guide.
+- [x] The playground call produces a `CallOutcome` with `campaign="playground"` and latency fields.
+  *(Checked in the bank `interactions` row of the 2026-11-18 call: `campaign=playground`, `latency_p50=2896`, `latency_p90=4413`, `latency_stages`, `disclosures_given=[ai_recording@1.0]`.)*
+  *(Unit-tested: `tests/agent/test_session_wiring.py` finalizes a playground call with latency figures from
+  synthetic metrics. Still to confirm on a real call: check its outcome in the console.)*
+- [ ] Live checklist (moved from T-VOICE-03; first real measurement 2026-11-18: 0.46 s and 1.10 s, FAILED against 0.3 s because `INTERRUPTION_MIN_S=0.4` made the agent wait 0.4 s of caller speech before stopping; re-measure after lowering it): barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in the session event log; run `tests/voice/test_live_barge_in.py` with `BARGE_IN_EVENT_LOG`)
+  *(Needs a person talking over the agent; `make agent-dev` writes the event log the test reads.)*
 
 **Tests**
-- `tests/voice/test_dev_token.py` (unit): the token decodes (PyJWT) with the room name, identity and grants; the dev key and secret come from settings.
+- `tests/voice/test_dev_token.py` (unit): the token decodes (PyJWT) with the room name, identity and grants; the dev key and secret come from settings; the agent dispatch is in the token and its name is the worker's.
+- `tests/voice/test_agent_dev.py` (unit): the worker environment from settings, the gateway check, the one-time download marker.
+- `tests/voice/test_event_log.py` (unit): the JSONL event log, states and times only, readable by `barge_in_latency_s`.
+- `tests/agent/test_session_wiring.py` (unit): a playground call's outcome carries latency figures; no completed turn means none; the event log is attached only when configured.
 - `tests/voice/test_live_pipeline.py::test_playground_greeting` (live): connect a headless participant, assert the agent publishes an audio track within 5 s.
 
-**Files:** `scripts/dev_token.py`, `Makefile`, `docs/dev-setup.md`, `tests/voice/test_dev_token.py`
+**Files:** `scripts/dev_token.py`, `scripts/agent_dev.py`, `Makefile`, `README.md`, `docs/dev-setup.md`, `src/supportagent/voice/event_log.py`, `src/supportagent/agent/session_factory.py`, `src/supportagent/agent/worker.py`, `src/supportagent/common/settings.py`, `.env.example`, tests above
 
 ### T-VOICE-06 · Latency benchmark: local vs hosted
 - **Status:** todo
@@ -156,7 +199,7 @@ Make the agent reachable with no telephony.
 - **Depends on:** T-VOICE-04, T-EVAL-01
 - **Requirements:** VOICE-R8
 
-Write `scripts/bench_latency.py`. For each LLM configuration (`ollama/qwen3:8b`, `ollama/qwen3:4b`,
+Write `scripts/bench_latency.py`. For each LLM configuration (`llamacpp/llama-3.1-8b-instruct`, `llamacpp/llama-3.2-3b-instruct`,
 `anthropic/claude-haiku-5-5`) and each whisper model, it:
 - plays N pre-recorded caller WAVs (`tests/fixtures/audio/*.wav`) through the STT endpoint
 - runs the matching text turns through the text-mode harness (T-EVAL-01) for LLM TTFT

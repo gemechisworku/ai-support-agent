@@ -8,6 +8,7 @@ Lookups that the bank answers with 404 return `None` (or an empty list); every o
 `BankError`, which the tool pipeline turns into `upstream_error`.
 """
 
+import datetime as dt
 from typing import Any, Protocol
 
 import httpx
@@ -28,6 +29,7 @@ class BankError(RuntimeError):
 
 class BankClient(Protocol):
     async def customers_by_phone(self, phone: str) -> list[c.Customer]: ...
+    async def match_customers(self, dob: dt.date, loan_last4: str) -> list[c.CustomerMatch]: ...
     async def get_customer(self, customer_id: int) -> c.Customer | None: ...
     async def customer_loans(self, customer_id: int) -> list[c.Loan]: ...
     async def loan_status(self, loan_id: int) -> c.LoanStatus | None: ...
@@ -35,6 +37,14 @@ class BankClient(Protocol):
         self, account_id: int, *, loan_id: int | None, limit: int
     ) -> list[c.Transaction]: ...
     async def interaction_history(self, customer_id: int, *, limit: int) -> c.InteractionHistory: ...
+    async def eligible_loans(
+        self, *, bucket: str | None = None, due_within: int | None = None
+    ) -> list[c.EligibleLoan]: ...
+    async def contact_preferences(self, customer_id: int) -> c.ContactPreferences | None: ...
+    async def list_tasks(
+        self, *, status: str | None = None, task_type: str | None = None
+    ) -> list[c.Task]: ...
+    async def list_promises(self, *, status: str | None = None) -> list[c.Promise]: ...
     async def create_promise(self, body: c.PromiseIn) -> c.Promise | None: ...
     async def create_task(self, body: c.TaskIn) -> c.Task | None: ...
     async def patch_contact_preferences(
@@ -45,8 +55,11 @@ class BankClient(Protocol):
 
 
 _customers = TypeAdapter(list[c.Customer])
+_matches = TypeAdapter(list[c.CustomerMatch])
 _loans = TypeAdapter(list[c.Loan])
 _transactions = TypeAdapter(list[c.Transaction])
+_eligible = TypeAdapter(list[c.EligibleLoan])
+_PAGE = 200  # the bank's MAX_PAGE
 
 
 class HttpBankClient:
@@ -115,6 +128,11 @@ class HttpBankClient:
         resp = await self._get("/customers", {"phone": phone})
         return [] if resp is None else _customers.validate_json(resp.content)
 
+    async def match_customers(self, dob: dt.date, loan_last4: str) -> list[c.CustomerMatch]:
+        """Loans whose customer has this DOB and whose number ends in `loan_last4` (ids only, T-BANK-08)."""
+        resp = await self._get("/customers/match", {"dob": dob.isoformat(), "loan_last4": loan_last4})
+        return [] if resp is None else _matches.validate_json(resp.content)
+
     async def get_customer(self, customer_id: int) -> c.Customer | None:
         resp = await self._get(f"/customers/{customer_id}")
         return None if resp is None else c.Customer.model_validate_json(resp.content)
@@ -139,6 +157,37 @@ class HttpBankClient:
         if resp is None:
             return c.InteractionHistory(interactions=[], open_promises=[], open_tasks=[])
         return c.InteractionHistory.model_validate_json(resp.content)
+
+    async def eligible_loans(
+        self, *, bucket: str | None = None, due_within: int | None = None
+    ) -> list[c.EligibleLoan]:
+        """`GET /collections/eligible`: loan facts for the compliance gate (no contact rules applied)."""
+        params: dict[str, Any] = {"bucket": bucket} if bucket is not None else {"due_within": due_within}
+        resp = await self._get("/collections/eligible", params)
+        return [] if resp is None else _eligible.validate_json(resp.content)
+
+    async def contact_preferences(self, customer_id: int) -> c.ContactPreferences | None:
+        resp = await self._get(f"/customers/{customer_id}/contact-preferences")
+        return None if resp is None else c.ContactPreferences.model_validate_json(resp.content)
+
+    async def _pages[T](self, path: str, model: type[T], params: dict[str, Any]) -> list[T]:
+        """Every row of a paged operations endpoint."""
+        rows: list[T] = []
+        while True:
+            resp = await self._get(path, {**params, "limit": _PAGE, "offset": len(rows)})
+            if resp is None:
+                return rows
+            page = c.Page[model].model_validate_json(resp.content)  # type: ignore[valid-type]
+            rows.extend(page.items)
+            if not page.items or len(rows) >= page.total:
+                return rows
+
+    async def list_tasks(self, *, status: str | None = None, task_type: str | None = None) -> list[c.Task]:
+        params = {k: v for k, v in {"status": status, "type": task_type}.items() if v is not None}
+        return await self._pages("/tasks", c.Task, params)
+
+    async def list_promises(self, *, status: str | None = None) -> list[c.Promise]:
+        return await self._pages("/promises", c.Promise, {} if status is None else {"status": status})
 
     # ------------------------------------------------------------------ writes (interaction tables only)
 

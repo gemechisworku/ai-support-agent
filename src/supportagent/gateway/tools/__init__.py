@@ -18,7 +18,7 @@
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ValidationError
 
@@ -29,6 +29,9 @@ from supportagent.gateway.config import GatewayConfig
 from supportagent.gateway.ratelimit import RateLimiter
 from supportagent.gateway.retriever import Retriever
 from supportagent.gateway.session import Session, SessionStore
+
+if TYPE_CHECKING:
+    from supportagent.gateway.kb_browse import KbBrowser
 
 Scope = Literal["unverified", "verified", "any", "worker"]
 
@@ -49,6 +52,7 @@ class Gateway:
     store: SessionStore = field(default_factory=SessionStore)
     limiter: RateLimiter = field(default_factory=RateLimiter)
     retriever: Retriever | None = None
+    kb_browser: "KbBrowser | None" = None  # console KB browse API (T-GW-12)
     audit: AuditWriter = field(init=False)
 
     def __post_init__(self) -> None:

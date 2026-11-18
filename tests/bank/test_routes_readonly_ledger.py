@@ -11,6 +11,7 @@ ALLOWED_WRITES = {
     ("POST", "/interactions"),
     ("POST", "/promises"),
     ("POST", "/tasks"),
+    ("PATCH", "/tasks/{task_id}"),  # T-BANK-07: the console's follow-up queue
     ("PATCH", "/contact-preferences/{customer_id}"),
     ("POST", "/audit"),
 }

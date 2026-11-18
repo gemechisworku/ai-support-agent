@@ -10,20 +10,66 @@ different plugin.
 - **STT:** whisper.cpp `whisper-server` started with `--inference-path /v1/audio/transcriptions`, used
   through `openai.STT(base_url=STT_URL/v1, model="whisper-1")`. Whisper is not truly streaming, so the
   STT is wrapped in `stt.StreamAdapter(stt, vad)` for VAD-segmented transcription (PRD §12 mitigation).
-- **LLM:** `openai.LLM.with_ollama(model=LLM_MODEL, base_url=OLLAMA_URL/v1)`. Qwen3 thinking is disabled
-  by sending `think: false` in extra body params, plus a `/no_think` system suffix as belt and braces.
+  Fix after the second playground call (2026-11-18): whisper.cpp writes `[BLANK_AUDIO]`, `[LAUGHTER]`,
+  `(audience chattering)` for silence and noise, and each became a caller turn. `voice/stt_filter.py`
+  (`NonSpeechFilterSTT`, applied inside `build_stt`) strips such tags; a result that is only tags has no
+  alternatives, so the adapter drops it and the silence policy still sees silence. `whisper-server` also starts
+  with `--suppress-nst` (an already-running server needs `make models-down && make models-up`).
+  Fix after the fourth call (2026-11-18): the caller's turns were "Thank you." and "Thanks.": whisper also
+  writes a polite phrase for plain noise. Measured on the local server (generated noise and Kokoro speech, never
+  user audio): 3 s of low-level noise returned `" Thank you."` with `no_speech_prob` 0.927 and `avg_logprob`
+  -0.55; synthetic speech scored 0.001 ("What is the late fee on a personal loan?") and 0.009 (a real "Thank
+  you."). The server reports both scores in `response_format=verbose_json`, but LiveKit's `openai.STT` asks for
+  that format only for the model name "whisper-1" and discards the segments, so `voice/whisper_stt.py`
+  (`WhisperCppSTT`, which `build_stt` now uses in place of `openai.STT`) calls the endpoint itself. Per segment:
+  `no_speech_prob > STT_NO_SPEECH_MAX` (0.6, whisper's own cut-off) or `avg_logprob < STT_MIN_AVG_LOGPROB`
+  (-1.5) drops it; with nothing left the result has no alternatives, so silence stays silence. Every result logs
+  one INFO line (`stt result`: kept, why dropped, seconds of audio, characters, words, segments and both scores),
+  never the words. Checked against the live server: noise gives no alternatives, speech is kept. Not tested: how
+  real microphone noise and accents score. If real speech is dropped, the log line shows its scores and the two
+  settings are the lever.
+- **LLM:** llama.cpp `llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja` (Llama 3.1 8B Instruct
+  Q4_K_M), used through `openai.LLM(model=LLM_MODEL, base_url=LLM_URL, api_key="local")`. `--jinja`
+  applies the model's chat template, which gives OpenAI-style tool calls. Llama 3.1 has no thinking
+  mode, so there is nothing to disable.
   The hosted option is `anthropic.LLM(model="claude-haiku-5-5")`.
 - **TTS:** Kokoro-FastAPI through `openai.TTS(base_url=TTS_URL/v1, model="kokoro", voice=TTS_VOICE)`.
   The session's sentence tokenizer streams TTS per sentence.
 - **VAD / turns:** `silero.VAD.load()` (prewarmed in the worker's `prewarm`) plus the LiveKit English
-  turn detector model. Interruptions are enabled, with `min_interruption_duration` ≈ 0.4 s and
-  `min_endpointing_delay` ≈ 0.4 s, tuned in T-VOICE-06.
+  turn detector model. Interruptions are enabled. The delays are settings (T-VOICE-03):
+  `INTERRUPTION_MIN_S` (0.4), `ENDPOINTING_MIN_DELAY_S` (0.4) and `ENDPOINTING_MAX_DELAY_S` (3.0), tuned in
+  T-VOICE-06. `session.build_session_options(settings, vad=…, turn_detector=…)` returns the `AgentSession`
+  kwargs (livekit-agents 1.x `turn_handling` form, not the deprecated flat keywords) and sets
+  `user_away_timeout=None`, because caller silence is `SilencePolicy`'s job. TTS is wrapped in
+  `tts.StreamAdapter` with a sentence tokenizer (`MIN_SENTENCE_LEN = 20`) so Kokoro speaks each sentence as soon
+  as the LLM has completed it.
 - **Silence:** a pure `SilencePolicy` state machine (injected clock) driven by session
   `user_state_changed` / `agent_state_changed` events. It emits `reprompt` and `end` actions. The
-  agent supplies the wording.
-- **Latency:** `LatencyTracker` consumes `metrics_collected` events (EOU, STT, LLM, TTS metrics) and keys
-  them by `speech_id` to compute per-turn `e2e = eou_delay + llm_ttft + tts_ttfb`. Percentiles use
-  `statistics.quantiles` with the "inclusive" method.
+  agent supplies the wording. Silence is accumulated quiet time: it counts only while the agent is not
+  speaking or thinking and the caller is not speaking, and it starts when the agent finishes a turn or the
+  caller stops. Caller speech resets it and the re-prompt budget; the agent's own speech (including the
+  re-prompt) neither counts nor resets it, and the agent's reply to a caller turn restarts it, so
+  `SILENCE_END_S` is total caller silence. `attach_silence_policy` polls every 0.25 s and calls
+  `on_reprompt()` / `on_end("silence")` (sync or async; a raising callback is logged and ignored).
+  Found on the first real call (2026-11-17): the agent *state* flickers to `listening` for a moment between
+  `thinking` stages while a reply is still being generated, which armed the clock and produced a re-prompt
+  over an undelivered reply. `attach_silence_policy(..., is_busy=...)` therefore calls `policy.hold(...)` every
+  tick: the wiring passes "the session still has speech in flight" (`AgentSession.current_speech` not done),
+  and the clock stands still while it is true. `is_closing=...` makes `set_closing(True)`: no re-prompt once
+  the closing state has the floor or the silence end has fired (the end of the call still can). Defaults are
+  `SILENCE_REPROMPT_S=10` / `SILENCE_END_S=25`: the same call showed the caller needing 8-11 s to answer after
+  each reply. `tests/voice/test_silence_real_call.py` replays that call's turn-taking (synthetic copy).
+- **Latency:** `LatencyTracker.add(metrics)` consumes LiveKit EOU, LLM and TTS metrics and keys them by
+  `speech_id` (LiveKit 1.8: STT metrics carry no `speech_id`, so the `stt` stage is the EOU metric's
+  `transcription_delay`). A turn completes when its three metrics have arrived, in any order; incomplete turns
+  (a tool-only turn, a barge-in before any audio) and cancelled calls are skipped, never counted as zero. Per turn:
+  `e2e = eou + llm_ttft + tts_ttfb`, where `llm_ttft` is summed over the turn's model calls (a tool turn waits
+  for each; tool execution time is not included) and `tts_ttfb` is the first spoken segment's. Percentiles use
+  `statistics.quantiles(n=100, method="inclusive")` (one value gives p50 = p90 = that value). One structured
+  `turn latency` log line per completed turn carries the figures only (no transcript text).
+  `attach_latency_tracker(session, tracker)` subscribes to `metrics_collected`; the worker calls it
+  (T-AGENT-13 / T-VOICE-05) and passes `summary.p50_ms`, `summary.p90_ms` and `summary.stage_latencies()` to
+  `OutcomeBuilder.set_latency(LatencyFigures(...))`.
 
 Everything LiveKit-specific sits behind thin factory functions, so unit tests never import model weights or
 open sockets.
@@ -36,44 +82,64 @@ src/supportagent/voice/
   session.py        # build_session_options(settings) -> SessionOptions
   silence.py        # SilencePolicy + attach_silence_policy
   latency.py        # LatencyTracker, LatencySummary
+  event_log.py      # attach_event_log: turn-taking states + times as JSON lines, for the barge-in check (dev)
 scripts/models/
-  setup.sh          # brew deps, model pulls/downloads into ./models (idempotent)
-  up.sh / down.sh   # start/stop native servers, logs + pids in var/run, var/log
-  health.py         # probe each endpoint, exit 1 if any unhealthy (stdlib only)
-scripts/dev_token.py      # mint a LiveKit token for the playground
+  _env.sh           # sourced: settings from env / .env / defaults, port_of, abs_path
+  setup.sh          # brew deps, missing GGUF/GGML downloads (sha256-checked) into ./models, Kokoro (idempotent)
+  up.sh / down.sh   # start/stop native servers, pids in var/run, logs in var/log; ports already in use are left alone
+  health.py         # probe each endpoint, exit 1 naming any unhealthy one (stdlib only)
+scripts/agent_dev.py      # make agent-dev: preflight (servers, gateway, turn-detector files in the cache), LiveKit env from settings, worker dev
+  voice/turn_files.py     # python -m supportagent.voice.turn_files: download the English end-of-turn model, check the cache
+scripts/dev_token.py      # make dev-token: a room token for the playground that also dispatches `support-agent`
+scripts/playground.sh     # make playground: LiveKit's open-source Agents Playground, pinned clone in vendor/, 127.0.0.1:3100
 scripts/bench_latency.py  # local vs hosted benchmark -> docs/reports/
 tests/voice/
   test_providers.py  test_session.py  test_silence.py  test_latency.py  test_health_script.py
+  test_dev_token.py  test_agent_dev.py  test_event_log.py
+  test_live_barge_in.py   # marker live (VOICE-R4 barge-in < 300 ms, from a session event log)
   test_live_pipeline.py   # marker live
 ```
 
 ## Data model / contracts
 - New settings fields (added to `supportagent.common.settings` by T-VOICE-02): `STT_URL`, `TTS_URL`,
-  `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`ollama|anthropic`), `LLM_MODEL`, `ANTHROPIC_API_KEY`
-  (SecretStr), `SILENCE_REPROMPT_S`, `SILENCE_END_S`, `WHISPER_MODEL` (`large-v3-turbo|small.en`).
-- `LatencySummary`: `{stage: {"p50": float, "p90": float}}` for stages `eou`, `stt`, `llm_ttft`,
-  `tts_ttfb`, `e2e`, in seconds. `to_outcome()` returns `latency_p50` / `latency_p90` as the e2e
-  values, plus a `latency_stages` dict for traces.
+  `TTS_VOICE` (default `af_heart`), `LLM_PROVIDER` (`llamacpp|anthropic`), `LLM_MODEL`, `ANTHROPIC_MODEL` (default `claude-haiku-5-5`),
+  `ANTHROPIC_API_KEY` (SecretStr), `STT_MODEL` (default `whisper-1`, the name the OpenAI client sends; whisper-server
+  serves `WHISPER_MODEL` regardless), `STT_LANGUAGE` (`en`), `TTS_MODEL` (`kokoro`), `SILENCE_REPROMPT_S`, `SILENCE_END_S` (must exceed the re-prompt delay), `ENDPOINTING_MIN_DELAY_S`, `ENDPOINTING_MAX_DELAY_S`, `INTERRUPTION_MIN_S`, `SESSION_EVENT_LOG` (dev only, empty = off; `make agent-dev` sets `var/log/session_events.jsonl`), `WHISPER_MODEL` (`small.en|large-v3-turbo`, default `small.en`). `LLM_URL`, `EMBED_URL`,
+  `LLM_GGUF` and `EMBED_GGUF` come from T-PLAT-07.
+- `LatencySummary{turns, stages}`: `stages[name]` is `Percentiles(p50, p90)` in seconds (both `None` with no
+  data) for `eou`, `stt`, `llm_ttft`, `tts_ttfb`, `e2e`. `p50_ms` / `p90_ms` are the e2e values in whole
+  milliseconds, `stage_latencies()` gives `contracts.outcome.StageLatency` per stage, and `to_outcome()` returns the
+  `CallOutcome` fields `latency_p50`, `latency_p90` and `latency_stages` (empty with no data).
 
 ## Key decisions
 | Decision | Choice | Why |
 |---|---|---|
 | Plugin surface | `livekit-plugins-openai` for all three local servers | One plugin, OpenAI-compatible servers, easy swap |
+| Browser client | LiveKit's open-source Agents Playground, cloned at a pinned commit into `vendor/` and run on 127.0.0.1:3100 by `make playground` | The hosted playground is being retired (2026-11-17); the open-source build has no cloud login; with the LiveKit URL set it mints its own token, and the `agent=support-agent` URL-hash setting makes it request the explicit dispatch our worker needs. A page of our own would be a Next.js app under `web/` (constitution VIII), a possible later task |
 | Streaming STT | VAD-segmented `StreamAdapter` over whisper.cpp | Whisper is not truly streaming (PRD §12) |
-| Thinking mode | Disabled per request | Qwen3 thinking adds seconds of latency |
+| Local model server | llama.cpp `llama-server` (one process for chat, one for embeddings) | Already installed, plain GGUF files reused across projects (disk budget), OpenAI-compatible; replaced Ollama on 2026-11-07 |
+| Local LLM | Llama 3.1 8B Instruct Q4_K_M | Reliable tool calling via its chat template, no thinking mode to disable, the GGUF was already on disk |
 | Hosted LLM | `livekit-plugins-anthropic`, `claude-haiku-5-5` | F14 benchmark; synthetic data only |
-| Model files | `./models/` (git-ignored) | Reproducible paths; not in Docker (no Metal GPU) |
+| Model files | `./models/` (git-ignored); an existing GGUF (`LLM_GGUF`/`EMBED_GGUF`) or Hugging Face cache copy is reused | Reproducible paths; not in Docker (no Metal GPU); disk budget |
+| Model URLs | `127.0.0.1`, never `localhost` | macOS resolves `localhost` to `::1` first; a tunnel on `[::1]:8090` hijacked the LLM URL on the dev Mac (2026-11-09) |
+| Kokoro-FastAPI | clone pinned to `KOKORO_REF` (default `v0.9.2`), started with its `start-gpu_mac.sh` and `HOST=127.0.0.1` | Upstream script handles MPS env; pinned ref keeps setup reproducible |
+| Servers already running | `up.sh` leaves a port that already answers alone; `down.sh` stops only pids it wrote | Hand-started servers keep running |
+| Playground dispatch | the room token carries a `RoomConfiguration` with `RoomAgentDispatch("support-agent")` | The worker registers with an explicit agent name, which turns off automatic dispatch: a plain token joins an empty room |
+| Worker environment | `scripts/agent_dev.py` copies `LIVEKIT_*` from settings into the worker's environment | LiveKit's CLI reads only the process environment; the project reads `.env` through settings |
+| Turn-detector weights | `python -m supportagent.voice.turn_files` downloads the English model once; `files_present` checks the Hugging Face cache on every `make agent-dev` (no marker) | The weights cannot load in `prewarm` (T-AGENT-13) and the plugin loads them with `local_files_only=True`, so a missing model kills the call. LiveKit's `download-files` fetches only for plugins already imported (ours is imported lazily), so it exited 0 having fetched nothing, and a marker made that look like success (found on the first playground call, 2026-11-17) |
 
 ## Dependencies
 Runtime: `livekit-agents`, `livekit-plugins-openai`, `livekit-plugins-silero`,
-`livekit-plugins-turn-detector`, `livekit-plugins-anthropic` (all `uv add`, pinned in `uv.lock`; verify
-API names against the installed version). Native (brew): `ollama`, `whisper-cpp`, `livekit`,
+`livekit-plugins-turn-detector`, `livekit-plugins-anthropic`, installed as one dependency
+`livekit-agents[anthropic,openai,silero,turn-detector]~=1.2` and pinned in `uv.lock` (T-VOICE-02 checked the API names
+against the installed version). `Settings.models.llm_id` is the single `provider/model` id: `providers.model_version`
+and `observability.versions.model_version` both use it, and for `anthropic` it is `anthropic/<ANTHROPIC_MODEL>`. Native (brew): `llama.cpp`, `whisper-cpp`, `livekit`,
 `livekit-cli`; Kokoro-FastAPI cloned to `vendor/kokoro-fastapi` (git-ignored) and started with its macOS
 start script. No Docker services are added; Docker on a Mac has no GPU.
 
 ## Test strategy
 - **unit:**
-  - Provider factory with settings fixtures, asserting types, base URLs and the `think` flag (no network).
+  - Provider factory with settings fixtures, asserting types, base URLs and model ids (no network).
   - `SilencePolicy` with a fake clock.
   - `LatencyTracker` fed synthetic metric objects.
   - `health.py` against a local `http.server` stub.

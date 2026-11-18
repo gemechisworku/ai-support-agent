@@ -1,5 +1,5 @@
 # One image for every Python service (bank API, gateway, scheduler, console).
-# The service is chosen by the compose `command`. Model servers (whisper.cpp, Ollama, Kokoro) and the
+# The service is chosen by the compose `command`. Model servers (whisper.cpp, llama.cpp, Kokoro) and the
 # agent worker run natively on macOS for Metal GPU access — see docs/architecture.md §6.
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never PYTHONUNBUFFERED=1

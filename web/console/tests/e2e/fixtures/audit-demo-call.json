@@ -1,0 +1,50 @@
+{
+  "name": "audit-demo-call",
+  "method": "GET",
+  "path": "/api/audit/fbde0dde-804f-4a79-ba80-2795d29b3079",
+  "query": {},
+  "body": null,
+  "status": 200,
+  "response": [
+    {
+      "id": 1,
+      "ts": "2026-11-09T14:00:00Z",
+      "tool": "verify_identity",
+      "decision": "allow",
+      "latency_ms": 5,
+      "customer_id": null
+    },
+    {
+      "id": 2,
+      "ts": "2026-11-09T14:00:01Z",
+      "tool": "get_loan_status",
+      "decision": "allow",
+      "latency_ms": 6,
+      "customer_id": 9002
+    },
+    {
+      "id": 3,
+      "ts": "2026-11-09T14:00:02Z",
+      "tool": "search_policy",
+      "decision": "allow",
+      "latency_ms": 7,
+      "customer_id": 9002
+    },
+    {
+      "id": 4,
+      "ts": "2026-11-09T14:00:03Z",
+      "tool": "record_promise_to_pay",
+      "decision": "deny",
+      "latency_ms": 8,
+      "customer_id": 9002
+    },
+    {
+      "id": 5,
+      "ts": "2026-11-09T14:00:04Z",
+      "tool": "record_call_outcome",
+      "decision": "allow",
+      "latency_ms": 9,
+      "customer_id": 9002
+    }
+  ]
+}

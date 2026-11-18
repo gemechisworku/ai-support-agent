@@ -1,0 +1,25 @@
+{
+  "name": "customers-frank",
+  "method": "GET",
+  "path": "/api/customers",
+  "query": {
+    "q": "frank"
+  },
+  "body": null,
+  "status": 200,
+  "response": {
+    "items": [
+      {
+        "customer_id": 9002,
+        "full_name": "Frank Fischer",
+        "phone": "•••• 0302",
+        "segment": "retail",
+        "loan_count": 1,
+        "worst_bucket": "1-30"
+      }
+    ],
+    "total": 1,
+    "limit": 25,
+    "offset": 0
+  }
+}

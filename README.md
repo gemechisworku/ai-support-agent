@@ -25,8 +25,90 @@ make setup                 # deps, .env, Postgres (pgvector) via docker compose
 make check                 # lint, types, import boundaries, specs, unit + integration tests
 make tasks-next            # what to build next
 ```
-Native model servers (Ollama, whisper.cpp, Kokoro, LiveKit) are needed from milestone M2. Run
+Native model servers (llama.cpp, whisper.cpp, Kokoro, LiveKit) are needed from milestone M2. Run
 `make doctor` to see what is missing, and follow [docs/dev-setup.md](docs/dev-setup.md).
+
+## Run it locally
+Everything binds to the loopback address (127.0.0.1). Ports and model paths come from `.env` (see `.env.example`).
+
+**1. Native model servers** (macOS, Metal). The console and gateway need only the embeddings server, for
+policy search. To skip it, set `KB_EMBEDDER=fake` in `.env`. Details, ports and memory are in
+[docs/dev-setup.md §2](docs/dev-setup.md#2-native-model-servers-needed-from-m2).
+```bash
+make models-setup          # once: brew deps + missing model files (reuses existing GGUFs; ARGS=--dry-run to preview)
+make models-up             # LLM :8090, embeddings :8082, whisper :8178, Kokoro :8880, LiveKit :7880 (ARGS="embed" for one)
+make models-health         # ✓/✗ per server
+make models-down           # stop them
+make doctor                # ✓/✗ for every prerequisite and server
+```
+
+**2. Docker services: Postgres, bank API, gateway, console API and the Next.js console.**
+```bash
+docker compose build bank-api console     # after code changes: the shared Python app image + the console image
+docker compose up -d --wait postgres bank-api gateway console-api console   # or: make console (builds + starts all five)
+docker compose ps                         # all five should be "healthy"
+```
+
+**3. Load the data** (first run, or after `make reset-db`).
+```bash
+docker compose exec -T bank-api python -m supportagent.bank.seed --as-of 2026-11-09 --reset   # synthetic bank
+make kb-ingest             # policy documents with the real embeddings; ARGS="--embedder fake" without a model server
+```
+Re-running the ingest is safe: unchanged documents are skipped (`added 0 / skipped 20`).
+
+**4. Open the console** at <http://localhost:8501>. It's the read-only operations console and data
+explorer: customers, loans, the policy knowledge base, the persona test sheet and the call audit trail.
+It is a Next.js app (`web/console`) that reads everything through the console API, never directly.
+
+To work on the console with hot reload (Node 24+; `make console-setup` installs its packages once):
+```bash
+docker compose stop console              # frees port 8501; console-api keeps running on :8004
+make console-dev                         # next dev on :8501, console API URL and token from .env
+make console-check                       # lint, types, unit tests, build, e2e (also part of make check)
+```
+After changing a console API view model, run `make console-types` to regenerate the TypeScript types.
+
+| Service | URL | Check |
+|---|---|---|
+| Console (Next.js) | <http://localhost:8501> | open in a browser |
+| Console API | <http://localhost:8004> | `curl localhost:8004/healthz` · OpenAPI at `/openapi.json` |
+| Bank API | <http://localhost:8001> | `curl localhost:8001/healthz` |
+| Gateway (MCP at `/mcp`) | <http://localhost:8002> | `curl localhost:8002/healthz` |
+| Embeddings / LLM / STT | `:8082` / `:8090` / `:8178` | `make doctor` |
+
+**Stop or reset:** `docker compose stop` (keeps the data), `make down` (stops all services), or
+`make reset-db` (deletes the local databases; then repeat step 3). Stop the model servers with
+`make models-down`.
+
+## Talk to the agent (browser playground, no phone line)
+Needs the data loaded (steps 1–3 above). Five steps; the voice servers and the agent run natively on the Mac.
+```bash
+# 1. The native servers: LLM, speech-to-text, text-to-speech, LiveKit (run `make models-setup` once before)
+make models-up && make models-health        # want: all healthy
+
+# 2. The gateway (the agent's only door to the bank data), if it is not already running
+docker compose up -d --wait postgres bank-api gateway
+
+# 3. The agent worker. Leave it running; it checks steps 1-2 first and stops with a one-line hint if one is missing.
+make agent-dev                              # the first run downloads the end-of-turn model, ~100 MB (needs the network once)
+
+# 4. Second terminal: LiveKit's open-source playground, served locally (first run clones it and runs npm install)
+make playground                             # prints a link: open it
+
+# 5. In the browser: open http://127.0.0.1:3100/#agent=support-agent&mic=1&audio=1&chat=1, click Connect, allow
+#    the microphone, and talk. (No token to paste: the playground mints its own for your local LiveKit.)
+```
+The agent speaks the recording disclosure first. You are an unverified inbound caller, so ask "what's my balance?"
+and verify with a persona from the console's **Test personas** page (name, date of birth, last 4 of the loan).
+Say "I want to speak to a person" to hear an escalation, or ask about late fees for a policy answer.
+After you hang up, the call's outcome is written once (`campaign="playground"`, with latency figures), the redacted
+transcript is in `var/transcripts/<call_id>.jsonl` (the call id is in the `agent-dev` log), and the console's
+**Audit trail** shows the tool calls for that id.
+
+To check barge-in (the agent must stop speaking within 300 ms of you talking over it), ask a question with a long
+answer and interrupt a few times, hang up, then run
+`BARGE_IN_EVENT_LOG=var/log/session_events.jsonl uv run pytest -m live tests/voice/test_live_barge_in.py -s`.
+Use `127.0.0.1`, not `localhost`, in the model URLs (see [docs/dev-setup.md](docs/dev-setup.md)).
 
 ## Workflow in one line
 Pick a ready task, write its tests, implement, mark it `done` in `tasks.md`, and commit it to the

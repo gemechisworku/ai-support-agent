@@ -1,6 +1,6 @@
 """Versioned, idempotent ingestion of policy documents into the `kb` database (KB-R5, KB-R2).
 
-    uv run python -m supportagent.kb.ingest [PATH=data/policies] [--embedder ollama|fake] [--dry-run]
+    uv run python -m supportagent.kb.ingest [PATH=data/policies] [--embedder llamacpp|fake] [--dry-run]
     make kb-ingest ARGS="--embedder fake"
 
 Per document (keyed by `doc_id` + `version`):
@@ -25,7 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from supportagent.kb.chunker import ChunkDraft, chunk
-from supportagent.kb.embed import Embedder, HashEmbedder, OllamaEmbedder
+from supportagent.kb.embed import Embedder, HashEmbedder, OpenAICompatEmbedder
 from supportagent.kb.frontmatter import FrontMatterError, PolicyDoc, load, load_corpus
 from supportagent.kb.models import Chunk, Document
 
@@ -154,15 +154,15 @@ def _embedder(kind: str | None) -> Embedder:
     if kind == "fake":
         return HashEmbedder()
     settings = get_settings()
-    if kind == "ollama":
-        return OllamaEmbedder(settings.models.ollama_url, settings.models.embed_model)
+    if kind == "llamacpp":
+        return OpenAICompatEmbedder(settings.models.embed_url, settings.models.embed_model)
     return get_embedder(settings)
 
 
 def main(argv: Sequence[str] | None = None, *, session: Session | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("path", nargs="?", type=Path, default=DEFAULT_PATH)
-    ap.add_argument("--embedder", choices=["ollama", "fake"], help="default: KB_EMBEDDER")
+    ap.add_argument("--embedder", choices=["llamacpp", "fake"], help="default: KB_EMBEDDER")
     ap.add_argument("--dry-run", action="store_true", help="list planned actions; write nothing")
     args = ap.parse_args(argv)
 

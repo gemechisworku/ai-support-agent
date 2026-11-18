@@ -62,9 +62,10 @@ class DataSettings(_Group):
     """Mock bank, knowledge base and policy configuration."""
 
     bank_as_of: date | None = None
-    kb_embedder: Literal["ollama", "fake"] = "ollama"
-    kb_min_similarity: float = Field(0.55, ge=0.0, le=1.0)
+    kb_embedder: Literal["llamacpp", "fake"] = "llamacpp"
+    kb_min_similarity: float = Field(0.58, ge=0.0, le=1.0)
     contact_rules_path: Path = Path("data/config/contact_rules.yaml")
+    campaigns_path: Path = Path("data/config/campaigns.yaml")  # scheduler campaigns (T-SCHED-01)
     promise_max_days: int = Field(14, ge=1)
     transcripts_dir: Path = Path("var/transcripts")
 
@@ -80,6 +81,10 @@ class ServicesSettings(_Group):
     human_agent_available: bool = True
     scheduler_url: str = "http://localhost:8003"
     scheduler_token: SecretStr
+    # Console API (T-CON-09): the Next.js console's backend. The token is required by the console API
+    # itself (it refuses to start without one), not by the other services.
+    console_api_url: str = "http://localhost:8004"
+    console_api_token: SecretStr | None = None
     sched_max_concurrent: int = Field(1, ge=1)
     max_call_s: int = Field(600, ge=1)
 
@@ -87,17 +92,60 @@ class ServicesSettings(_Group):
 class ModelsSettings(_Group):
     """Native model servers (Metal) and the hosted-LLM switch (F14)."""
 
-    ollama_url: str = "http://localhost:11434"
-    llm_provider: Literal["ollama", "anthropic"] = "ollama"
-    llm_model: str = "qwen3:8b"
-    embed_model: str = "nomic-embed-text"
-    stt_url: str = "http://localhost:8178"
-    whisper_model: str = "large-v3-turbo"
-    silence_reprompt_s: float = Field(6, gt=0)
-    silence_end_s: float = Field(15, gt=0)
-    tts_url: str = "http://localhost:8880"
+    # llama.cpp `llama-server` (OpenAI-compatible, base URLs include /v1). The model names are the
+    # servers' `--alias`; the GGUF paths are what scripts/models/ starts them with.
+    llm_url: str = "http://127.0.0.1:8090/v1"
+    embed_url: str = "http://127.0.0.1:8082/v1"
+    llm_provider: Literal["llamacpp", "anthropic"] = "llamacpp"
+    llm_model: str = "llama-3.1-8b-instruct"
+    embed_model: str = "nomic-embed-text-v1.5"
+    llm_gguf: Path = Path("models/llm/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf")
+    embed_gguf: Path = Path("models/embed/nomic-embed-text-v1.5.Q8_0.gguf")
+    stt_url: str = "http://127.0.0.1:8178"
+    # whisper-server ignores the request's model name (it serves WHISPER_MODEL); the OpenAI API needs one.
+    stt_model: str = "whisper-1"
+    stt_language: str = "en"
+    # whisper writes "Thank you." for noise. The server scores every segment (`no_speech_prob`,
+    # `avg_logprob`); a segment above the first or below the second is dropped like silence
+    # (voice/whisper_stt.py). Measured: noise 0.93, real and synthetic speech 0.001 to 0.009.
+    stt_no_speech_max: float = Field(0.6, ge=0, le=1)
+    stt_min_avg_logprob: float = Field(-1.5, le=0)
+    whisper_model: str = "small.en"
+    # Caller silence before the one re-prompt, and before the agent ends the call. 10 and 25: on the
+    # first real
+    # call the caller took 8-11 s to answer after each reply, and 6 s re-prompted over an active conversation.
+    silence_reprompt_s: float = Field(10, gt=0)
+    silence_end_s: float = Field(25, gt=0)
+    # Development aid (T-VOICE-05): append turn-taking state changes (no speech) to this JSON-lines file,
+    # for the live barge-in check. `make agent-dev` sets it; empty means off.
+    session_event_log: str | None = None
+    # `make playground` (scripts/playground.sh reads it from .env): the port of LiveKit's open-source Agents
+    # Playground on 127.0.0.1. 3100, because Langfuse uses 3000.
+    playground_port: int = Field(3100, ge=1, le=65535)
+    # Turn taking (VOICE-R4): how long to wait after speech before answering, and how long the caller must
+    # speak over the agent to count as barging in.
+    endpointing_min_delay_s: float = Field(0.4, gt=0)
+    endpointing_max_delay_s: float = Field(3.0, gt=0)
+    interruption_min_s: float = Field(0.4, gt=0)
+    tts_url: str = "http://127.0.0.1:8880"
     tts_voice: str = "af_heart"
+    tts_model: str = "kokoro"
+    anthropic_model: str = "claude-haiku-5-5"
     anthropic_api_key: SecretStr | None = None
+
+    @property
+    def llm_id(self) -> str:
+        """The active LLM as `provider/model`, e.g. `llamacpp/llama-3.1-8b-instruct` (VOICE-R3)."""
+        model = self.anthropic_model if self.llm_provider == "anthropic" else self.llm_model
+        return f"{self.llm_provider}/{model}"
+
+    @model_validator(mode="after")
+    def _turn_and_silence_timings_are_ordered(self) -> Self:
+        if self.endpointing_max_delay_s < self.endpointing_min_delay_s:
+            raise ValueError("ENDPOINTING_MAX_DELAY_S must be >= ENDPOINTING_MIN_DELAY_S")
+        if self.silence_end_s <= self.silence_reprompt_s:
+            raise ValueError("SILENCE_END_S must be greater than SILENCE_REPROMPT_S")
+        return self
 
     @model_validator(mode="after")
     def _hosted_llm_needs_key(self) -> Self:
@@ -112,7 +160,7 @@ class LiveKitSettings(_Group):
     The key/secret defaults are the ones `livekit-server --dev` uses.
     """
 
-    livekit_url: str = "ws://localhost:7880"
+    livekit_url: str = "ws://127.0.0.1:7880"
     livekit_api_key: str = "devkey"
     livekit_api_secret: SecretStr = SecretStr("secret")
     sip_outbound_trunk_id: str | None = None

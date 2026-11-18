@@ -77,6 +77,15 @@ class FakeBank:
         self.calls.append(("customers_by_phone", phone))
         return [cu for cu in self.customers.values() if cu.phone == phone]
 
+    async def match_customers(self, dob: dt.date, loan_last4: str) -> list[c.CustomerMatch]:
+        self.calls.append(("match_customers", (dob, loan_last4)))
+        out = []
+        for ln in sorted(self.loans.values(), key=lambda ln: ln.id):
+            cu = self.customers.get(ln.customer_id)
+            if ln.number[-4:] == loan_last4 and cu is not None and cu.dob == dob:
+                out.append(c.CustomerMatch(customer_id=ln.customer_id, loan_id=ln.id))
+        return out
+
     async def get_customer(self, customer_id: int) -> c.Customer | None:
         self.calls.append(("get_customer", customer_id))
         return self.customers.get(customer_id)
@@ -109,6 +118,72 @@ class FakeBank:
             open_promises=[p for p in self.promises if p.loan_id in loans and p.status == "open"],
             open_tasks=[t for t in self.tasks if t.customer_id == customer_id and t.status == "open"],
         )
+
+    async def eligible_loans(
+        self, *, bucket: str | None = None, due_within: int | None = None
+    ) -> list[c.EligibleLoan]:
+        """Mirrors `bank.queries.eligible_loans`: facts only, no contact rules applied."""
+        self.calls.append(("eligible_loans", (bucket, due_within)))
+        now = NOW
+        out = []
+        for loan in sorted(self.loans.values(), key=lambda ln: ln.id):
+            if loan.status == "closed":
+                continue
+            insts = sorted(self.installments[loan.id], key=lambda i: i.seq)
+            dpd = ledger.days_past_due(insts, self.as_of)
+            upcoming = ledger.next_due(insts, self.as_of)
+            if bucket is not None:
+                if ledger.bucket(dpd) != bucket:
+                    continue
+                amount = ledger.overdue_amount(insts, self.as_of)
+            else:
+                assert due_within is not None
+                if upcoming is None or upcoming[0] > self.as_of + dt.timedelta(days=due_within):
+                    continue
+                amount = upcoming[1]
+            mine = [
+                i
+                for i in self.interactions.values()
+                if i.loan_id == loan.id and i.customer_id == loan.customer_id
+            ]
+            talked = [i.started_at for i in mine if i.contact_result == "right_party"]
+            out.append(
+                c.EligibleLoan(
+                    loan_id=loan.id,
+                    customer_id=loan.customer_id,
+                    product_code=loan.product_code,
+                    timezone=self.customers[loan.customer_id].timezone,
+                    phone=self.customers[loan.customer_id].phone,
+                    days_past_due=dpd,
+                    bucket=ledger.bucket(dpd),
+                    next_due_date=upcoming[0] if upcoming else None,
+                    amount_due=amount,
+                    prefs=self.prefs[loan.customer_id],
+                    attempts_last_7d=sum(
+                        1
+                        for i in mine
+                        if i.direction == "outbound" and i.started_at >= now - dt.timedelta(days=7)
+                    ),
+                    last_conversation_at=max(talked) if talked else None,
+                )
+            )
+        return out
+
+    async def contact_preferences(self, customer_id: int) -> c.ContactPreferences | None:
+        self.calls.append(("contact_preferences", customer_id))
+        return self.prefs.get(customer_id)
+
+    async def list_tasks(self, *, status: str | None = None, task_type: str | None = None) -> list[c.Task]:
+        self.calls.append(("list_tasks", (status, task_type)))
+        return [
+            t
+            for t in self.tasks
+            if (status is None or t.status == status) and (task_type is None or t.type == task_type)
+        ]
+
+    async def list_promises(self, *, status: str | None = None) -> list[c.Promise]:
+        self.calls.append(("list_promises", status))
+        return [p for p in self.promises if status is None or p.status == status]
 
     # ------------------------------------------------------------------ writes
 
