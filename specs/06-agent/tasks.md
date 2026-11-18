@@ -219,7 +219,7 @@ merges latency and versions, composes the template summary (F13), classifies sen
 `tests/agent/test_closing.py` (also), tests above
 
 ### T-AGENT-09 · Pre-due reminder flow (U1)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #46
 - **Depends on:** T-AGENT-08
@@ -230,7 +230,7 @@ Implement `ReminderAgent` for `campaign=pre_due`: after verification, state the 
 (`record_intent_to_pay` → outcome `intent`), then close.
 
 **Acceptance criteria**
-- [ ] Olivia's scenario: the reminder is given and intent to pay is confirmed in the outcome; no collections disclosure is spoken
+- [x] Olivia's scenario: the reminder is given and intent to pay is confirmed in the outcome; no collections disclosure is spoken
 
 **Tests**
 - `tests/agent/test_reminder.py` (unit, text mode): Olivia happy path; caller says they'll pay late → offered the policy consequences and a callback

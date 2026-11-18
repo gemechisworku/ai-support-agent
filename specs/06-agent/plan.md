@@ -43,7 +43,7 @@ state. The handlers are:
 | `RouterAgent` (inbound) | "How can I help?" | `route_account_question`, `route_policy_question`, `request_human`, `finish_call` | Verify→Account / Policy / Escalation / Closing |
 | `AccountAgent` (U3) | answers the question already in the chat history | `get_loan_status`, `get_recent_transactions`, `finish` | Router / Closing |
 | `PolicyAgent` (U4) | — | `search_policy`, `offer_follow_up`, `route_to_account`, `finish` | Verify→Account / Router / Closing |
-| `ReminderAgent` (U1) | `get_loan_status` → speak amount and date | `search_policy`, `record_intent_to_pay`, `finish` | Closing |
+| `ReminderAgent` (U1) | `get_loan_status` → speak amount and date (code); channels from `search_policy` | `search_policy`, `record_intent_to_pay`, `offer_callback`, `finish` | Closing |
 | `CollectionsPurposeAgent` (U2 §7 steps 3–5) | `say(collections disclosure)`; `get_loan_status` → purpose line | `get_recent_transactions`, `set_reason_code`, `mark_payment_in_transit` | Resolve / Closing |
 | `CollectionsResolveAgent` (U2 §7 steps 6–7) | — | `search_policy`, `record_promise_to_pay`, `request_callback`, `refer_to_human` | Closing / Escalation |
 | `CallbackAgent` (U5) | `get_interaction_history` → context line | `get_loan_status`, `record_promise_to_pay`, `request_callback`, `finish` | Closing |
@@ -369,6 +369,31 @@ tests/agent/          # mirrors the modules above
 - **Not enforced at the speech output.** The check is a test and eval, not a runtime filter on what the model
   says; the code-level guarantees are that the model is only ever given grounded text and that the verification
   guard stands in front of every account read.
+
+## Pre-due reminder (T-AGENT-09)
+- **`states/reminder.py`, `prompts/reminder.md`** (v1). `on_state_enter`, in code: if the caller is not verified, one
+  neutral line and a switch to `VerifyAgent` (no figure is ever said unverified); else `get_loan_status`, pick the loan
+  with the earliest `next_due_date` that has a `next_due_amount` (`due_loan`), and `session.say(reminder_line(loan))`:
+  the loan, `format_money(next_due_amount)` and `format_date(next_due_date)` straight from the tool result. A failed
+  read or nothing due says a fixed line with no figure and moves to `ClosingAgent` (`update_agent` does nothing during
+  `on_enter`, so the switch waits for the spoken line, as the greeting does). Then one policy search
+  (`CHANNELS_QUERY`) hands the payment channels to the model as data (citations into `kb_sources`) and the model asks
+  whether the caller will pay by the due date.
+- **Tools** (4 domain tools, the maximum): `record_intent_to_pay(will_pay_on_time)`: `True` records the
+  `intent_to_pay` intent and hands off to the closing state with one thank-you turn; `False` records no intent, runs a
+  second policy search (`CONSEQUENCES_QUERY`) and gives the model that text (or "cannot confirm" when the search is
+  not confident or fails) with the instruction to offer a callback and promise nothing. `offer_callback()`, only after
+  a yes, books tomorrow through `request_callback`, records the time the gateway returned (`record_callback`) and the
+  `callback_request` intent, and on a refusal tells the model to promise nothing. `search_policy(query)` answers
+  "how does paying work" questions from excerpts only. `finish` hands off to closing.
+- **Plan change:** the plan listed `search_policy, record_intent_to_pay, finish`; `offer_callback` was added so the
+  "pay late → callback" path books the callback itself (the closing state's `offer_callback` needs a caller-chosen time).
+- **No collections:** the state speaks no collections disclosure and the prompt forbids arrears or consequences talk
+  unless the caller says they will pay late. A caller farewell and the global interrupts are screened in code first.
+- **Tests:** `tests/agent/test_reminder.py` (12): the pure line, the allow-list, Olivia's happy path, paying late
+  (both policy queries, no intent recorded, callback booked once with the gateway's time), a refused callback (no
+  promise), two loans (the one due first only), nothing due, a failed read, an unverified caller, a farewell, and the
+  whole greeting → verify → reminder path.
 
 ## Session wiring (T-AGENT-13)
 - **Flow of a call.** `entrypoint` connects, parses the call context, opens the gateway session (`setup_call`), then
