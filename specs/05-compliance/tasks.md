@@ -75,7 +75,7 @@ cool_off_days_after_conversation`. Both limits come from config.
 **Files:** `src/supportagent/compliance/rules.py`, `tests/compliance/test_frequency.py`
 
 ### T-COMP-04 · Eligibility gate: DNC, consent, dispute, cease-contact
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #52
 - **Depends on:** T-COMP-02, T-COMP-03
@@ -87,10 +87,11 @@ reason, fails closed and stamps `rules_version`. Also add
 scheduler uses (T-SCHED-01, T-SCHED-04).
 
 **Acceptance criteria**
-- [ ] Spec acceptance criteria for COMP-R4 and COMP-R7 hold
-- [ ] `allowed` is true iff `reasons == []`
-- [ ] Persona facts: Stop-calling Sam (cease) and any `dispute_open` loan are always denied; Frank at 10:00 local with 0 attempts is allowed
-- [ ] Branch coverage of `supportagent.compliance.rules` is 100%
+- [x] Spec acceptance criteria for COMP-R4 and COMP-R7 hold (dnc + cease_contact both listed; `timezone=None` → `unknown_timezone`; `rules_version == "contact_rules@" + yaml.version`)
+- [x] `allowed` is true iff `reasons == []`
+  *(`GateDecision` also rejects an inconsistent pair at construction. A naive `now` raises instead of allowing. Reasons come in a fixed order: flags, window, frequency. The decision is the audit record: reasons, rules version, `evaluated_at`, no contact data.)*
+- [x] Persona facts: Stop-calling Sam (cease) and any `dispute_open` loan are always denied; Frank at 10:00 local with 0 attempts is allowed
+- [x] Branch coverage of `supportagent.compliance.rules` is 100% (58 statements, 24 branches, measured with `pytest --cov-branch`)
 
 **Tests**
 - `tests/compliance/test_gate.py` (unit): each flag; combined reasons; fail-closed on missing facts; persona-shaped facts; `facts_from_eligible` mapping
