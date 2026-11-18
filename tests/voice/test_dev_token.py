@@ -68,7 +68,8 @@ def test_the_token_expires(settings: Settings) -> None:
         dev_token.mint_token(settings, room="r", identity="i", ttl_s=600),
         settings.livekit.livekit_api_secret.get_secret_value(),
     )
-    assert 0 < claims["exp"] - claims["nbf"] <= 600
+    # LiveKit stamps nbf and exp in whole seconds, so across a second boundary the gap can read 601.
+    assert 0 < claims["exp"] - claims["nbf"] <= 600 + 2
 
 
 def test_default_names_are_fresh() -> None:
