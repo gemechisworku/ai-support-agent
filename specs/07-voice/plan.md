@@ -10,6 +10,11 @@ different plugin.
 - **STT:** whisper.cpp `whisper-server` started with `--inference-path /v1/audio/transcriptions`, used
   through `openai.STT(base_url=STT_URL/v1, model="whisper-1")`. Whisper is not truly streaming, so the
   STT is wrapped in `stt.StreamAdapter(stt, vad)` for VAD-segmented transcription (PRD §12 mitigation).
+  Fix after the second playground call (2026-11-18): whisper.cpp writes `[BLANK_AUDIO]`, `[LAUGHTER]`,
+  `(audience chattering)` for silence and noise, and each became a caller turn. `voice/stt_filter.py`
+  (`NonSpeechFilterSTT`, applied inside `build_stt`) strips such tags; a result that is only tags has no
+  alternatives, so the adapter drops it and the silence policy still sees silence. `whisper-server` also starts
+  with `--suppress-nst` (an already-running server needs `make models-down && make models-up`).
 - **LLM:** llama.cpp `llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja` (Llama 3.1 8B Instruct
   Q4_K_M), used through `openai.LLM(model=LLM_MODEL, base_url=LLM_URL, api_key="local")`. `--jinja`
   applies the model's chat template, which gives OpenAI-style tool calls. Llama 3.1 has no thinking
