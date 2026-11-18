@@ -44,8 +44,8 @@ state. The handlers are:
 | `AccountAgent` (U3) | answers the question already in the chat history | `get_loan_status`, `get_recent_transactions`, `finish` | Router / Closing |
 | `PolicyAgent` (U4) | — | `search_policy`, `offer_follow_up`, `route_to_account`, `finish` | Verify→Account / Router / Closing |
 | `ReminderAgent` (U1) | `get_loan_status` → speak amount and date (code); channels from `search_policy` | `search_policy`, `record_intent_to_pay`, `offer_callback`, `finish` | Closing |
-| `CollectionsPurposeAgent` (U2 §7 steps 3–5) | `say(collections disclosure)`; `get_loan_status` → purpose line | `get_recent_transactions`, `set_reason_code`, `mark_payment_in_transit` | Resolve / Closing |
-| `CollectionsResolveAgent` (U2 §7 steps 6–7) | — | `search_policy`, `record_promise_to_pay`, `request_callback`, `refer_to_human` | Closing / Escalation |
+| `CollectionsPurposeAgent` (U2 §7 steps 3–5) | `say(collections disclosure)` (after verification, before any figure); `get_loan_status` → purpose line | `get_recent_transactions`, `set_reason_code`, `mark_payment_in_transit` | Resolve / Closing / Escalation |
+| `CollectionsResolveAgent` (U2 §7 steps 6–7) | `search_policy` (consequences) → model relays; code asks for a date and names the amount | `search_policy`, `record_promise_to_pay`, `offer_callback`, `refer_to_human` | Closing / Escalation |
 | `CallbackAgent` (U5) | `get_interaction_history` → context line | `get_loan_status`, `record_promise_to_pay`, `request_callback`, `finish` | Closing |
 | `EscalationAgent` (U6) | compose summary | `escalate_and_transfer`, `create_callback_ticket` | end |
 | `ClosingAgent` | read back commitments; payment channels | `end_call`, `offer_callback` | end |
@@ -394,6 +394,38 @@ tests/agent/          # mirrors the modules above
   (both policy queries, no intent recorded, callback booked once with the gateway's time), a refused callback (no
   promise), two loans (the one due first only), nothing due, a failed read, an unverified caller, a farewell, and the
   whole greeting → verify → reminder path.
+
+## Missed-payment collections (T-AGENT-10)
+- **`CollectionsPurposeAgent`** (`collections_purpose`) and **`CollectionsResolveAgent`** (`collections_resolve`) in
+  `states/collections.py`; prompts `collections_purpose.md` and `collections_resolve.md` (v1). `flow.post_verification_state`
+  already sends `campaign=missed_payment` here.
+- **Order, in code.** An unverified caller is sent to verification with nothing said about money (the disclosure is
+  owed once verified). Then: the collections disclosure (`disclose.speak_disclosure("collections")`, verbatim,
+  uninterruptible, recorded in `disclosures_given` only once heard in full) is queued first, so it always comes before
+  the first figure; then the purpose line from `get_loan_status` (`purpose_line`: the overdue amount and the date of the
+  oldest unpaid instalment; with several loans the one with the oldest unpaid instalment). The model only asks.
+- **Already paid.** `get_recent_transactions` reads the payments (pending first, the gateway's own `speakable` wording).
+  `mark_payment_in_transit` is checked against that read: it counts only if a *pending* payment covers the overdue
+  amount (`covering_pending`); then it records the `already_paid` intent and `CallState.payment_in_transit`, asks for
+  no promise and closes. The model's say-so is never enough. (No `CallOutcome` field exists for it: a contract change
+  for a later task.)
+- **Reason code.** `set_reason_code` records the `ReasonCode`. `income_disruption` becomes a `hardship` referral and
+  `dispute` a `dispute` referral, in code; a hardship or dispute the caller states is caught by the global detector
+  first and sets the same reason code if none is set. Anything else goes on to the resolve state with the loan and the
+  overdue amount fixed by the code.
+- **Resolve.** On entry, one policy search for what a missed payment leads to; the model relays only that text, then the
+  code asks "On what date can you make a payment of $X?". `record_promise_to_pay(promise_date)` sends the caller's date
+  and the *code's* amount to the gateway. Accepted: recorded from the accepted arguments, closing reads it back.
+  `date_out_of_window` or `amount_invalid`: the model is told, from the gateway's own `max_date` and `amount_due`, to
+  ask for a date within the window (an `amount_invalid` replaces the amount with `amount_due`); after
+  `MAX_REJECTIONS` (3) it offers a callback instead. A failed call promises nothing. An unreadable date never reaches
+  the gateway.
+- **Referral.** `refer_to_human(hardship|dispute)` and the interrupt path run `handle_concern` (flags, intents,
+  escalation hand-off). Escalation is T-AGENT-11; until it is registered the line is `flow.unavailable_line` (a callback
+  booked through the gateway and spoken from its answer, or plainly nothing promised) and the call goes to closing.
+- **Tests.** `tests/agent/test_collections.py`: Frank (forgot, promise at today+3), Priya (pending payment), Hana
+  (hardship) and Dawit (dispute), the window and amount rejections, the callback refusals, the unverified caller, and the
+  greeting → verify → collections path with the disclosure before the first amount.
 
 ## Session wiring (T-AGENT-13)
 - **Flow of a call.** `entrypoint` connects, parses the call context, opens the gateway session (`setup_call`), then

@@ -99,6 +99,8 @@ class CallState:
     end_reason: str | None = None  # why the agent ended the call itself, e.g. "silence" (T-AGENT-13)
     # --- routing (T-AGENT-05)
     after_verification: str | None = None  # state to enter once verified, set by the router (inbound)
+    # --- collections (T-AGENT-10)
+    payment_in_transit: bool = False  # a pending payment covers what is overdue; no promise was asked for
     outcome: OutcomeBuilder = field(
         init=False, repr=False
     )  # the PRD §8 outcome, built up during the call (T-AGENT-08): the single source of intents and flags
@@ -169,4 +171,5 @@ class CallState:
             "dispute_flag": self.dispute_flag,
             "cease_contact_flag": self.cease_contact_flag,
             "kb_sources": list(self.kb_sources),
+            "payment_in_transit": self.payment_in_transit,
         }

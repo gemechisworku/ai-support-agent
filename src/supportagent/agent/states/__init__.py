@@ -8,6 +8,7 @@ names states use to hand off to each other.
 from supportagent.agent.states import (
     account,
     closing,
+    collections,
     flow,
     greeting,
     policy,
@@ -20,6 +21,7 @@ from supportagent.agent.states import (
 __all__ = [
     "account",
     "closing",
+    "collections",
     "flow",
     "greeting",
     "policy",

@@ -238,7 +238,7 @@ Implement `ReminderAgent` for `campaign=pre_due`: after verification, state the 
 **Files:** `src/supportagent/agent/states/reminder.py`, `prompts/reminder.md`, tests above
 
 ### T-AGENT-10 · Missed-payment collections flow (U2)
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #47
 - **Depends on:** T-AGENT-07, T-AGENT-08
@@ -251,10 +251,17 @@ from `search_policy` → `record_promise_to_pay` (on gateway rejection, re-ask w
 `amount_due`) or `refer_to_human` for hardship or dispute → closing read-back.
 
 **Acceptance criteria**
-- [ ] The collections disclosure is spoken before the first amount, every time
-- [ ] Frank: `reason_code=forgot`, promise at today+3 accepted
-- [ ] Priya: `payment_in_transit`, no promise requested
-- [ ] A promise beyond 14 days is rejected by the gateway, and the agent proposes a date within the window
+- [x] The collections disclosure is spoken before the first amount, every time
+- [x] Frank: `reason_code=forgot`, promise at today+3 accepted
+- [x] Priya: `payment_in_transit`, no promise requested
+- [x] A promise beyond 14 days is rejected by the gateway, and the agent proposes a date within the window
+
+*(Notes: `payment_in_transit` is `CallState.payment_in_transit` plus the `already_paid` intent: the outcome contract
+has no field for it and `ReasonCode` has no such value, so it is not on the written `CallOutcome` yet. Until escalation
+exists (T-AGENT-11), a hardship or dispute referral is the honest callback line from `flow.unavailable_line`, and the
+tests for Hana and Dawit assert that: the intent, the reason code and the dispute flag are recorded, no promise is
+asked for, and only a callback the gateway booked is promised. The 14-day window is the gateway's rule, so the
+out-of-window test uses a fake gateway that applies it.)*
 
 **Tests**
 - `tests/agent/test_collections.py` (unit, text mode): Frank, Priya, Hana (→ hardship escalation), Dawit (→ dispute flag and escalation), promise out of window
