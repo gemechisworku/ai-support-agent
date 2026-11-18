@@ -171,14 +171,16 @@ Make the agent reachable with no telephony.
   barge-in check.
 
 **Acceptance criteria**
-- [ ] `make models-up && make agent-dev`, then opening the playground with the printed token, gives a spoken greeting.
+- [x] `make models-up && make agent-dev`, then opening the playground, gives a spoken greeting.
+  *(Confirmed by a person on 2026-11-18: the recording disclosure was heard and the caller's words were transcribed nearly accurately.)*
   *(Needs a person at a browser with the whole stack running; not verifiable in an automated run.
   `tests/voice/test_live_pipeline.py::test_playground_greeting` is the headless version.)*
 - [x] The README / `docs/dev-setup.md` has a 5-step "talk to the agent" guide.
-- [ ] The playground call produces a `CallOutcome` with `campaign="playground"` and latency fields.
+- [x] The playground call produces a `CallOutcome` with `campaign="playground"` and latency fields.
+  *(Checked in the bank `interactions` row of the 2026-11-18 call: `campaign=playground`, `latency_p50=2896`, `latency_p90=4413`, `latency_stages`, `disclosures_given=[ai_recording@1.0]`.)*
   *(Unit-tested: `tests/agent/test_session_wiring.py` finalizes a playground call with latency figures from
   synthetic metrics. Still to confirm on a real call: check its outcome in the console.)*
-- [ ] Live checklist (moved from T-VOICE-03): barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in the session event log; run `tests/voice/test_live_barge_in.py` with `BARGE_IN_EVENT_LOG`)
+- [ ] Live checklist (moved from T-VOICE-03; first real measurement 2026-11-18: 0.46 s and 1.10 s, FAILED against 0.3 s because `INTERRUPTION_MIN_S=0.4` made the agent wait 0.4 s of caller speech before stopping; re-measure after lowering it): barge-in stops TTS in < 300 ms (agent state `speaking → listening` delta in the session event log; run `tests/voice/test_live_barge_in.py` with `BARGE_IN_EVENT_LOG`)
   *(Needs a person talking over the agent; `make agent-dev` writes the event log the test reads.)*
 
 **Tests**
