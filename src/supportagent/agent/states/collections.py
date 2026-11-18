@@ -40,12 +40,12 @@ Interrupts (AGENT-R3) and a caller farewell are code too, checked before the mod
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Sequence
 from decimal import Decimal
 from typing import Any, Literal
 
-from livekit.agents import Agent, RunContext, function_tool
-from livekit.agents.llm import ChatMessage
+from livekit.agents import Agent, ModelSettings, RunContext, function_tool
+from livekit.agents.llm import ChatContext, ChatMessage, Tool
 
 from supportagent.agent.base import BaseStateAgent, register_state
 from supportagent.agent.context import CallState
@@ -207,7 +207,16 @@ class _CollectionsState(BaseStateAgent):
             closing = await self._refer_unavailable(referral)
             self.session.update_agent(closing)
             return True
+        if await flow.speak_capabilities(self, message):
+            return True
         return await flow.route_on_phrases(self, message, farewell=True)
+
+    async def llm_node(
+        self, chat_ctx: ChatContext, tools: list[Tool], model_settings: ModelSettings
+    ) -> AsyncGenerator[Any, None]:
+        """A reply that is only a quoted prompt example is never spoken (third real call)."""
+        async for chunk in flow.drop_recited(self, super().llm_node(chat_ctx, tools, model_settings)):
+            yield chunk
 
     async def on_concern(self, kind: Any) -> Any:
         """A concern the model reported: hardship and dispute follow the same code path as the detector."""

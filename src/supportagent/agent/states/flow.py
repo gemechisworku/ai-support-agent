@@ -12,6 +12,8 @@ A state that is escalated to takes the keyword argument `reason` (an `Escalation
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import AsyncIterable, AsyncIterator
+from typing import Any
 
 from livekit.agents import RunContext
 from livekit.agents.llm import ChatMessage
@@ -25,6 +27,7 @@ from supportagent.agent.phrases import (
     says_done_loosely,
 )
 from supportagent.agent.summary import format_callback
+from supportagent.agent.toolcall_guard import drop_recited_fragments
 from supportagent.common import clock
 from supportagent.common.logging import get_logger
 from supportagent.contracts.outcome import Campaign, Direction, Intent
@@ -190,3 +193,43 @@ def caller_is_done(agent: BaseStateAgent, *, asked_anything_else: bool = False) 
     """
     text = agent.state.last_caller_text
     return is_farewell(text, asked_anything_else=asked_anything_else) or says_done_loosely(text)
+
+
+def business_done(agent: BaseStateAgent) -> bool:
+    """Has this call's business already been settled by the state's own deterministic path?
+
+    A promise the gateway accepted, a callback it booked, a recorded intent to pay or an escalation: after
+    any of them a `finish` needs no farewell from the caller.
+    """
+    builder = agent.state.outcome
+    return (
+        builder.promise is not None
+        or builder.callback is not None
+        or builder.escalated is not None
+        or Intent.intent_to_pay in builder.intents
+    )
+
+
+def finish_to_closing(agent: BaseStateAgent) -> Any:
+    """The `finish` tool of a flow state: hand off to the closing state, or refuse in code.
+
+    Closes only when the caller's latest turn is a farewell or the business is already done (`business_done`).
+    Otherwise it returns `NOT_DONE` (which the model reads and the caller never hears): "Mm-hmm." once hung up
+    on a caller (third real call).
+    """
+    closing = resolve(CLOSING)
+    if closing is None:  # always registered; keep the call alive regardless
+        return "Ask whether there is anything else you can help with."
+    if not (business_done(agent) or caller_is_done(agent)):
+        return NOT_DONE
+    return agent.hand_off(agent.next_state(closing))
+
+
+# What a caller says, never what an agent says: a model must not speak these as a reply (third real call).
+RECITED = ("that's all", "that is all", "that's it", "no thanks", "no thank you")
+ASK_MORE = "Is there anything else I can help you with?"
+
+
+def drop_recited(agent: BaseStateAgent, stream: AsyncIterable[Any]) -> AsyncIterator[Any]:
+    """Pass a model reply through, but never speak a quoted prompt example: say `ASK_MORE` in code instead."""
+    return drop_recited_fragments(stream, RECITED, lambda: agent.session.say(ASK_MORE))

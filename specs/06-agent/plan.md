@@ -516,8 +516,16 @@ The caller asked what the agent could do. Five things went wrong, each now a cod
   `finish` sends a how-it-works question to the policy state instead of the router.
 - **`finish_call` is guarded** (router): it closes the call only when the caller's latest turn is a farewell or a
   looser "we're finished" (`flow.caller_is_done`); otherwise the tool returns `flow.NOT_DONE` (an instruction to the
-  model, never spoken) and the call stays open. "Mm-hmm." gets the clarifying question in code. The reminder,
-  collections and callback states (M3) need the same guard on any finish tool they expose.
+  model, never spoken) and the call stays open. "Mm-hmm." gets the clarifying question in code.
+- **The same guard in the M3 flow states.** `flow.finish_to_closing` is the `finish` tool of the reminder and callback
+  states: it closes only when the caller's latest turn is a farewell (`caller_is_done`) or the state's own path has
+  already settled the business (`flow.business_done`: an accepted promise, a booked callback, a recorded intent to pay
+  or an escalation); otherwise it returns `NOT_DONE`. The collections states have no `finish` tool: they close only
+  through their deterministic paths (an accepted promise, a payment in transit, a referral). All four states
+  (reminder, callback, both collections states) also answer "what can you do?" in code (`speak_capabilities`) and
+  pass the model's reply through `flow.drop_recited`, which never speaks a quoted prompt example and says
+  `flow.ASK_MORE` instead. Empty turns are ignored by `BaseStateAgent._screen`, which they all inherit. Their
+  prompts quote no example phrases, so none was reworded and no prompt version changed.
 - **No mimicable prompt examples.** `prompts/router.md` (version 3) no longer quotes "that's all" / "no thanks" or the
   clarifying question; `toolcall_guard.drop_recited_fragments` drops a router reply that is exactly such a fragment
   and the clarifying question is said instead.

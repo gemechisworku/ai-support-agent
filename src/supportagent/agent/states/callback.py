@@ -202,7 +202,4 @@ class CallbackAgent(_CollectionsState):
     @function_tool
     async def finish(self, context: RunContext[CallState]) -> str | Agent:
         """The caller has nothing more to say about this call."""
-        closing = flow.resolve(flow.CLOSING)
-        if closing is None:  # always registered; keep the call alive regardless
-            return "Ask whether there is anything else you can help with."
-        return self.hand_off(self.next_state(closing))  # type: ignore[return-value]
+        return flow.finish_to_closing(self)

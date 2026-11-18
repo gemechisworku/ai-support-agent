@@ -26,9 +26,11 @@ farewell are code too, checked before the model replies.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import AsyncGenerator
+from typing import Any
 
-from livekit.agents import Agent, RunContext, function_tool
-from livekit.agents.llm import ChatMessage
+from livekit.agents import Agent, ModelSettings, RunContext, function_tool
+from livekit.agents.llm import ChatContext, ChatMessage, Tool
 
 from supportagent.agent.base import BaseStateAgent, register_state
 from supportagent.agent.context import CallState
@@ -123,10 +125,19 @@ class ReminderAgent(BaseStateAgent):
         )
 
     async def _screen(self, message: ChatMessage) -> bool:
-        """Interrupts first (AGENT-R3), then a farewell in code (before the model)."""
+        """Interrupts first (AGENT-R3), then "what can you do?" and a farewell in code (before the model)."""
         if await super()._screen(message):
             return True
+        if await flow.speak_capabilities(self, message):
+            return True
         return await flow.route_on_phrases(self, message, farewell=True)
+
+    async def llm_node(
+        self, chat_ctx: ChatContext, tools: list[Tool], model_settings: ModelSettings
+    ) -> AsyncGenerator[Any, None]:
+        """A reply that is only a quoted prompt example is never spoken (third real call)."""
+        async for chunk in flow.drop_recited(self, super().llm_node(chat_ctx, tools, model_settings)):
+            yield chunk
 
     # ------------------------------------------------------------------ tools
 
@@ -178,10 +189,7 @@ class ReminderAgent(BaseStateAgent):
     @function_tool
     async def finish(self, context: RunContext[CallState]) -> str | Agent:
         """The caller has nothing more to say about this reminder."""
-        closing = flow.resolve(flow.CLOSING)
-        if closing is None:  # always registered; keep the call alive regardless
-            return "Ask whether there is anything else you can help with."
-        return self.hand_off(self.next_state(closing))  # type: ignore[return-value]
+        return flow.finish_to_closing(self)
 
     # ------------------------------------------------------------------ helpers
 
