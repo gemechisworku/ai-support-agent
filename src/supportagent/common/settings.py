@@ -104,6 +104,11 @@ class ModelsSettings(_Group):
     # whisper-server ignores the request's model name (it serves WHISPER_MODEL); the OpenAI API needs one.
     stt_model: str = "whisper-1"
     stt_language: str = "en"
+    # whisper writes "Thank you." for noise. The server scores every segment (`no_speech_prob`,
+    # `avg_logprob`); a segment above the first or below the second is dropped like silence
+    # (voice/whisper_stt.py). Measured: noise 0.93, real and synthetic speech 0.001 to 0.009.
+    stt_no_speech_max: float = Field(0.6, ge=0, le=1)
+    stt_min_avg_logprob: float = Field(-1.5, le=0)
     whisper_model: str = "small.en"
     # Caller silence before the one re-prompt, and before the agent ends the call. 10 and 25: on the
     # first real

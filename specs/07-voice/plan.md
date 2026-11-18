@@ -15,6 +15,19 @@ different plugin.
   (`NonSpeechFilterSTT`, applied inside `build_stt`) strips such tags; a result that is only tags has no
   alternatives, so the adapter drops it and the silence policy still sees silence. `whisper-server` also starts
   with `--suppress-nst` (an already-running server needs `make models-down && make models-up`).
+  Fix after the fourth call (2026-11-18): the caller's turns were "Thank you." and "Thanks.": whisper also
+  writes a polite phrase for plain noise. Measured on the local server (generated noise and Kokoro speech, never
+  user audio): 3 s of low-level noise returned `" Thank you."` with `no_speech_prob` 0.927 and `avg_logprob`
+  -0.55; synthetic speech scored 0.001 ("What is the late fee on a personal loan?") and 0.009 (a real "Thank
+  you."). The server reports both scores in `response_format=verbose_json`, but LiveKit's `openai.STT` asks for
+  that format only for the model name "whisper-1" and discards the segments, so `voice/whisper_stt.py`
+  (`WhisperCppSTT`, which `build_stt` now uses in place of `openai.STT`) calls the endpoint itself. Per segment:
+  `no_speech_prob > STT_NO_SPEECH_MAX` (0.6, whisper's own cut-off) or `avg_logprob < STT_MIN_AVG_LOGPROB`
+  (-1.5) drops it; with nothing left the result has no alternatives, so silence stays silence. Every result logs
+  one INFO line (`stt result`: kept, why dropped, seconds of audio, characters, words, segments and both scores),
+  never the words. Checked against the live server: noise gives no alternatives, speech is kept. Not tested: how
+  real microphone noise and accents score. If real speech is dropped, the log line shows its scores and the two
+  settings are the lever.
 - **LLM:** llama.cpp `llama-server -m $LLM_GGUF --alias $LLM_MODEL --jinja` (Llama 3.1 8B Instruct
   Q4_K_M), used through `openai.LLM(model=LLM_MODEL, base_url=LLM_URL, api_key="local")`. `--jinja`
   applies the model's chat template, which gives OpenAI-style tool calls. Llama 3.1 has no thinking

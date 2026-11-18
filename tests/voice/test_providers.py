@@ -12,6 +12,7 @@ from supportagent.common.settings import ModelsSettings, Settings
 from supportagent.observability.versions import model_version as obs_model_version
 from supportagent.voice import providers
 from supportagent.voice.stt_filter import NonSpeechFilterSTT
+from supportagent.voice.whisper_stt import WhisperCppSTT
 
 
 def _with_models(base: Settings, **models: object) -> Settings:
@@ -41,12 +42,15 @@ def test_default_llm_uses_settings_defaults(settings: Settings) -> None:
     assert _base_url(llm) == s.models.llm_url.rstrip("/")
 
 
-def test_stt_is_whisper_behind_openai_plugin(settings: Settings) -> None:
-    s = _with_models(settings, stt_url="http://127.0.0.1:8178")
+def test_stt_is_whisper_scored_for_speech_and_stripped_of_tags(settings: Settings) -> None:
+    s = _with_models(
+        settings, stt_url="http://127.0.0.1:8178", stt_no_speech_max=0.5, stt_min_avg_logprob=-1.2
+    )
     stt = providers.build_stt(s)
     assert isinstance(stt, NonSpeechFilterSTT)  # whisper's [BLANK_AUDIO] tags are removed (stt_filter)
-    assert isinstance(stt.inner, openai.STT)
-    assert _base_url(stt.inner) == "http://127.0.0.1:8178/v1"
+    assert isinstance(stt.inner, WhisperCppSTT)  # and noise scored as no-speech is dropped (whisper_stt)
+    assert stt.inner._url == "http://127.0.0.1:8178/v1/audio/transcriptions"
+    assert (stt.inner._no_speech_max, stt.inner._min_avg_logprob) == (0.5, -1.2)
 
 
 def test_stt_is_wrapped_in_a_stream_adapter_when_given_a_vad(settings: Settings) -> None:
@@ -58,7 +62,7 @@ def test_stt_is_wrapped_in_a_stream_adapter_when_given_a_vad(settings: Settings)
     stt = providers.build_stt(s, vad=_FakeVad())  # type: ignore[arg-type]
     assert isinstance(stt, lk_stt.StreamAdapter)
     assert isinstance(stt.wrapped_stt, NonSpeechFilterSTT)
-    assert isinstance(stt.wrapped_stt.inner, openai.STT)
+    assert isinstance(stt.wrapped_stt.inner, WhisperCppSTT)
 
 
 def test_tts_is_kokoro_behind_openai_plugin(settings: Settings) -> None:

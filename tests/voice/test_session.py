@@ -18,6 +18,7 @@ from supportagent.common.settings import ModelsSettings, Settings
 from supportagent.voice import session as session_module
 from supportagent.voice.session import barge_in_latency_s, build_session_options
 from supportagent.voice.stt_filter import NonSpeechFilterSTT
+from supportagent.voice.whisper_stt import WhisperCppSTT
 
 
 class _FakeVad:
@@ -68,7 +69,7 @@ def test_stt_llm_tts_come_from_the_provider_factory(settings: Settings) -> None:
     o = options(settings)
     assert isinstance(o["stt"], lk_stt.StreamAdapter)  # VAD-segmented whisper
     assert isinstance(o["stt"].wrapped_stt, NonSpeechFilterSTT)  # type: ignore[attr-defined]
-    assert isinstance(o["stt"].wrapped_stt.inner, openai.STT)  # type: ignore[attr-defined]
+    assert isinstance(o["stt"].wrapped_stt.inner, WhisperCppSTT)  # type: ignore[attr-defined]
     assert isinstance(o["llm"], openai.LLM)
     assert o["llm"].model == settings.models.llm_model  # type: ignore[attr-defined]
 
