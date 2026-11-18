@@ -177,6 +177,13 @@ tests/agent/          # mirrors the modules above
   (typed turns). LiveKit 1.8 does **not** call `on_user_turn_completed` for `session.run(user_input=...)` or
   `generate_reply(user_input=...)`, so without the `llm_node` twin the text-mode harness (and any chat box in the
   playground) would bypass the detector. Both paths hand off with `session.update_agent(next_state)`.
+- **A tool call written as text (second playground call, 2026-11-18).** Llama 3.1 8B sometimes returns
+  `{"name": "finish", "parameters": {}}` as message *content*; unguarded it was spoken, shown and recorded as an
+  agent utterance. `llm_node` now passes the model's stream through `toolcall_guard.guard_tool_json`: content that
+  begins with `{` is held until complete; a whole-message `{"name", "parameters"|"arguments"}` object is never
+  emitted as text. A tool in this state's allow-list becomes a real tool call (LiveKit validates and runs it like
+  any other); a tool the state does not offer is dropped and only its name is logged (never the arguments).
+  Other text, even one that merely starts with a brace, is released unchanged.
 - **Misunderstanding.** `is_misunderstanding(text)` ("I don't understand", "what?", "can you repeat that") and the
   model's `report_concern("misunderstanding")` both feed `CallState.misunderstandings`, a **consecutive** counter
   (reset at the start of any turn that follows a turn without one; counted once per turn however it was noticed).
