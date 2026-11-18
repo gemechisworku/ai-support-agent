@@ -88,6 +88,7 @@ class CallState:
     # The outcome's intents and the dispute / cease-contact flags live on `outcome` (properties below).
     misunderstandings: int = 0
     misunderstood_this_turn: bool = False  # the latest caller turn counted as a misunderstanding
+    unclear_turns: int = 0  # consecutive router turns that said nothing about what the caller wants
     screened_messages: set[str] = field(default_factory=set)  # caller messages already checked (by id)
 
     # --- identity and disclosures (T-AGENT-04); T-AGENT-08's OutcomeBuilder reads these

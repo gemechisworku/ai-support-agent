@@ -461,3 +461,69 @@ async def test_a_farewell_reads_back_a_commitment_before_the_goodbye(prompts: Pr
     lines = _agent_lines(result)
     assert lines[-1] == goodbye_line("Meridian Bank")
     assert "call you back" in lines[-2]  # the commitment the gateway scheduled, said before the goodbye
+
+
+# ------------------------------------------------------------ an unclear turn (second real call)
+
+UNCLEAR_LINE = "I'm sorry, I didn't catch that. Is it about your own account, or about how something works?"
+
+
+async def test_an_unclear_first_turn_gets_a_clarifying_question_in_code(
+    prompts: PromptRegistry, stand_ins: None
+) -> None:
+    """The real call: "Yeah, I'm going to see." was sent to the policy state by the model."""
+    result = await _run(prompts, [], ["Yeah, I'm going to see."])
+    assert result.states == ["router"]  # not policy, not anything else
+    assert _agent_lines(result) == [HOW_CAN_I_HELP, UNCLEAR_LINE]
+    assert result.llm.remaining == 0
+    assert result.llm.requests == []  # the model was not asked
+
+
+async def test_after_a_clarifying_question_a_clear_turn_routes_normally(
+    prompts: PromptRegistry, stand_ins: None
+) -> None:
+    result = await _run(
+        prompts,
+        [call("route_policy_question")],
+        ["Hi, how are you going to get to me, please?", "What's the late fee on a personal loan?"],
+    )
+    assert result.states == ["router", "policy"]
+    assert UNCLEAR_LINE in _agent_lines(result)
+    assert result.llm.remaining == 0
+
+
+async def test_the_model_decides_after_two_unclear_turns_in_a_row(
+    prompts: PromptRegistry, stand_ins: None
+) -> None:
+    result = await _run(
+        prompts,
+        [say("Could you tell me a little more about what you need?")],
+        ["Mm-hm.", "Yeah, okay.", "Well, whatever."],
+    )
+    lines = _agent_lines(result)
+    assert lines.count(UNCLEAR_LINE) == 2  # asked twice, then the model took over
+    assert "Could you tell me a little more about what you need?" in lines
+
+
+async def test_a_clear_turn_resets_the_unclear_count(prompts: PromptRegistry, stand_ins: None) -> None:
+    result = await _run(
+        prompts,
+        [call("route_policy_question"), call("finish"), say("Okay.")],
+        ["Mm-hm.", "Can I pay early?", "Yes, thanks.", "Hmm.", "Right."],
+    )
+    assert _agent_lines(result).count(UNCLEAR_LINE) >= 2  # the count started again after the clear turn
+    assert result.state.unclear_turns <= 2
+
+
+async def test_a_request_for_a_person_is_not_unclear(prompts: PromptRegistry, stand_ins: None) -> None:
+    result = await _run(prompts, [], ["Can I talk to someone please?"])
+    assert UNCLEAR_LINE not in _agent_lines(result)
+    assert "human_request" in _intents(result)  # the interrupt path took it, in code
+
+
+async def test_an_unclear_turn_does_not_say_amounts_or_policy(
+    prompts: PromptRegistry, stand_ins: None
+) -> None:
+    result = await _run(prompts, [], ["Hello there."])
+    assert _no_figures([UNCLEAR_LINE])
+    assert "verify_identity" not in result.gateway.tools_called

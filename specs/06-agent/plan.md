@@ -217,6 +217,14 @@ tests/agent/          # mirrors the modules above
   itself (the test run hung). A hand-off and `shutdown(drain=True)` both let queued speech finish first.
 
 ## Inbound routing (T-AGENT-05)
+- **An unclear turn is clarified in code (second playground call, 2026-11-18).** The model had sent "Yeah, I'm
+  going to see." to the policy state. `RouterAgent._screen` now ends with `_clarify`: a turn for which
+  `phrases.has_router_intent` is false (no policy keyword, account mention, request for a person, farewell or
+  global interrupt: a greeting or filler) gets the fixed line `CLARIFY` ("I'm sorry, I didn't catch that. Is it
+  about your own account, or about how something works?"), and the model is not asked. `CallState.unclear_turns`
+  counts consecutive unclear turns (a clear turn resets it); after `MAX_CLARIFICATIONS` (2) the model decides.
+  `has_router_intent` is deliberately loose (`_ACCOUNT_LOOSE`, `_DONE_LOOSE`) so a real request that no strict
+  pattern matches still reaches the model. The line says no amount, date or policy and reads no data.
 - **`RouterAgent`** (`router`): on entry, in code, `"How can I help?"` the first time and `"Is there anything else I can
   help you with?"` when the caller comes back from the account or policy state. Four tools, no data tools:
   `route_policy_question` → `PolicyAgent` (`flow.POLICY`, no verification), `route_account_question` →
