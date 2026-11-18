@@ -126,6 +126,17 @@ class ContactFacts(_Contract):
     last_conversation_at: AwareDatetime | None = None
     planned_at: AwareDatetime
 
+    @model_validator(mode="after")
+    def _preferred_window_is_same_day(self) -> Self:
+        """A malformed window is an error here, never a silent allow later (T-COMP-02)."""
+        if self.preferred_window is not None:
+            start, _, end = self.preferred_window.partition("-")
+            if end <= start:  # "HH:MM" strings order like times
+                raise ValueError(
+                    f"preferred_window {self.preferred_window!r}: end must be after start (same day)"
+                )
+        return self
+
 
 class GateDecision(_Contract):
     """Allowed only when `reasons` is empty; every applicable reason is listed (COMP-R4)."""

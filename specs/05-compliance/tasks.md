@@ -31,7 +31,7 @@ YAML values match the KB doc `contact-calling-rules`.
 **Files:** `data/config/contact_rules.yaml`, `src/supportagent/compliance/config.py`, `src/supportagent/contracts/compliance.py`, tests above
 
 ### T-COMP-02 · Calling-window check in customer local time
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M3
 - **Issue:** #50
 - **Depends on:** T-COMP-01
@@ -42,11 +42,12 @@ YAML values match the KB doc `contact-calling-rules`.
 returns `unknown_timezone` for a missing or invalid zone, and rejects naive datetimes.
 
 **Acceptance criteria**
-- [ ] Spec acceptance criteria for COMP-R2 hold, including both DST transitions in 2026
-- [ ] Malformed `preferred_window` → `ValueError` at fact construction, not silent allow
+- [x] Spec acceptance criteria for COMP-R2 hold, including both DST transitions in 2026
+- [x] Malformed `preferred_window` → `ValueError` at fact construction, not silent allow
+  *(`ContactFacts` validates the shape and that the window ends after it starts, same day; pydantic's `ValidationError` is a `ValueError`.)*
 
 **Tests**
-- `tests/compliance/test_window.py` (unit): boundaries 07:59/08:00/20:59/21:00; LA/NY/UTC; DST days; preferred window; hypothesis property "allowed ⇒ local hour in [8,21)"
+- `tests/compliance/test_window.py` (unit): boundaries 07:59/08:00/20:59/21:00; LA/NY/UTC; DST days; preferred window; an exhaustive sweep standing in for the hypothesis property "allowed ⇔ local hour in [8,21)" (every 5 minutes over both 2026 DST weekends, five zones; `hypothesis` is not a dependency yet)
 
 **Files:** `src/supportagent/compliance/rules.py`, `tests/compliance/test_window.py`
 

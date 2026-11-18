@@ -88,8 +88,8 @@ tests/compliance/ test_config.py test_window.py test_frequency.py test_gate.py
 | Config paths | settings path; relative paths fall back to the repo root | tools and tests run from any working directory |
 
 ## Dependencies
-`pyyaml`. `zoneinfo` is stdlib (`tzdata` package only if the slim image lacks zone data). Dev:
-`hypothesis` for window and DST property tests.
+`pyyaml`. `zoneinfo` is stdlib (`tzdata` package only if the slim image lacks zone data). Dev: `hypothesis` was planned for window and DST property tests; T-COMP-02 uses an exhaustive deterministic
+sweep instead, so no new dependency. Add it if a property test is wanted later.
 
 ## Test strategy
 - **unit (only):** every rule and reason branch, DST boundaries (2026-11-01 US fall back, 2026-03-08
