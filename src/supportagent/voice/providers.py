@@ -32,6 +32,7 @@ from livekit.plugins import anthropic, openai
 
 from supportagent.common.settings import Settings
 from supportagent.voice.stt_filter import NonSpeechFilterSTT
+from supportagent.voice.whisper_stt import WhisperCppSTT
 
 if TYPE_CHECKING:
     from livekit.plugins.turn_detector.english import EnglishModel
@@ -47,15 +48,15 @@ def _v1(url: str) -> str:
 
 
 def build_stt(settings: Settings, *, vad: lk_vad.VAD | None = None) -> lk_stt.STT:
-    """whisper.cpp through the OpenAI STT plugin, with its non-speech tags (`[BLANK_AUDIO]`...) removed
-    (`stt_filter`); wrapped in a `StreamAdapter` when a VAD is given."""
+    """whisper.cpp (`whisper_stt`: results it scores as no-speech are dropped) with its non-speech tags
+    (`[BLANK_AUDIO]`...) removed (`stt_filter`); wrapped in a `StreamAdapter` when a VAD is given."""
     m = settings.models
-    stt = openai.STT(
+    stt = WhisperCppSTT(
+        base_url=_v1(m.stt_url),
         model=m.stt_model,
         language=m.stt_language,
-        base_url=_v1(m.stt_url),
-        api_key=LOCAL_API_KEY,
-        use_realtime=False,
+        no_speech_max=m.stt_no_speech_max,
+        min_avg_logprob=m.stt_min_avg_logprob,
     )
     filtered = NonSpeechFilterSTT(stt)
     return lk_stt.StreamAdapter(stt=filtered, vad=vad) if vad is not None else filtered
